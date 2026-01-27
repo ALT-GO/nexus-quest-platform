@@ -4,6 +4,8 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+@import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
+
 /* ERP Design System - Business-oriented, clean, modern */
 
 @layer base {
@@ -17,7 +19,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 239 83.5294% 66.6667%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96%;
