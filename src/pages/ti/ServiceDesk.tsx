@@ -1,20 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -31,16 +23,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Plus,
-  Ticket,
   Clock,
   CheckCircle2,
   AlertCircle,
   Search,
   Filter,
   Eye,
-  Paperclip,
+  AlertTriangle,
 } from "lucide-react";
+import { useSlaTimer, slaByCategory, calcSlaInfo } from "@/hooks/use-sla";
+import { toast } from "sonner";
 
 interface Ticket {
   id: string;
@@ -53,6 +45,8 @@ interface Ticket {
   email: string;
   createdAt: string;
   slaDeadline: string;
+  prazoSlaEmHoras: number;
+  slaVencido: boolean;
   assignee?: string;
 }
 
@@ -70,22 +64,22 @@ const categories = [
   "Gerais/Outros",
 ];
 
-const slaByCategory: Record<string, number> = {
-  "Acesso e permissões": 4,
-  "Problemas com Computador/Notebook": 8,
-  "Problemas com Celular/Tablet": 8,
-  "Rede e Internet": 4,
-  "E-mail e Comunicação": 4,
-  "Serviços de Impressão": 8,
-  "Sistemas Corporativos": 8,
-  "Solicitação de novo Computador/Notebook": 72,
-  "Solicitação de novo Celular": 72,
-  "Solicitação de Tablet": 72,
-  "Gerais/Outros": 24,
-};
+function buildTicket(
+  partial: Omit<Ticket, "prazoSlaEmHoras" | "slaDeadline" | "slaVencido">
+): Ticket {
+  const prazo = slaByCategory[partial.category] ?? 24;
+  const created = new Date(partial.createdAt);
+  const deadline = new Date(created.getTime() + prazo * 3600000);
+  return {
+    ...partial,
+    prazoSlaEmHoras: prazo,
+    slaDeadline: deadline.toISOString(),
+    slaVencido: false,
+  };
+}
 
 const initialTickets: Ticket[] = [
-  {
+  buildTicket({
     id: "TI-2024-001",
     title: "VPN não conecta",
     category: "Rede e Internet",
@@ -94,11 +88,10 @@ const initialTickets: Ticket[] = [
     priority: "high",
     requester: "Maria Silva",
     email: "maria.silva@empresa.com",
-    createdAt: "2024-11-12T10:30:00",
-    slaDeadline: "2024-11-12T14:30:00",
+    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(), // 3h ago
     assignee: "Carlos TI",
-  },
-  {
+  }),
+  buildTicket({
     id: "TI-2024-002",
     title: "Novo notebook para colaborador",
     category: "Solicitação de novo Computador/Notebook",
@@ -107,10 +100,9 @@ const initialTickets: Ticket[] = [
     priority: "medium",
     requester: "RH - Ana Costa",
     email: "ana.costa@empresa.com",
-    createdAt: "2024-11-11T15:00:00",
-    slaDeadline: "2024-11-14T15:00:00",
-  },
-  {
+    createdAt: new Date(Date.now() - 48 * 3600000).toISOString(), // 48h ago
+  }),
+  buildTicket({
     id: "TI-2024-003",
     title: "Reset de senha do sistema ERP",
     category: "Acesso e permissões",
@@ -119,11 +111,10 @@ const initialTickets: Ticket[] = [
     priority: "low",
     requester: "João Pedro",
     email: "joao.pedro@empresa.com",
-    createdAt: "2024-11-10T09:00:00",
-    slaDeadline: "2024-11-10T13:00:00",
+    createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
     assignee: "Carlos TI",
-  },
-  {
+  }),
+  buildTicket({
     id: "TI-2024-004",
     title: "Impressora não funciona",
     category: "Serviços de Impressão",
@@ -132,10 +123,9 @@ const initialTickets: Ticket[] = [
     priority: "medium",
     requester: "Financeiro",
     email: "financeiro@empresa.com",
-    createdAt: "2024-11-12T08:00:00",
-    slaDeadline: "2024-11-12T16:00:00",
+    createdAt: new Date(Date.now() - 7 * 3600000).toISOString(), // 7h ago, SLA 8h → warning
     assignee: "Pedro TI",
-  },
+  }),
 ];
 
 const statusLabels: Record<string, string> = {
@@ -150,10 +140,43 @@ export default function ServiceDesk() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const { getSlaInfo, tick } = useSlaTimer();
+  const loggedExpired = useRef<Set<string>>(new Set());
+
+  // Update slaVencido flags and log when SLA is breached
+  useEffect(() => {
+    setTickets((prev) =>
+      prev.map((ticket) => {
+        if (ticket.status === "completed" || ticket.status === "cancelled")
+          return ticket;
+
+        const sla = getSlaInfo(ticket.createdAt, ticket.category, false);
+
+        if (sla.slaVencido && !ticket.slaVencido) {
+          // Log SLA breach
+          if (!loggedExpired.current.has(ticket.id)) {
+            loggedExpired.current.add(ticket.id);
+            console.warn(
+              `[SLA VENCIDO] ${new Date().toISOString()} | Chamado ${ticket.id} - "${ticket.title}" | Categoria: ${ticket.category} | Prazo: ${ticket.prazoSlaEmHoras}h | Limite: ${ticket.slaDeadline}`
+            );
+            toast.error(`SLA vencido: ${ticket.id} - ${ticket.title}`, {
+              description: `O prazo de ${ticket.prazoSlaEmHoras}h foi ultrapassado.`,
+              duration: 8000,
+            });
+          }
+          return { ...ticket, slaVencido: true };
+        }
+        return ticket;
+      })
+    );
+  }, [tick, getSlaInfo]);
 
   const pendingCount = tickets.filter((t) => t.status === "pending").length;
   const inProgressCount = tickets.filter((t) => t.status === "inProgress").length;
   const completedCount = tickets.filter((t) => t.status === "completed").length;
+  const slaExpiredCount = tickets.filter(
+    (t) => t.slaVencido && t.status !== "completed" && t.status !== "cancelled"
+  ).length;
 
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -180,7 +203,7 @@ export default function ServiceDesk() {
       </PageHeader>
 
       {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Chamados Pendentes"
           value={pendingCount}
@@ -192,6 +215,12 @@ export default function ServiceDesk() {
           value={inProgressCount}
           icon={Clock}
           className="border-l-4 border-l-info"
+        />
+        <StatCard
+          title="SLA Vencido"
+          value={slaExpiredCount}
+          icon={AlertTriangle}
+          className="border-l-4 border-l-destructive"
         />
         <StatCard
           title="Concluídos (Mês)"
@@ -258,51 +287,70 @@ export default function ServiceDesk() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-mono text-sm">{ticket.id}</TableCell>
-                  <TableCell className="font-medium">{ticket.title}</TableCell>
-                  <TableCell>
-                    <span className="rounded-full bg-secondary px-2 py-1 text-xs">
-                      {ticket.category}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{ticket.requester}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {ticket.email}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Clock className="h-3 w-3" />
-                      {slaByCategory[ticket.category]}h
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge variant={ticket.status}>
-                      {statusLabels[ticket.status]}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge variant={ticket.priority}>
-                      {ticket.priority === "high"
-                        ? "Alta"
-                        : ticket.priority === "medium"
-                        ? "Média"
-                        : "Baixa"}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>{ticket.assignee || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredTickets.map((ticket) => {
+                const isCompleted =
+                  ticket.status === "completed" ||
+                  ticket.status === "cancelled";
+                const sla = getSlaInfo(
+                  ticket.createdAt,
+                  ticket.category,
+                  isCompleted
+                );
+
+                return (
+                  <TableRow
+                    key={ticket.id}
+                    className={
+                      sla.slaVencido && !isCompleted
+                        ? "bg-destructive/5"
+                        : undefined
+                    }
+                  >
+                    <TableCell className="font-mono text-sm">
+                      {ticket.id}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {ticket.title}
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">
+                        {ticket.category}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm">{ticket.requester}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {ticket.email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <SlaIndicator sla={sla} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge variant={ticket.status}>
+                        {statusLabels[ticket.status]}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge variant={ticket.priority}>
+                        {ticket.priority === "high"
+                          ? "Alta"
+                          : ticket.priority === "medium"
+                          ? "Média"
+                          : "Baixa"}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>{ticket.assignee || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
