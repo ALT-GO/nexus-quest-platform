@@ -10,6 +10,7 @@ import KPIs from "./pages/marketing/KPIs";
 import ServiceDesk from "./pages/ti/ServiceDesk";
 import GestaoAtivos from "./pages/ti/GestaoAtivos";
 import DashboardFinanceiro from "./pages/ti/DashboardFinanceiro";
+import DashboardTI from "./pages/ti/DashboardTI";
 import ChamadoPublico from "./pages/ti/ChamadoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/marketing/solicitacoes" element={<Solicitacoes />} />
           <Route path="/marketing/kpis" element={<KPIs />} />
           {/* TI Routes */}
+          <Route path="/ti/dashboard" element={<DashboardTI />} />
           <Route path="/ti/service-desk" element={<ServiceDesk />} />
           <Route path="/ti/ativos" element={<GestaoAtivos />} />
           <Route path="/ti/financeiro" element={<DashboardFinanceiro />} />

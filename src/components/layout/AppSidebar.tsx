@@ -42,6 +42,7 @@ const navigation: NavItem[] = [
     title: "TI",
     icon: Monitor,
     children: [
+      { title: "Dashboard TI", href: "/ti/dashboard" },
       { title: "Service Desk", href: "/ti/service-desk" },
       { title: "Gestão de Ativos", href: "/ti/ativos" },
       { title: "Dashboard Financeiro", href: "/ti/financeiro" },
