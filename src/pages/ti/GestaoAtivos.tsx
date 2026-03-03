@@ -15,6 +15,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAssets, HardwareStatus } from "@/hooks/use-assets";
+import { useCustomFields } from "@/hooks/use-custom-fields";
+import { CustomFieldManager } from "@/components/assets/CustomFieldManager";
+import { InlineFieldEditor } from "@/components/assets/InlineFieldEditor";
 import {
   Plus,
   Laptop,
@@ -95,10 +98,22 @@ const statusVariant: Record<HardwareStatus, "active" | "pending" | "inProgress" 
 
 export default function GestaoAtivos() {
   const { assets } = useAssets();
+  const {
+    fields,
+    getFieldsByCategory,
+    getValue,
+    addField,
+    updateField,
+    deleteField,
+    setValue,
+  } = useCustomFields();
+
   const [passwords] = useState<PasswordEntry[]>(initialPasswords);
   const [telecom] = useState<TelecomLine[]>(initialTelecom);
   const [licenses] = useState<MicrosoftLicense[]>(initialLicenses);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+
+  const hardwareFields = getFieldsByCategory("hardware");
 
   const togglePasswordVisibility = (id: string) => {
     setVisiblePasswords((prev) => {
@@ -142,94 +157,118 @@ export default function GestaoAtivos() {
               <CardTitle className="text-base font-semibold">
                 Hardware (Notebooks/Tablets/Periféricos)
               </CardTitle>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Ativo
-              </Button>
+              <div className="flex items-center gap-2">
+                <CustomFieldManager
+                  category="hardware"
+                  categoryLabel="Hardware"
+                  fields={fields}
+                  onAdd={addField}
+                  onUpdate={updateField}
+                  onDelete={deleteField}
+                />
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Ativo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Service Tag</TableHead>
-                    <TableHead>Centro de Custo</TableHead>
-                    <TableHead>Notas</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assets.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-sm">{item.id}</TableCell>
-                      <TableCell>
-                        <StatusBadge variant={statusVariant[item.status]}>
-                          {item.status}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {item.collaborator || <span className="text-muted-foreground italic">-</span>}
-                      </TableCell>
-                      <TableCell>{item.model}</TableCell>
-                      <TableCell>
-                        <span className="rounded-full bg-secondary px-2 py-1 text-xs">
-                          {item.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {item.serviceTag}
-                      </TableCell>
-                      <TableCell>{item.costCenter || "-"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                        {item.notes || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {item.history.length > 0 && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <History className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>
-                                    Histórico - {item.model} ({item.id})
-                                  </DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                                  {item.history.map((entry) => (
-                                    <div key={entry.id} className="flex gap-3 border-l-2 border-primary pl-3 py-1">
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">{entry.action}</p>
-                                        <p className="text-xs text-muted-foreground">{entry.details}</p>
-                                        {entry.ticketId && (
-                                          <p className="text-xs font-mono text-primary">{entry.ticketId}</p>
-                                        )}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                        {new Date(entry.timestamp).toLocaleString("pt-BR")}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          )}
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Colaborador</TableHead>
+                      <TableHead>Modelo</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Service Tag</TableHead>
+                      <TableHead>Centro de Custo</TableHead>
+                      {hardwareFields.map((field) => (
+                        <TableHead key={field.id} className="whitespace-nowrap">
+                          {field.nome}
+                        </TableHead>
+                      ))}
+                      <TableHead>Notas</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {assets.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-sm">{item.id}</TableCell>
+                        <TableCell>
+                          <StatusBadge variant={statusVariant[item.status]}>
+                            {item.status}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {item.collaborator || <span className="text-muted-foreground italic">-</span>}
+                        </TableCell>
+                        <TableCell>{item.model}</TableCell>
+                        <TableCell>
+                          <span className="rounded-full bg-secondary px-2 py-1 text-xs">
+                            {item.type}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{item.serviceTag}</TableCell>
+                        <TableCell>{item.costCenter || "-"}</TableCell>
+                        {hardwareFields.map((field) => (
+                          <TableCell key={field.id}>
+                            <InlineFieldEditor
+                              field={field}
+                              value={getValue(item.id, field.id)}
+                              onSave={(val) => setValue(item.id, field.id, val)}
+                            />
+                          </TableCell>
+                        ))}
+                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                          {item.notes || "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {item.history.length > 0 && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <History className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      Histórico - {item.model} ({item.id})
+                                    </DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                    {item.history.map((entry) => (
+                                      <div key={entry.id} className="flex gap-3 border-l-2 border-primary pl-3 py-1">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium">{entry.action}</p>
+                                          <p className="text-xs text-muted-foreground">{entry.details}</p>
+                                          {entry.ticketId && (
+                                            <p className="text-xs font-mono text-primary">{entry.ticketId}</p>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                          {new Date(entry.timestamp).toLocaleString("pt-BR")}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
