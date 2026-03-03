@@ -1,5 +1,7 @@
 import { StatusCustom } from "@/hooks/use-custom-status";
+import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
+import { AssetLinker } from "@/components/servicedesk/AssetLinker";
 import { SlaInfo } from "@/hooks/use-sla";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye } from "lucide-react";
+import { Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 interface TicketForTable {
   id: string;
@@ -24,6 +27,7 @@ interface TicketForTable {
   createdAt: string;
   slaVencido: boolean;
   assignee?: string;
+  ativoId?: string;
 }
 
 interface TicketTableProps {
@@ -31,6 +35,9 @@ interface TicketTableProps {
   statuses: StatusCustom[];
   getSlaInfo: (createdAt: string, category: string, isCompleted: boolean) => SlaInfo;
   isFinalStatus: (statusId: string) => boolean;
+  getAvailableForCategory: (category: string) => HardwareAsset[];
+  getAsset: (id: string) => HardwareAsset | undefined;
+  onLinkAsset: (ticketId: string, assetId: string) => void;
 }
 
 export function TicketTable({
@@ -38,7 +45,12 @@ export function TicketTable({
   statuses,
   getSlaInfo,
   isFinalStatus,
+  getAvailableForCategory,
+  getAsset,
+  onLinkAsset,
 }: TicketTableProps) {
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
+
   const getStatusDisplay = (statusId: string) => {
     const status = statuses.find((s) => s.id === statusId);
     if (!status) return { nome: statusId, cor: "215 16% 47%" };
@@ -51,6 +63,7 @@ export function TicketTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Título</TableHead>
               <TableHead>Categoria</TableHead>
@@ -67,75 +80,115 @@ export function TicketTable({
               const isCompleted = isFinalStatus(ticket.statusId);
               const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
               const statusDisplay = getStatusDisplay(ticket.statusId);
+              const isExpanded = expandedTicket === ticket.id;
+              const availableAssets = getAvailableForCategory(ticket.category);
+              const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
+              const hasAssetInfo = availableAssets.length > 0 || !!ticket.ativoId;
 
               return (
-                <TableRow
-                  key={ticket.id}
-                  className={
-                    sla.slaVencido && !isCompleted
-                      ? "bg-destructive/5"
-                      : undefined
-                  }
-                >
-                  <TableCell className="font-mono text-sm">
-                    {ticket.id}
-                  </TableCell>
-                  <TableCell className="font-medium">{ticket.title}</TableCell>
-                  <TableCell>
-                    <span className="rounded-full bg-secondary px-2 py-1 text-xs">
-                      {ticket.category}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{ticket.requester}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {ticket.email}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <SlaIndicator sla={sla} />
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      style={{
-                        backgroundColor: `hsl(${statusDisplay.cor} / 0.15)`,
-                        color: `hsl(${statusDisplay.cor})`,
-                      }}
-                    >
+                <>
+                  <TableRow
+                    key={ticket.id}
+                    className={
+                      sla.slaVencido && !isCompleted
+                        ? "bg-destructive/5"
+                        : undefined
+                    }
+                  >
+                    <TableCell className="w-8 px-2">
+                      {hasAssetInfo && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() =>
+                            setExpandedTicket(isExpanded ? null : ticket.id)
+                          }
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {ticket.id}
+                    </TableCell>
+                    <TableCell className="font-medium">{ticket.title}</TableCell>
+                    <TableCell>
+                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">
+                        {ticket.category}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm">{ticket.requester}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {ticket.email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <SlaIndicator sla={sla} />
+                    </TableCell>
+                    <TableCell>
                       <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: `hsl(${statusDisplay.cor})` }}
-                      />
-                      {statusDisplay.nome}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        ticket.priority === "high"
-                          ? "bg-destructive/15 text-destructive"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        style={{
+                          backgroundColor: `hsl(${statusDisplay.cor} / 0.15)`,
+                          color: `hsl(${statusDisplay.cor})`,
+                        }}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{
+                            backgroundColor: `hsl(${statusDisplay.cor})`,
+                          }}
+                        />
+                        {statusDisplay.nome}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          ticket.priority === "high"
+                            ? "bg-destructive/15 text-destructive"
+                            : ticket.priority === "medium"
+                            ? "bg-warning/15 text-warning"
+                            : "bg-success/15 text-success"
+                        }`}
+                      >
+                        {ticket.priority === "high"
+                          ? "Alta"
                           : ticket.priority === "medium"
-                          ? "bg-warning/15 text-warning"
-                          : "bg-success/15 text-success"
-                      }`}
-                    >
-                      {ticket.priority === "high"
-                        ? "Alta"
-                        : ticket.priority === "medium"
-                        ? "Média"
-                        : "Baixa"}
-                    </span>
-                  </TableCell>
-                  <TableCell>{ticket.assignee || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                          ? "Média"
+                          : "Baixa"}
+                      </span>
+                    </TableCell>
+                    <TableCell>{ticket.assignee || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && hasAssetInfo && (
+                    <TableRow key={`${ticket.id}-asset`}>
+                      <TableCell colSpan={10} className="bg-muted/30 p-4">
+                        <AssetLinker
+                          ticketId={ticket.id}
+                          ticketCategory={ticket.category}
+                          linkedAssetId={ticket.ativoId}
+                          linkedAsset={linkedAsset}
+                          availableAssets={availableAssets}
+                          onLink={(assetId) => onLinkAsset(ticket.id, assetId)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               );
             })}
           </TableBody>

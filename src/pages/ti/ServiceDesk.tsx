@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useSlaTimer, slaByCategory } from "@/hooks/use-sla";
 import { useCustomStatuses } from "@/hooks/use-custom-status";
+import { useAssets, assetRequestCategories } from "@/hooks/use-assets";
 import { StatusManagerDialog } from "@/components/servicedesk/StatusManagerDialog";
 import { KanbanBoard } from "@/components/servicedesk/KanbanBoard";
 import { TicketTable } from "@/components/servicedesk/TicketTable";
@@ -43,6 +44,7 @@ interface Ticket {
   slaVencido: boolean;
   completedAt?: string;
   assignee?: string;
+  ativoId?: string;
 }
 
 const categories = [
@@ -156,6 +158,14 @@ export default function ServiceDesk() {
     logStatusChange,
   } = useCustomStatuses();
 
+  const {
+    assets,
+    getAvailableForCategory,
+    reserveAsset,
+    deliverAsset,
+    getAsset,
+  } = useAssets();
+
   const loggedExpired = useRef<Set<string>>(new Set());
 
   // SLA expiry check
@@ -184,6 +194,21 @@ export default function ServiceDesk() {
     );
   }, [tick, getSlaInfo, isFinalStatus]);
 
+  // Link an asset to a ticket
+  const handleLinkAsset = useCallback(
+    (ticketId: string, assetId: string) => {
+      reserveAsset(assetId, ticketId);
+      setTickets((prev) =>
+        prev.map((t) => (t.id === ticketId ? { ...t, ativoId: assetId } : t))
+      );
+
+      console.log(
+        `[VINCULAÇÃO] ${new Date().toISOString()} | Ativo ${assetId} vinculado ao chamado ${ticketId}`
+      );
+    },
+    [reserveAsset]
+  );
+
   // Handle status change (from kanban drag-drop or any other source)
   const handleStatusChange = useCallback(
     (ticketId: string, newStatusId: string) => {
@@ -197,8 +222,10 @@ export default function ServiceDesk() {
           // Log change
           logStatusChange(ticketId, oldStatusId, newStatusId);
 
-          const oldName = statuses.find((s) => s.id === oldStatusId)?.nome ?? oldStatusId;
-          const newName = statuses.find((s) => s.id === newStatusId)?.nome ?? newStatusId;
+          const oldName =
+            statuses.find((s) => s.id === oldStatusId)?.nome ?? oldStatusId;
+          const newName =
+            statuses.find((s) => s.id === newStatusId)?.nome ?? newStatusId;
           toast.info(`${ticketId}: ${oldName} → ${newName}`);
 
           // Auto-fill completedAt when moved to a final status
@@ -209,6 +236,17 @@ export default function ServiceDesk() {
             console.log(
               `[CONCLUSÃO] ${new Date().toISOString()} | Chamado ${ticketId} concluído | data_conclusao: ${completedAt}`
             );
+
+            // If ticket has linked asset → deliver it
+            if (ticket.ativoId) {
+              deliverAsset(ticket.ativoId, ticketId, ticket.requester);
+              toast.success(
+                `Ativo ${ticket.ativoId} entregue para ${ticket.requester}`,
+                {
+                  description: "Status do ativo alterado para Em uso",
+                }
+              );
+            }
           }
 
           return {
@@ -219,13 +257,17 @@ export default function ServiceDesk() {
         })
       );
     },
-    [logStatusChange, isFinalStatus, statuses]
+    [logStatusChange, isFinalStatus, statuses, deliverAsset]
   );
 
   // Stats
   const pendingCount = tickets.filter((t) => t.statusId === "pending").length;
-  const inProgressCount = tickets.filter((t) => t.statusId === "inProgress").length;
-  const completedCount = tickets.filter((t) => isFinalStatus(t.statusId)).length;
+  const inProgressCount = tickets.filter(
+    (t) => t.statusId === "inProgress"
+  ).length;
+  const completedCount = tickets.filter((t) =>
+    isFinalStatus(t.statusId)
+  ).length;
   const slaExpiredCount = tickets.filter(
     (t) => t.slaVencido && !isFinalStatus(t.statusId)
   ).length;
@@ -363,11 +405,15 @@ export default function ServiceDesk() {
             requester: t.requester,
             assignee: t.assignee,
             createdAt: t.createdAt,
+            ativoId: t.ativoId,
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
           isFinalStatus={isFinalStatus}
           onStatusChange={handleStatusChange}
+          getAvailableForCategory={getAvailableForCategory}
+          getAsset={getAsset}
+          onLinkAsset={handleLinkAsset}
         />
       ) : (
         <TicketTable
@@ -375,6 +421,9 @@ export default function ServiceDesk() {
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
           isFinalStatus={isFinalStatus}
+          getAvailableForCategory={getAvailableForCategory}
+          getAsset={getAsset}
+          onLinkAsset={handleLinkAsset}
         />
       )}
     </AppLayout>

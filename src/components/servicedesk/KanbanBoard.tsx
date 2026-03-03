@@ -1,8 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { StatusCustom } from "@/hooks/use-custom-status";
+import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
+import { AssetLinkerCompact } from "@/components/servicedesk/AssetLinker";
 import { SlaInfo } from "@/hooks/use-sla";
-import { Clock, User, GripVertical } from "lucide-react";
+import { User, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KanbanTicket {
@@ -14,6 +16,7 @@ interface KanbanTicket {
   requester: string;
   assignee?: string;
   createdAt: string;
+  ativoId?: string;
 }
 
 interface KanbanBoardProps {
@@ -22,6 +25,9 @@ interface KanbanBoardProps {
   getSlaInfo: (createdAt: string, category: string, isCompleted: boolean) => SlaInfo;
   isFinalStatus: (statusId: string) => boolean;
   onStatusChange: (ticketId: string, newStatusId: string) => void;
+  getAvailableForCategory: (category: string) => HardwareAsset[];
+  getAsset: (id: string) => HardwareAsset | undefined;
+  onLinkAsset: (ticketId: string, assetId: string) => void;
 }
 
 const priorityConfig: Record<string, { label: string; dot: string }> = {
@@ -36,6 +42,9 @@ export function KanbanBoard({
   getSlaInfo,
   isFinalStatus,
   onStatusChange,
+  getAvailableForCategory,
+  getAsset,
+  onLinkAsset,
 }: KanbanBoardProps) {
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -43,7 +52,6 @@ export function KanbanBoard({
   const handleDragStart = (e: React.DragEvent, ticketId: string) => {
     setDraggedTicketId(ticketId);
     e.dataTransfer.effectAllowed = "move";
-    // Set drag data for compatibility
     e.dataTransfer.setData("text/plain", ticketId);
   };
 
@@ -127,6 +135,8 @@ export function KanbanBoard({
                 const isCompleted = isFinalStatus(ticket.statusId);
                 const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
                 const priority = priorityConfig[ticket.priority];
+                const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
+                const availableAssets = getAvailableForCategory(ticket.category);
 
                 return (
                   <div
@@ -156,6 +166,16 @@ export function KanbanBoard({
                     <span className="inline-block rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground mb-2.5">
                       {ticket.category}
                     </span>
+
+                    {/* Asset indicator */}
+                    <div className="mb-2">
+                      <AssetLinkerCompact
+                        ticketCategory={ticket.category}
+                        linkedAssetId={ticket.ativoId}
+                        linkedAsset={linkedAsset}
+                        availableCount={availableAssets.length}
+                      />
+                    </div>
 
                     {/* SLA */}
                     <div className="mb-2.5">
