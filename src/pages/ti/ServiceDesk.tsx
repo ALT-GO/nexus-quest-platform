@@ -1,11 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -15,23 +12,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Clock,
   CheckCircle2,
   AlertCircle,
   Search,
   Filter,
-  Eye,
   AlertTriangle,
+  LayoutList,
+  Kanban,
 } from "lucide-react";
-import { useSlaTimer, slaByCategory, calcSlaInfo } from "@/hooks/use-sla";
+import { useSlaTimer, slaByCategory } from "@/hooks/use-sla";
+import { useCustomStatuses } from "@/hooks/use-custom-status";
+import { StatusManagerDialog } from "@/components/servicedesk/StatusManagerDialog";
+import { KanbanBoard } from "@/components/servicedesk/KanbanBoard";
+import { TicketTable } from "@/components/servicedesk/TicketTable";
 import { toast } from "sonner";
 
 interface Ticket {
@@ -39,7 +33,7 @@ interface Ticket {
   title: string;
   category: string;
   description: string;
-  status: "pending" | "inProgress" | "completed" | "cancelled";
+  statusId: string;
   priority: "low" | "medium" | "high";
   requester: string;
   email: string;
@@ -47,6 +41,7 @@ interface Ticket {
   slaDeadline: string;
   prazoSlaEmHoras: number;
   slaVencido: boolean;
+  completedAt?: string;
   assignee?: string;
 }
 
@@ -84,11 +79,11 @@ const initialTickets: Ticket[] = [
     title: "VPN não conecta",
     category: "Rede e Internet",
     description: "Não consigo conectar na VPN desde ontem",
-    status: "inProgress",
+    statusId: "inProgress",
     priority: "high",
     requester: "Maria Silva",
     email: "maria.silva@empresa.com",
-    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(), // 3h ago
+    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
     assignee: "Carlos TI",
   }),
   buildTicket({
@@ -96,64 +91,82 @@ const initialTickets: Ticket[] = [
     title: "Novo notebook para colaborador",
     category: "Solicitação de novo Computador/Notebook",
     description: "Solicitação de notebook para novo funcionário do comercial",
-    status: "pending",
+    statusId: "pending",
     priority: "medium",
     requester: "RH - Ana Costa",
     email: "ana.costa@empresa.com",
-    createdAt: new Date(Date.now() - 48 * 3600000).toISOString(), // 48h ago
+    createdAt: new Date(Date.now() - 48 * 3600000).toISOString(),
   }),
   buildTicket({
     id: "TI-2024-003",
     title: "Reset de senha do sistema ERP",
     category: "Acesso e permissões",
     description: "Preciso resetar a senha do sistema ERP",
-    status: "completed",
+    statusId: "completed",
     priority: "low",
     requester: "João Pedro",
     email: "joao.pedro@empresa.com",
     createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
     assignee: "Carlos TI",
+    completedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
   }),
   buildTicket({
     id: "TI-2024-004",
     title: "Impressora não funciona",
     category: "Serviços de Impressão",
     description: "Impressora do 3º andar está com erro",
-    status: "inProgress",
+    statusId: "inProgress",
     priority: "medium",
     requester: "Financeiro",
     email: "financeiro@empresa.com",
-    createdAt: new Date(Date.now() - 7 * 3600000).toISOString(), // 7h ago, SLA 8h → warning
+    createdAt: new Date(Date.now() - 7 * 3600000).toISOString(),
     assignee: "Pedro TI",
+  }),
+  buildTicket({
+    id: "TI-2024-005",
+    title: "Acesso ao sistema financeiro",
+    category: "Acesso e permissões",
+    description: "Novo colaborador precisa de acesso ao sistema",
+    statusId: "waitingUser",
+    priority: "low",
+    requester: "RH",
+    email: "rh@empresa.com",
+    createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+    assignee: "Carlos TI",
   }),
 ];
 
-const statusLabels: Record<string, string> = {
-  pending: "Pendente",
-  inProgress: "Em Andamento",
-  completed: "Concluído",
-  cancelled: "Cancelado",
-};
+type ViewMode = "list" | "kanban";
 
 export default function ServiceDesk() {
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+
   const { getSlaInfo, tick } = useSlaTimer();
+  const {
+    statuses,
+    activeStatuses,
+    isFinalStatus,
+    addStatus,
+    updateStatus,
+    reorderStatuses,
+    logStatusChange,
+  } = useCustomStatuses();
+
   const loggedExpired = useRef<Set<string>>(new Set());
 
-  // Update slaVencido flags and log when SLA is breached
+  // SLA expiry check
   useEffect(() => {
     setTickets((prev) =>
       prev.map((ticket) => {
-        if (ticket.status === "completed" || ticket.status === "cancelled")
-          return ticket;
+        if (isFinalStatus(ticket.statusId)) return ticket;
 
         const sla = getSlaInfo(ticket.createdAt, ticket.category, false);
 
         if (sla.slaVencido && !ticket.slaVencido) {
-          // Log SLA breach
           if (!loggedExpired.current.has(ticket.id)) {
             loggedExpired.current.add(ticket.id);
             console.warn(
@@ -169,15 +182,55 @@ export default function ServiceDesk() {
         return ticket;
       })
     );
-  }, [tick, getSlaInfo]);
+  }, [tick, getSlaInfo, isFinalStatus]);
 
-  const pendingCount = tickets.filter((t) => t.status === "pending").length;
-  const inProgressCount = tickets.filter((t) => t.status === "inProgress").length;
-  const completedCount = tickets.filter((t) => t.status === "completed").length;
+  // Handle status change (from kanban drag-drop or any other source)
+  const handleStatusChange = useCallback(
+    (ticketId: string, newStatusId: string) => {
+      setTickets((prev) =>
+        prev.map((ticket) => {
+          if (ticket.id !== ticketId) return ticket;
+
+          const oldStatusId = ticket.statusId;
+          if (oldStatusId === newStatusId) return ticket;
+
+          // Log change
+          logStatusChange(ticketId, oldStatusId, newStatusId);
+
+          const oldName = statuses.find((s) => s.id === oldStatusId)?.nome ?? oldStatusId;
+          const newName = statuses.find((s) => s.id === newStatusId)?.nome ?? newStatusId;
+          toast.info(`${ticketId}: ${oldName} → ${newName}`);
+
+          // Auto-fill completedAt when moved to a final status
+          const isFinal = isFinalStatus(newStatusId);
+          const completedAt = isFinal ? new Date().toISOString() : undefined;
+
+          if (isFinal) {
+            console.log(
+              `[CONCLUSÃO] ${new Date().toISOString()} | Chamado ${ticketId} concluído | data_conclusao: ${completedAt}`
+            );
+          }
+
+          return {
+            ...ticket,
+            statusId: newStatusId,
+            completedAt,
+          };
+        })
+      );
+    },
+    [logStatusChange, isFinalStatus, statuses]
+  );
+
+  // Stats
+  const pendingCount = tickets.filter((t) => t.statusId === "pending").length;
+  const inProgressCount = tickets.filter((t) => t.statusId === "inProgress").length;
+  const completedCount = tickets.filter((t) => isFinalStatus(t.statusId)).length;
   const slaExpiredCount = tickets.filter(
-    (t) => t.slaVencido && t.status !== "completed" && t.status !== "cancelled"
+    (t) => t.slaVencido && !isFinalStatus(t.statusId)
   ).length;
 
+  // Filters
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,7 +238,7 @@ export default function ServiceDesk() {
     const matchesCategory =
       filterCategory === "all" || ticket.category === filterCategory;
     const matchesStatus =
-      filterStatus === "all" || ticket.status === filterStatus;
+      filterStatus === "all" || ticket.statusId === filterStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -195,6 +248,12 @@ export default function ServiceDesk() {
         title="Service Desk"
         description="Central de atendimento e suporte de TI"
       >
+        <StatusManagerDialog
+          statuses={statuses}
+          onAdd={addStatus}
+          onUpdate={updateStatus}
+          onReorder={reorderStatuses}
+        />
         <Button variant="outline" asChild>
           <a href="/chamado-publico" target="_blank">
             Ver Formulário Público
@@ -223,15 +282,15 @@ export default function ServiceDesk() {
           className="border-l-4 border-l-destructive"
         />
         <StatCard
-          title="Concluídos (Mês)"
+          title="Concluídos"
           value={completedCount}
           icon={CheckCircle2}
           className="border-l-4 border-l-success"
         />
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row">
+      {/* Filters + View Toggle */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -261,100 +320,63 @@ export default function ServiceDesk() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os Status</SelectItem>
-            <SelectItem value="pending">Pendente</SelectItem>
-            <SelectItem value="inProgress">Em Andamento</SelectItem>
-            <SelectItem value="completed">Concluído</SelectItem>
-            <SelectItem value="cancelled">Cancelado</SelectItem>
+            {activeStatuses.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.nome}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+
+        {/* View toggle */}
+        <div className="flex rounded-lg border bg-muted p-1">
+          <Button
+            variant={viewMode === "kanban" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("kanban")}
+            className="gap-1.5"
+          >
+            <Kanban className="h-4 w-4" />
+            <span className="hidden sm:inline">Kanban</span>
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="gap-1.5"
+          >
+            <LayoutList className="h-4 w-4" />
+            <span className="hidden sm:inline">Lista</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Tickets Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Solicitante</TableHead>
-                <TableHead>SLA</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Prioridade</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.map((ticket) => {
-                const isCompleted =
-                  ticket.status === "completed" ||
-                  ticket.status === "cancelled";
-                const sla = getSlaInfo(
-                  ticket.createdAt,
-                  ticket.category,
-                  isCompleted
-                );
-
-                return (
-                  <TableRow
-                    key={ticket.id}
-                    className={
-                      sla.slaVencido && !isCompleted
-                        ? "bg-destructive/5"
-                        : undefined
-                    }
-                  >
-                    <TableCell className="font-mono text-sm">
-                      {ticket.id}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {ticket.title}
-                    </TableCell>
-                    <TableCell>
-                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">
-                        {ticket.category}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">{ticket.requester}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {ticket.email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <SlaIndicator sla={sla} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge variant={ticket.status}>
-                        {statusLabels[ticket.status]}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge variant={ticket.priority}>
-                        {ticket.priority === "high"
-                          ? "Alta"
-                          : ticket.priority === "medium"
-                          ? "Média"
-                          : "Baixa"}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell>{ticket.assignee || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Content */}
+      {viewMode === "kanban" ? (
+        <KanbanBoard
+          tickets={filteredTickets.map((t) => ({
+            id: t.id,
+            title: t.title,
+            category: t.category,
+            statusId: t.statusId,
+            priority: t.priority,
+            requester: t.requester,
+            assignee: t.assignee,
+            createdAt: t.createdAt,
+          }))}
+          statuses={activeStatuses}
+          getSlaInfo={getSlaInfo}
+          isFinalStatus={isFinalStatus}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <TicketTable
+          tickets={filteredTickets}
+          statuses={activeStatuses}
+          getSlaInfo={getSlaInfo}
+          isFinalStatus={isFinalStatus}
+        />
+      )}
     </AppLayout>
   );
 }
