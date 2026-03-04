@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,8 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Monitor, Upload, CheckCircle2, Send } from "lucide-react";
+import { Monitor, Upload, CheckCircle2, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createTicket } from "@/hooks/use-tickets";
 
 const categories = [
   "Acesso e permissões",
@@ -31,6 +31,7 @@ const categories = [
 
 export default function ChamadoPublico() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketId, setTicketId] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -41,7 +42,7 @@ export default function ChamadoPublico() {
     file: null as File | null,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.category || !formData.description) {
@@ -49,16 +50,31 @@ export default function ChamadoPublico() {
       return;
     }
 
-    // Simulate ticket creation
-    const newTicketId = `TI-2024-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
-    setTicketId(newTicketId);
-    setIsSubmitted(true);
+    setIsSubmitting(true);
 
-    // Simulate email notification
-    console.log("Email notification would be sent to:", formData.email);
-    console.log("Ticket details:", { ...formData, ticketId: newTicketId });
+    const result = await createTicket({
+      title: formData.category,
+      category: formData.category,
+      description: formData.description,
+      requester: formData.name,
+      email: formData.email,
+      department: formData.department || undefined,
+    });
 
-    toast.success("Chamado aberto com sucesso!");
+    setIsSubmitting(false);
+
+    if (result.success && result.ticketNumber) {
+      setTicketId(result.ticketNumber);
+      setIsSubmitted(true);
+      toast.success("Chamado aberto com sucesso!");
+    } else {
+      toast.error("Erro ao abrir chamado. Tente novamente.");
+    }
+  };
+
+  const handleNewTicket = () => {
+    setIsSubmitted(false);
+    setFormData({ name: "", email: "", department: "", category: "", description: "", file: null });
   };
 
   if (isSubmitted) {
@@ -82,9 +98,7 @@ export default function ChamadoPublico() {
                 Você receberá atualizações sobre o andamento do chamado no e-mail{" "}
                 <strong>{formData.email}</strong>
               </p>
-              <Button onClick={() => setIsSubmitted(false)}>
-                Abrir Novo Chamado
-              </Button>
+              <Button onClick={handleNewTicket}>Abrir Novo Chamado</Button>
             </CardContent>
           </Card>
         </div>
@@ -95,7 +109,6 @@ export default function ChamadoPublico() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-2xl">
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
             <Monitor className="h-8 w-8 text-primary-foreground" />
@@ -106,7 +119,6 @@ export default function ChamadoPublico() {
           </p>
         </div>
 
-        {/* Form */}
         <Card>
           <CardHeader>
             <CardTitle>Novo Chamado</CardTitle>
@@ -121,9 +133,7 @@ export default function ChamadoPublico() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Seu nome"
                   />
                 </div>
@@ -135,9 +145,7 @@ export default function ChamadoPublico() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="seu.email@empresa.com"
                   />
                 </div>
@@ -149,9 +157,7 @@ export default function ChamadoPublico() {
                   <Input
                     id="department"
                     value={formData.department}
-                    onChange={(e) =>
-                      setFormData({ ...formData, department: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     placeholder="Ex: Comercial, RH, Financeiro..."
                   />
                 </div>
@@ -161,18 +167,14 @@ export default function ChamadoPublico() {
                   </Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, category: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o motivo" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -187,9 +189,7 @@ export default function ChamadoPublico() {
                   id="description"
                   rows={5}
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descreva detalhadamente o problema ou solicitação..."
                 />
               </div>
@@ -202,10 +202,7 @@ export default function ChamadoPublico() {
                     type="file"
                     className="hidden"
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        file: e.target.files?.[0] || null,
-                      })
+                      setFormData({ ...formData, file: e.target.files?.[0] || null })
                     }
                   />
                   <Button
@@ -217,24 +214,25 @@ export default function ChamadoPublico() {
                     Escolher Arquivo
                   </Button>
                   {formData.file && (
-                    <span className="text-sm text-muted-foreground">
-                      {formData.file.name}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{formData.file.name}</span>
                   )}
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" size="lg">
-                <Send className="mr-2 h-4 w-4" />
-                Enviar Chamado
+              <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                {isSubmitting ? "Enviando..." : "Enviar Chamado"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Após enviar, você receberá um e-mail com o número do chamado para
-          acompanhamento.
+          Após enviar, você receberá um e-mail com o número do chamado para acompanhamento.
         </p>
       </div>
     </div>
