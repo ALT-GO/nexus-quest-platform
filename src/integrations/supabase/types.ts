@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tickets: {
+        Row: {
+          asset_id: string | null
+          assignee: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          department: string | null
+          description: string
+          email: string
+          id: string
+          priority: string
+          requester: string
+          sla_deadline: string
+          sla_expired: boolean
+          sla_hours: number
+          status_id: string
+          ticket_number: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          assignee?: string | null
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          description: string
+          email: string
+          id?: string
+          priority?: string
+          requester: string
+          sla_deadline: string
+          sla_expired?: boolean
+          sla_hours?: number
+          status_id?: string
+          ticket_number: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          assignee?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          description?: string
+          email?: string
+          id?: string
+          priority?: string
+          requester?: string
+          sla_deadline?: string
+          sla_expired?: boolean
+          sla_hours?: number
+          status_id?: string
+          ticket_number?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
