@@ -46,6 +46,7 @@ export function KanbanBoard({
   getAvailableForCategory,
   getAsset,
   onLinkAsset,
+  onTicketClick,
 }: KanbanBoardProps) {
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
