@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      ticket_comments: {
+        Row: {
+          author: string
+          avatar_url: string | null
+          content: string
+          created_at: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          author: string
+          avatar_url?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          author?: string
+          avatar_url?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_history: {
+        Row: {
+          action: string
+          author: string
+          created_at: string
+          details: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          action: string
+          author?: string
+          created_at?: string
+          details: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          action?: string
+          author?: string
+          created_at?: string
+          details?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           asset_id: string | null

@@ -38,6 +38,7 @@ interface TicketTableProps {
   getAvailableForCategory: (category: string) => HardwareAsset[];
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
+  onTicketClick?: (ticketId: string) => void;
 }
 
 export function TicketTable({
@@ -48,6 +49,7 @@ export function TicketTable({
   getAvailableForCategory,
   getAsset,
   onLinkAsset,
+  onTicketClick,
 }: TicketTableProps) {
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
@@ -169,7 +171,7 @@ export function TicketTable({
                     </TableCell>
                     <TableCell>{ticket.assignee || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>

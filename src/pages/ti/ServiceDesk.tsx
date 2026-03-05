@@ -29,6 +29,7 @@ import { useTickets } from "@/hooks/use-tickets";
 import { StatusManagerDialog } from "@/components/servicedesk/StatusManagerDialog";
 import { KanbanBoard } from "@/components/servicedesk/KanbanBoard";
 import { TicketTable } from "@/components/servicedesk/TicketTable";
+import { TicketDetailSheet } from "@/components/servicedesk/TicketDetailSheet";
 import { toast } from "sonner";
 
 const categories = [
@@ -53,6 +54,8 @@ export default function ServiceDesk() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const { getSlaInfo, tick } = useSlaTimer();
   const {
@@ -143,6 +146,20 @@ export default function ServiceDesk() {
     },
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
+
+  // Open detail sheet
+  const handleTicketClick = useCallback(
+    (ticketIdOrNumber: string) => {
+      const ticket = tickets.find((t) => t.ticket_number === ticketIdOrNumber || t.id === ticketIdOrNumber);
+      if (ticket) {
+        setSelectedTicketId(ticket.id);
+        setDetailOpen(true);
+      }
+    },
+    [tickets]
+  );
+
+  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
 
   // Stats
   const pendingCount = tickets.filter((t) => t.status_id === "pending").length;
@@ -292,6 +309,7 @@ export default function ServiceDesk() {
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
+          onTicketClick={handleTicketClick}
         />
       ) : (
         <TicketTable
@@ -314,8 +332,23 @@ export default function ServiceDesk() {
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
+          onTicketClick={handleTicketClick}
         />
       )}
+
+      <TicketDetailSheet
+        ticket={selectedTicket}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        statuses={activeStatuses}
+        isFinalStatus={isFinalStatus}
+        getSlaInfo={getSlaInfo}
+        getAvailableForCategory={getAvailableForCategory}
+        getAsset={getAsset}
+        onLinkAsset={handleLinkAsset}
+        onStatusChange={handleStatusChange}
+        onUpdateTicket={async (id, updates) => updateTicket(id, updates as any)}
+      />
     </AppLayout>
   );
 }
