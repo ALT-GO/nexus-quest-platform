@@ -309,6 +309,7 @@ export default function ServiceDesk() {
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
+          onTicketClick={handleTicketClick}
         />
       ) : (
         <TicketTable
@@ -331,6 +332,7 @@ export default function ServiceDesk() {
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
+          onTicketClick={handleTicketClick}
         />
       )}
     </AppLayout>
