@@ -54,6 +54,8 @@ export default function ServiceDesk() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const { getSlaInfo, tick } = useSlaTimer();
   const {
