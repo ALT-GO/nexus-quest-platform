@@ -146,6 +146,7 @@ export function KanbanBoard({
                     draggable
                     onDragStart={(e) => handleDragStart(e, ticket.id)}
                     onDragEnd={handleDragEnd}
+                    onClick={() => onTicketClick?.(ticket.id)}
                     className={cn(
                       "cursor-grab rounded-lg border bg-card p-3.5 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
                       draggedTicketId === ticket.id ? "opacity-40 scale-95" : ""
