@@ -29,6 +29,7 @@ import { useTickets } from "@/hooks/use-tickets";
 import { StatusManagerDialog } from "@/components/servicedesk/StatusManagerDialog";
 import { KanbanBoard } from "@/components/servicedesk/KanbanBoard";
 import { TicketTable } from "@/components/servicedesk/TicketTable";
+import { TicketDetailSheet } from "@/components/servicedesk/TicketDetailSheet";
 import { toast } from "sonner";
 
 const categories = [
