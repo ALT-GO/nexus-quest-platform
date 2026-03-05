@@ -147,6 +147,20 @@ export default function ServiceDesk() {
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
 
+  // Open detail sheet
+  const handleTicketClick = useCallback(
+    (ticketIdOrNumber: string) => {
+      const ticket = tickets.find((t) => t.ticket_number === ticketIdOrNumber || t.id === ticketIdOrNumber);
+      if (ticket) {
+        setSelectedTicketId(ticket.id);
+        setDetailOpen(true);
+      }
+    },
+    [tickets]
+  );
+
+  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
+
   // Stats
   const pendingCount = tickets.filter((t) => t.status_id === "pending").length;
   const inProgressCount = tickets.filter((t) => t.status_id === "inProgress").length;
