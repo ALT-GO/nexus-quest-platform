@@ -335,6 +335,20 @@ export default function ServiceDesk() {
           onTicketClick={handleTicketClick}
         />
       )}
+
+      <TicketDetailSheet
+        ticket={selectedTicket}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        statuses={activeStatuses}
+        isFinalStatus={isFinalStatus}
+        getSlaInfo={getSlaInfo}
+        getAvailableForCategory={getAvailableForCategory}
+        getAsset={getAsset}
+        onLinkAsset={handleLinkAsset}
+        onStatusChange={handleStatusChange}
+        onUpdateTicket={async (id, updates) => updateTicket(id, updates as any)}
+      />
     </AppLayout>
   );
 }
