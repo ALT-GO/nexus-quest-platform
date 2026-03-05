@@ -171,7 +171,7 @@ export function TicketTable({
                     </TableCell>
                     <TableCell>{ticket.assignee || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
