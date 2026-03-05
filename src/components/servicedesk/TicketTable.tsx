@@ -49,6 +49,7 @@ export function TicketTable({
   getAvailableForCategory,
   getAsset,
   onLinkAsset,
+  onTicketClick,
 }: TicketTableProps) {
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
