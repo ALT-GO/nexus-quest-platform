@@ -28,6 +28,7 @@ interface KanbanBoardProps {
   getAvailableForCategory: (category: string) => HardwareAsset[];
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
+  onTicketClick?: (ticketId: string) => void;
 }
 
 const priorityConfig: Record<string, { label: string; dot: string }> = {
