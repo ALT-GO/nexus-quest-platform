@@ -440,6 +440,10 @@ export default function ServiceDesk() {
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
           onTicketClick={handleTicketClick}
+          onDelete={(ticketIdOrNumber) => {
+            const t = tickets.find((tk) => tk.ticket_number === ticketIdOrNumber || tk.id === ticketIdOrNumber);
+            if (t) deleteTicket(t.id);
+          }}
         />
       )}
 

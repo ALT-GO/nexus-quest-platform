@@ -193,8 +193,12 @@ export function KanbanBoard({
                         <p className="text-xs font-mono text-muted-foreground mb-1">{ticket.id}</p>
                         <p className={cn("font-medium text-sm leading-tight", isCompleted && "line-through")}>{ticket.title}</p>
                       </div>
-                      <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground/40" />
-                    </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {onDelete && (
+                          <ConfirmDeleteDialog onConfirm={() => onDelete(ticket.id)} />
+                        )}
+                        <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
 
                     {/* Category */}
                     <div onClick={() => onTicketClick?.(ticket.id)}>
