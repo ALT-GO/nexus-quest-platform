@@ -9,6 +9,9 @@ import { useCollaborators } from "@/hooks/use-collaborators";
 import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProfile";
 import { StockTab } from "@/components/collaborators/StockTab";
 import { Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const catIcons: Record<string, React.ElementType> = {
   notebooks: Laptop,
