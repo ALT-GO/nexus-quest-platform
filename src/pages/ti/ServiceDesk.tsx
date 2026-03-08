@@ -147,6 +147,33 @@ export default function ServiceDesk() {
           { description: "Status do ativo alterado para Em uso" }
         );
       }
+
+      // Desligamento: set licenças to "Desligado" instead of removing collaborator
+      if (isFinal && ticket.category === "Desligamento") {
+        const { data: assets } = await supabase
+          .from("inventory")
+          .select("id, category")
+          .eq("collaborator", ticket.requester);
+        if (assets && assets.length > 0) {
+          const licencas = assets.filter((a: any) => a.category === "licencas");
+          const others = assets.filter((a: any) => a.category !== "licencas");
+          // Licenças: change status to Desligado, keep collaborator name
+          if (licencas.length > 0) {
+            await supabase
+              .from("inventory")
+              .update({ status: "Desligado", updated_at: new Date().toISOString() })
+              .in("id", licencas.map((a: any) => a.id));
+          }
+          // Other assets: set to Disponível and clear collaborator
+          if (others.length > 0) {
+            await supabase
+              .from("inventory")
+              .update({ status: "Disponível", collaborator: "", updated_at: new Date().toISOString() })
+              .in("id", others.map((a: any) => a.id));
+          }
+          toast.success("Ativos do colaborador atualizados pelo desligamento");
+        }
+      }
     },
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
