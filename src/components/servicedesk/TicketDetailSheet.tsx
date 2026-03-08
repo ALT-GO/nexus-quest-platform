@@ -68,6 +68,7 @@ const technicians = ["Alvaro", "Carlos", "Mariana", "Pedro", "Julia"];
 
 interface TicketDetailSheetProps {
   ticket: Ticket | null;
+  subtasks?: Ticket[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   statuses: StatusCustom[];
