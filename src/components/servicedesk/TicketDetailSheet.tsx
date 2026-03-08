@@ -165,11 +165,14 @@ export function TicketDetailSheet({
   const handleComplete = async () => {
     // If already completed, toggle it off
     if (isCompleted) {
-      await supabase
+      const todoStatus = statuses.find((s) => s.statusType === "todo" && s.ativo);
+      const { error } = await supabase
         .from("tickets")
-        .update({ completed_at: null, updated_at: new Date().toISOString() } as any)
+        .update({ completed_at: null, status_id: todoStatus?.id || "pending", updated_at: new Date().toISOString() } as any)
         .eq("id", ticket.id as any);
-      toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+      if (!error) {
+        toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+      }
       return;
     }
 
