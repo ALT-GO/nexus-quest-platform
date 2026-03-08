@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Megaphone, Monitor, Ticket, TrendingUp, Loader2, Laptop, Smartphone, Phone, KeyRound } from "lucide-react";
+import { Monitor, Ticket, TrendingUp, Loader2, Laptop, Smartphone, Phone, KeyRound, Package } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type { CostCenterFilter } from "@/pages/CentralInteligencia";
 
 const tooltipStyle = {
   backgroundColor: "hsl(var(--card))",
@@ -25,6 +26,7 @@ interface TicketRow {
   status_id: string;
   priority: string;
   completed_at: string | null;
+  sla_deadline: string;
   created_at: string;
   department: string | null;
 }
@@ -33,6 +35,8 @@ interface InventoryRow {
   id: string;
   category: string;
   status: string;
+  cost_center_eng: string | null;
+  cost_center_man: string | null;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -56,87 +60,87 @@ const categoryColors: Record<string, string> = {
   licencas: "text-chart-4",
 };
 
-export function GeralTab() {
+interface GeralTabProps {
+  costCenter: CostCenterFilter;
+}
+
+export function GeralTab({ costCenter }: GeralTabProps) {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [statusConfigs, setStatusConfigs] = useState<{ id: string; is_final: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchTickets = async () => {
+    const { data } = await supabase
+      .from("tickets")
+      .select("id, ticket_number, title, category, status_id, priority, completed_at, sla_deadline, created_at, department")
+      .is("parent_ticket_id", null)
+      .order("created_at", { ascending: false });
+    if (data) setTickets(data as TicketRow[]);
+  };
+
+  const fetchInventory = async () => {
+    const { data } = await supabase
+      .from("inventory")
+      .select("id, category, status, cost_center_eng, cost_center_man");
+    if (data) setInventory(data as InventoryRow[]);
+  };
+
   useEffect(() => {
     async function fetchAll() {
-      const [ticketsRes, inventoryRes, statusRes] = await Promise.all([
-        supabase.from("tickets").select("id, ticket_number, title, category, status_id, priority, completed_at, created_at, department").order("created_at", { ascending: false }),
-        supabase.from("inventory").select("id, category, status"),
+      const [, , statusRes] = await Promise.all([
+        fetchTickets(),
+        fetchInventory(),
         supabase.from("status_config").select("id, is_final"),
       ]);
-      setTickets((ticketsRes.data as TicketRow[]) || []);
-      setInventory((inventoryRes.data as InventoryRow[]) || []);
       setStatusConfigs((statusRes.data as any[]) || []);
       setLoading(false);
     }
     fetchAll();
   }, []);
 
-  // Realtime for tickets
+  // Realtime
   useEffect(() => {
     const channel = supabase
-      .channel("geral-tickets-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => {
-        supabase.from("tickets").select("id, ticket_number, title, category, status_id, priority, completed_at, created_at, department").order("created_at", { ascending: false })
-          .then(({ data }) => { if (data) setTickets(data as TicketRow[]); });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
-        supabase.from("inventory").select("id, category, status")
-          .then(({ data }) => { if (data) setInventory(data as InventoryRow[]); });
-      })
+      .channel("geral-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => fetchTickets())
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchInventory())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Filter inventory by cost center
+  const filteredInventory = useMemo(() => {
+    if (costCenter === "all") return inventory;
+    if (costCenter === "eng") return inventory.filter((i) => i.cost_center_eng && i.cost_center_eng.trim() !== "");
+    return inventory.filter((i) => i.cost_center_man && i.cost_center_man.trim() !== "");
+  }, [inventory, costCenter]);
+
   const finalStatusIds = useMemo(() => new Set(statusConfigs.filter((s) => s.is_final).map((s) => s.id)), [statusConfigs]);
 
   const openCount = useMemo(() => tickets.filter((t) => !t.completed_at && !finalStatusIds.has(t.status_id)).length, [tickets, finalStatusIds]);
-  const completedCount = useMemo(() => tickets.filter((t) => !!t.completed_at).length, [tickets]);
-  const totalAssets = inventory.length;
+  const completedCount = useMemo(() => tickets.filter((t) => finalStatusIds.has(t.status_id) || !!t.completed_at).length, [tickets, finalStatusIds]);
 
-  const slaCumprido = useMemo(() => {
+  const slaPercent = useMemo(() => {
     const completed = tickets.filter((t) => !!t.completed_at);
     if (completed.length === 0) return 100;
-    // We don't have sla_deadline in the select, let's use completed_at presence as proxy
-    // Actually let's fetch it properly
-    return 0; // placeholder, will calculate below
+    const withinSla = completed.filter((t) => new Date(t.completed_at!).getTime() <= new Date(t.sla_deadline).getTime());
+    return Math.round((withinSla.length / completed.length) * 100);
   }, [tickets]);
 
-  // Better SLA calc — fetch sla_deadline for completed tickets
-  const [slaPercent, setSlaPercent] = useState<number | null>(null);
-  useEffect(() => {
-    async function calcSla() {
-      const { data } = await supabase
-        .from("tickets")
-        .select("completed_at, sla_deadline")
-        .not("completed_at", "is", null);
-      if (!data || data.length === 0) { setSlaPercent(100); return; }
-      const withinSla = data.filter((t: any) => new Date(t.completed_at).getTime() <= new Date(t.sla_deadline).getTime());
-      setSlaPercent(Math.round((withinSla.length / data.length) * 100));
-    }
-    calcSla();
-  }, [tickets]);
-
-  // Ticket status distribution (real)
+  // Ticket status distribution
   const ticketStatusData = useMemo(() => {
-    const open = tickets.filter((t) => !t.completed_at && !finalStatusIds.has(t.status_id)).length;
-    const completed = tickets.filter((t) => !!t.completed_at).length;
-    // In progress: has assignee but not completed and not final
+    const completed = tickets.filter((t) => finalStatusIds.has(t.status_id) || !!t.completed_at).length;
     const inProgress = tickets.filter((t) => !t.completed_at && !finalStatusIds.has(t.status_id) && t.status_id !== "pending").length;
-    const pending = open - inProgress;
+    const pending = tickets.filter((t) => !t.completed_at && t.status_id === "pending").length;
     return [
-      { name: "Pendentes", value: Math.max(0, pending), color: "hsl(var(--warning))" },
+      { name: "Pendentes", value: pending, color: "hsl(var(--warning))" },
       { name: "Em andamento", value: inProgress, color: "hsl(var(--info))" },
       { name: "Concluídos", value: completed, color: "hsl(var(--success))" },
     ].filter((d) => d.value > 0);
   }, [tickets, finalStatusIds]);
 
-  // Tickets by month (last 6 months, real data)
+  // Tickets by month
   const ticketsByMonth = useMemo(() => {
     const months: { key: string; label: string }[] = [];
     const now = new Date();
@@ -144,27 +148,34 @@ export function GeralTab() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months.push({ key: format(d, "yyyy-MM"), label: format(d, "MMM", { locale: ptBR }) });
     }
-    return months.map((m) => {
-      const monthTickets = tickets.filter((t) => t.created_at.startsWith(m.key));
-      return {
-        name: m.label.charAt(0).toUpperCase() + m.label.slice(1),
-        ti: monthTickets.length,
-      };
-    });
+    return months.map((m) => ({
+      name: m.label.charAt(0).toUpperCase() + m.label.slice(1),
+      ti: tickets.filter((t) => t.created_at.startsWith(m.key)).length,
+    }));
   }, [tickets]);
 
-  // Recent tickets (last 5)
   const recentTickets = useMemo(() => tickets.slice(0, 5), [tickets]);
 
-  // Inventory per category (Disponível)
-  const inventoryByCategory = useMemo(() => {
-    const cats = ["notebooks", "celulares", "linhas", "licencas"];
-    return cats.map((cat) => ({
-      category: cat,
-      available: inventory.filter((i) => i.category === cat && i.status === "Disponível").length,
-      total: inventory.filter((i) => i.category === cat).length,
-    }));
-  }, [inventory]);
+  // Detailed inventory per category
+  const inventoryDetails = useMemo(() => {
+    const cats = ["notebooks", "celulares", "linhas", "licencas"] as const;
+    return cats.map((cat) => {
+      const items = filteredInventory.filter((i) => i.category === cat);
+      const total = items.length;
+      const available = items.filter((i) => i.status === "Disponível").length;
+
+      if (cat === "linhas") {
+        const active = items.filter((i) => i.status === "Em uso" || i.status === "Ativo").length;
+        const vacant = items.filter((i) => i.status === "Disponível").length;
+        return { category: cat, total, available, detail: `${active} ativos · ${vacant} vagos` };
+      }
+      if (cat === "licencas") {
+        const idle = items.filter((i) => i.status === "Desligado").length;
+        return { category: cat, total, available, detail: `${idle} ociosas (Desligado)` };
+      }
+      return { category: cat, total, available, detail: `${available} disponíveis` };
+    });
+  }, [filteredInventory]);
 
   if (loading) {
     return (
@@ -176,19 +187,54 @@ export function GeralTab() {
 
   return (
     <div className="space-y-6">
+      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Chamados abertos" value={openCount} description="Todos os módulos" icon={Ticket} />
-        <StatCard title="Chamados concluídos" value={completedCount} description="Total geral" icon={TrendingUp} />
-        <StatCard title="Ativos cadastrados" value={totalAssets} description="Inventário total" icon={Monitor} />
+        <StatCard title="Chamados abertos" value={openCount} description="Tempo real" icon={Ticket} />
+        <StatCard title="Chamados concluídos" value={completedCount} description="Total geral (todos os módulos)" icon={TrendingUp} />
+        <StatCard title="Ativos cadastrados" value={filteredInventory.length} description={costCenter === "all" ? "Inventário total" : `Filtro: ${costCenter.toUpperCase()}`} icon={Monitor} />
         <StatCard
           title="SLA cumprido"
-          value={slaPercent !== null ? `${slaPercent}%` : "—"}
+          value={`${slaPercent}%`}
           description="Todos os chamados"
           icon={TrendingUp}
-          trend={slaPercent !== null && slaPercent >= 90 ? { value: slaPercent - 90, isPositive: true } : slaPercent !== null ? { value: 90 - slaPercent, isPositive: false } : undefined}
+          trend={slaPercent >= 90 ? { value: slaPercent - 90, isPositive: true } : { value: 90 - slaPercent, isPositive: false }}
         />
       </div>
 
+      {/* Painel de Ativos de TI */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            Painel de Ativos de TI
+            {costCenter !== "all" && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                (Filtro: Centro de Custo {costCenter.toUpperCase()})
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {inventoryDetails.map((item) => {
+              const Icon = categoryIcons[item.category] || Monitor;
+              return (
+                <div key={item.category} className="flex flex-col items-center gap-2 rounded-xl border bg-muted/30 p-5 transition-colors hover:bg-muted/50">
+                  <Icon className={`h-9 w-9 ${categoryColors[item.category] || "text-muted-foreground"}`} />
+                  <span className="text-3xl font-bold">{item.total}</span>
+                  <span className="text-sm font-medium">{categoryLabels[item.category]}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-success" />
+                    <span className="text-xs text-muted-foreground">{item.detail}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-base font-semibold">Chamados por mês</CardTitle></CardHeader>
@@ -234,28 +280,6 @@ export function GeralTab() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Inventory per category */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Estoque disponível por categoria</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {inventoryByCategory.map((item) => {
-              const Icon = categoryIcons[item.category] || Monitor;
-              return (
-                <div key={item.category} className="flex flex-col items-center gap-2 rounded-lg border p-4">
-                  <Icon className={`h-8 w-8 ${categoryColors[item.category] || "text-muted-foreground"}`} />
-                  <span className="text-2xl font-bold">{item.available}</span>
-                  <span className="text-sm text-muted-foreground">{categoryLabels[item.category] || item.category}</span>
-                  <span className="text-xs text-muted-foreground">de {item.total} total</span>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Recent tickets */}
       <Card>

@@ -150,16 +150,22 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
       .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const assetsDisponivel = inventoryItems.filter((a) => a.status === "Disponível").length;
-  const assetsManutencao = inventoryItems.filter((a) => a.status === "Manutenção").length;
+  const filteredInv = useMemo(() => {
+    if (costCenter === "all") return inventoryItems;
+    if (costCenter === "eng") return inventoryItems.filter((i) => i.cost_center_eng && i.cost_center_eng.trim() !== "");
+    return inventoryItems.filter((i) => i.cost_center_man && i.cost_center_man.trim() !== "");
+  }, [inventoryItems, costCenter]);
+
+  const assetsDisponivel = filteredInv.filter((a) => a.status === "Disponível").length;
+  const assetsManutencao = filteredInv.filter((a) => a.status === "Manutenção").length;
   const inventoryByCategory = useMemo(() => {
     const cats = ["notebooks", "celulares", "linhas", "licencas"];
     return cats.map((cat) => ({
       category: cat,
-      available: inventoryItems.filter((i) => i.category === cat && i.status === "Disponível").length,
-      total: inventoryItems.filter((i) => i.category === cat).length,
+      available: filteredInv.filter((i) => i.category === cat && i.status === "Disponível").length,
+      total: filteredInv.filter((i) => i.category === cat).length,
     }));
-  }, [inventoryItems]);
+  }, [filteredInv]);
   const categories = useMemo(() => [...new Set(allTickets.map((t) => t.category))], [allTickets]);
 
   if (loading) {
