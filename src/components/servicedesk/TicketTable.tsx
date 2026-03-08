@@ -156,7 +156,7 @@ export function TicketTable({
                         <p className="text-xs text-muted-foreground">{ticket.email}</p>
                       </div>
                     </TableCell>
-                    <TableCell><SlaIndicator sla={sla} /></TableCell>
+                    <TableCell>{!isCompleted ? <SlaIndicator sla={sla} /> : <span className="text-xs text-success font-medium">Concluído</span>}</TableCell>
                     <TableCell>
                       <span
                         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"

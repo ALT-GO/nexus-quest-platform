@@ -424,10 +424,12 @@ export function TicketDetailSheet({
               </div>
             )}
 
-            {/* SLA */}
-            <div>
-              <SlaIndicator sla={sla} />
-            </div>
+            {/* SLA - hide when completed */}
+            {!isCompleted && (
+              <div>
+                <SlaIndicator sla={sla} />
+              </div>
+            )}
 
             {/* Fields grid */}
             <div className="grid grid-cols-2 gap-4">

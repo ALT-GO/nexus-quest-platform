@@ -385,6 +385,7 @@ export default function ServiceDesk() {
             requester: t.requester,
             email: t.email,
             createdAt: t.created_at,
+            completedAt: t.completed_at ?? undefined,
             slaVencido: t.sla_expired,
             assignee: t.assignee ?? undefined,
             ativoId: t.asset_id ?? undefined,

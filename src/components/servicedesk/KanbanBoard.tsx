@@ -215,9 +215,11 @@ export function KanbanBoard({
                         </div>
                       )}
 
-                      <div className="mb-2.5">
-                        <SlaIndicator sla={sla} />
-                      </div>
+                      {!isCompleted && (
+                        <div className="mb-2.5">
+                          <SlaIndicator sla={sla} />
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
