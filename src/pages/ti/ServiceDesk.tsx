@@ -348,6 +348,7 @@ export default function ServiceDesk() {
             slaVencido: t.sla_expired,
             assignee: t.assignee ?? undefined,
             ativoId: t.asset_id ?? undefined,
+            subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
