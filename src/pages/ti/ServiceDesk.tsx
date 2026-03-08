@@ -6,6 +6,8 @@ import { NewTicketDialog } from "@/components/servicedesk/NewTicketDialog";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -59,6 +61,7 @@ export default function ServiceDesk() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const { getSlaInfo, tick } = useSlaTimer();
@@ -241,17 +244,25 @@ export default function ServiceDesk() {
   );
 
   // Filters - exclude subtasks from main list
-  const filteredTickets = tickets.filter((ticket) => {
-    if (ticket.parent_ticket_id) return false; // hide subtasks from main list
-    const matchesSearch =
-      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      filterCategory === "all" || ticket.category === filterCategory;
-    const matchesStatus =
-      filterStatus === "all" || ticket.status_id === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const filteredTickets = tickets
+    .filter((ticket) => {
+      if (ticket.parent_ticket_id) return false;
+      if (hideCompleted && !!ticket.completed_at) return false;
+      const matchesSearch =
+        ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        filterCategory === "all" || ticket.category === filterCategory;
+      const matchesStatus =
+        filterStatus === "all" || ticket.status_id === filterStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    // Sort: completed tickets go to the bottom
+    .sort((a, b) => {
+      const aCompleted = !!a.completed_at ? 1 : 0;
+      const bCompleted = !!b.completed_at ? 1 : 0;
+      return aCompleted - bCompleted;
+    });
 
   return (
     <AppLayout>
@@ -335,6 +346,19 @@ export default function ServiceDesk() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hide-completed"
+              checked={hideCompleted}
+              onCheckedChange={setHideCompleted}
+            />
+            <Label htmlFor="hide-completed" className="text-sm text-muted-foreground whitespace-nowrap cursor-pointer">
+              Ocultar concluídos
+            </Label>
+          </div>
+        </div>
 
         <div className="flex rounded-lg border bg-muted p-1">
           <Button
