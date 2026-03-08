@@ -308,6 +308,14 @@ export function CollaboratorProfile({ name, onBack }: Props) {
         <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
         <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
       </div>
+
+      <PrintableTermDialog 
+        open={termDialogOpen} 
+        onOpenChange={setTermDialogOpen} 
+        collaboratorName={name}
+        assets={assets}
+        type={termType}
+      />
     </div>
   );
 }
