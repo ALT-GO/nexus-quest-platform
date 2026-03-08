@@ -148,6 +148,15 @@ export default function ServiceDesk() {
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
 
+  // Quick complete - moves ticket to the first "done" status
+  const handleQuickComplete = useCallback(
+    (ticketIdOrNumber: string) => {
+      const doneStatusId = getDoneStatusId();
+      handleStatusChange(ticketIdOrNumber, doneStatusId);
+    },
+    [getDoneStatusId, handleStatusChange]
+  );
+
   // Open detail sheet
   const handleTicketClick = useCallback(
     (ticketIdOrNumber: string) => {
