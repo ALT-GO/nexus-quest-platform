@@ -111,6 +111,7 @@ export async function createTicket(data: {
   email: string;
   department?: string;
   priority?: "low" | "medium" | "high";
+  parent_ticket_id?: string;
 }): Promise<{ success: boolean; ticketNumber?: string; ticketId?: string }> {
   const slaHours = slaByCategory[data.category] ?? 24;
   const now = new Date();
@@ -130,6 +131,7 @@ export async function createTicket(data: {
       sla_hours: slaHours,
       sla_deadline: slaDeadline.toISOString(),
       ticket_number: "",
+      parent_ticket_id: data.parent_ticket_id || null,
     } as any)
     .select("id, ticket_number")
     .single();
