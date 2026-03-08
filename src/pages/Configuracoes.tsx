@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
+import { UserManagementTab } from "@/components/settings/UserManagementTab";
+import { useAuth } from "@/hooks/use-auth";
 import {
   User,
   Bell,
@@ -15,6 +17,7 @@ import {
   Database,
   Zap,
   Save,
+  Users,
 } from "lucide-react";
 
 export default function Configuracoes() {
