@@ -191,6 +191,36 @@ export function TicketDetailSheet({
       toast.success(`${assetIds.length} ativo(s) liberado(s) para o estoque`);
     }
 
+    // Handle Contratação: deliver subtask-linked assets
+    if (ticket.category === "Contratação" && subtasks.length > 0) {
+      let deliveredCount = 0;
+      for (const sub of subtasks) {
+        if (sub.asset_id) {
+          await supabase
+            .from("inventory")
+            .update({
+              status: "Em uso",
+              collaborator: ticket.requester,
+              delivered_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq("id", sub.asset_id as any);
+          deliveredCount++;
+        }
+        // Also complete the subtask
+        if (!isFinalStatus(sub.status_id)) {
+          await supabase
+            .from("tickets")
+            .update({ status_id: finalStatus.id, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+            .eq("id", sub.id as any);
+        }
+      }
+      if (deliveredCount > 0) {
+        await logHistory("asset_delivery", `${deliveredCount} ativo(s) entregue(s) para ${ticket.requester}`, "Admin");
+        toast.success(`${deliveredCount} ativo(s) entregue(s) para ${ticket.requester}`);
+      }
+    }
+
     onStatusChange(ticket.ticket_number, finalStatus.id);
     await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
     await logHistory("timesheet", `Cronômetro finalizado. Tempo total: ${formatDuration(totalSeconds)}`, "Admin");
