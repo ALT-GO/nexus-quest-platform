@@ -177,19 +177,16 @@ export function NewTicketDialog() {
       }
 
       if (contratacao.celular) {
-        promises.push(
-          supabase
-            .from("inventory")
-            .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
-            .eq("status", "Disponível")
-            .ilike("asset_type", "%celular%")
-            .then(({ data }) => setStockCelulares((data as InventoryAsset[]) || []))
-        );
+        const { data } = await supabase
+          .from("inventory")
+          .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+          .eq("status", "Disponível")
+          .ilike("asset_type", "%celular%");
+        setStockCelulares((data as InventoryAsset[]) || []);
       } else {
         setStockCelulares([]);
       }
 
-      await Promise.all(promises);
       setCheckingStock(false);
     };
 
