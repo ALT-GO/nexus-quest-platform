@@ -155,6 +155,11 @@ export function useAvailableStock() {
 
   useEffect(() => {
     fetchStock();
+    const channel = supabase
+      .channel("stock-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchStock())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [fetchStock]);
 
   const assignToCollaborator = useCallback(async (assetId: string, collaboratorName: string) => {
