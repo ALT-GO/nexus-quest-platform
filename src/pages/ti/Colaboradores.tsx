@@ -10,6 +10,7 @@ import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProf
 import { StockTab } from "@/components/collaborators/StockTab";
 import { Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaboratorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -55,10 +56,13 @@ export default function Colaboradores() {
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Colaboradores"
-        description="Gestão de inventário e ativos por colaborador"
-      />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader
+          title="Colaboradores"
+          description="Gestão de inventário e ativos por colaborador"
+        />
+        <NewCollaboratorDialog onCreated={refetch} />
+      </div>
 
       <Tabs defaultValue="colaboradores" className="space-y-6">
         <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
@@ -115,17 +119,25 @@ export default function Colaboradores() {
                           </div>
                         </div>
                         <ConfirmDeleteDialog
-                          description={`Tem certeza que deseja excluir permanentemente o colaborador "${c.name}" e todos os seus ${c.assetCount} ativo(s)?`}
+                          description={`Tem certeza que deseja excluir o colaborador "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
                           onConfirm={async () => {
-                            const { error } = await supabase
-                              .from("inventory")
-                              .delete()
-                              .eq("collaborator", c.name);
-                            if (error) {
-                              toast.error("Erro ao excluir colaborador");
-                            } else {
-                              toast.success(`Colaborador "${c.name}" e seus ativos excluídos`);
+                            try {
+                              // Return notebooks, celulares, linhas to stock
+                              await supabase.from("inventory").update({
+                                collaborator: "",
+                                status: "Disponível",
+                                updated_at: new Date().toISOString(),
+                              }).eq("collaborator", c.name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
+
+                              // Delete licenças
+                              await supabase.from("inventory").delete()
+                                .eq("collaborator", c.name)
+                                .in("category", ["licencas", "licenses"]);
+
+                              toast.success(`Colaborador "${c.name}" removido. Ativos devolvidos ao estoque.`);
                               refetch();
+                            } catch {
+                              toast.error("Erro ao excluir colaborador");
                             }
                           }}
                         />
