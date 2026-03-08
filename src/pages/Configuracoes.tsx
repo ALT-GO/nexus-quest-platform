@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import {
   User,
   Bell,
   Shield,
-  Palette,
   Database,
-  Mail,
+  Zap,
   Save,
 } from "lucide-react";
 
@@ -26,7 +26,7 @@ export default function Configuracoes() {
       />
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap gap-1">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -34,6 +34,10 @@ export default function Configuracoes() {
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notificações
+          </TabsTrigger>
+          <TabsTrigger value="automations" className="gap-2">
+            <Zap className="h-4 w-4" />
+            Automações
           </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
@@ -56,17 +60,11 @@ export default function Configuracoes() {
                   A
                 </div>
                 <div>
-                  <Button variant="outline" size="sm">
-                    Alterar Foto
-                  </Button>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    JPG, PNG ou GIF. Máximo 2MB.
-                  </p>
+                  <Button variant="outline" size="sm">Alterar Foto</Button>
+                  <p className="mt-1 text-xs text-muted-foreground">JPG, PNG ou GIF. Máximo 2MB.</p>
                 </div>
               </div>
-
               <Separator />
-
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo</Label>
@@ -85,12 +83,8 @@ export default function Configuracoes() {
                   <Input id="department" defaultValue="TI / Marketing" />
                 </div>
               </div>
-
               <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salvar Alterações
-                </Button>
+                <Button><Save className="mr-2 h-4 w-4" />Salvar Alterações</Button>
               </div>
             </CardContent>
           </Card>
@@ -103,73 +97,34 @@ export default function Configuracoes() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Notificações por E-mail</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receber atualizações de chamados por e-mail
-                    </p>
+                {[
+                  { title: "Notificações por E-mail", desc: "Receber atualizações de chamados por e-mail", on: true },
+                  { title: "Novos Chamados", desc: "Ser notificado quando um novo chamado for aberto", on: true },
+                  { title: "Aprovações Pendentes", desc: "Alertas sobre tarefas aguardando aprovação", on: true },
+                  { title: "SLA Próximo do Vencimento", desc: "Alertas quando um SLA estiver prestes a vencer", on: true },
+                  { title: "Relatórios Semanais", desc: "Receber resumo semanal de métricas", on: false },
+                ].map((item, i) => (
+                  <div key={i}>
+                    {i > 0 && <Separator className="mb-4" />}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                      </div>
+                      <Switch defaultChecked={item.on} />
+                    </div>
                   </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Novos Chamados</p>
-                    <p className="text-sm text-muted-foreground">
-                      Ser notificado quando um novo chamado for aberto
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Aprovações Pendentes</p>
-                    <p className="text-sm text-muted-foreground">
-                      Alertas sobre tarefas aguardando aprovação
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">SLA Próximo do Vencimento</p>
-                    <p className="text-sm text-muted-foreground">
-                      Alertas quando um SLA estiver prestes a vencer
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Relatórios Semanais</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receber resumo semanal de métricas
-                    </p>
-                  </div>
-                  <Switch />
-                </div>
+                ))}
               </div>
-
               <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salvar Preferências
-                </Button>
+                <Button><Save className="mr-2 h-4 w-4" />Salvar Preferências</Button>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="automations">
+          <AutomationsTab />
         </TabsContent>
 
         <TabsContent value="security">
@@ -194,24 +149,16 @@ export default function Configuracoes() {
                   </div>
                 </div>
               </div>
-
               <Separator />
-
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Autenticação em Dois Fatores</p>
-                  <p className="text-sm text-muted-foreground">
-                    Adicione uma camada extra de segurança
-                  </p>
+                  <p className="text-sm text-muted-foreground">Adicione uma camada extra de segurança</p>
                 </div>
                 <Button variant="outline">Configurar 2FA</Button>
               </div>
-
               <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
-                  Atualizar Senha
-                </Button>
+                <Button><Save className="mr-2 h-4 w-4" />Atualizar Senha</Button>
               </div>
             </CardContent>
           </Card>
@@ -227,48 +174,30 @@ export default function Configuracoes() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Modo de Manutenção</p>
-                    <p className="text-sm text-muted-foreground">
-                      Desativa o acesso público ao sistema
-                    </p>
+                    <p className="text-sm text-muted-foreground">Desativa o acesso público ao sistema</p>
                   </div>
                   <Switch />
                 </div>
-
                 <Separator />
-
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Backup Automático</p>
-                    <p className="text-sm text-muted-foreground">
-                      Realizar backup diário dos dados
-                    </p>
+                    <p className="text-sm text-muted-foreground">Realizar backup diário dos dados</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
-
                 <Separator />
-
                 <div className="space-y-2">
                   <Label>URL do Formulário Público</Label>
                   <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value="https://seudominio.com/chamado-publico"
-                      className="flex-1"
-                    />
+                    <Input readOnly value="https://seudominio.com/chamado-publico" className="flex-1" />
                     <Button variant="outline">Copiar</Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Link para solicitantes externos abrirem chamados
-                  </p>
+                  <p className="text-xs text-muted-foreground">Link para solicitantes externos abrirem chamados</p>
                 </div>
               </div>
-
               <div className="flex justify-end">
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salvar Configurações
-                </Button>
+                <Button><Save className="mr-2 h-4 w-4" />Salvar Configurações</Button>
               </div>
             </CardContent>
           </Card>
