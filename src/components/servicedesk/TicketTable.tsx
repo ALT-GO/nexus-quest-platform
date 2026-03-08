@@ -183,9 +183,14 @@ export function TicketTable({
                     </TableCell>
                     <TableCell>{ticket.assignee || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {onDelete && (
+                          <ConfirmDeleteDialog onConfirm={() => onDelete(ticket.id)} />
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                   {isExpanded && hasAssetInfo && (
