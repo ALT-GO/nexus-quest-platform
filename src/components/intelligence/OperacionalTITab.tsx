@@ -145,8 +145,16 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
       .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const assetsDisponivel = mockAssets.filter((a) => a.status === "Disponível").length;
-  const assetsManutencao = mockAssets.filter((a) => a.status === "Manutenção").length;
+  const assetsDisponivel = inventoryItems.filter((a) => a.status === "Disponível").length;
+  const assetsManutencao = inventoryItems.filter((a) => a.status === "Manutenção").length;
+  const inventoryByCategory = useMemo(() => {
+    const cats = ["notebooks", "celulares", "linhas", "licencas"];
+    return cats.map((cat) => ({
+      category: cat,
+      available: inventoryItems.filter((i) => i.category === cat && i.status === "Disponível").length,
+      total: inventoryItems.filter((i) => i.category === cat).length,
+    }));
+  }, [inventoryItems]);
   const categories = useMemo(() => [...new Set(allTickets.map((t) => t.category))], [allTickets]);
 
   if (loading) {
