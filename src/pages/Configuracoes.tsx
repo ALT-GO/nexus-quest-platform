@@ -19,6 +19,7 @@ import {
   Zap,
   Save,
   Users,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function Configuracoes() {
