@@ -3,6 +3,7 @@ import { StatusCustom } from "@/hooks/use-custom-status";
 import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinkerCompact } from "@/components/servicedesk/AssetLinker";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SlaInfo } from "@/hooks/use-sla";
 import { User, GripVertical, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
