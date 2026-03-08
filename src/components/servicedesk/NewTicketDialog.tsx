@@ -242,11 +242,23 @@ export function NewTicketDialog() {
         `Notebook: ${contratacao.notebook ? "Sim" : "Não"}`,
         `E-mail: ${contratacao.email ? "Sim" : "Não"}`,
       ];
+
+      const suggestions: string[] = [];
+      if (contratacao.notebook && stockNotebooks.length > 0) {
+        const nb = stockNotebooks[0];
+        suggestions.push(`Notebook sugerido: ${nb.asset_code} - ${nb.model || "Sem modelo"} (ST: ${nb.service_tag || "N/A"})`);
+      }
+      if (contratacao.celular && stockCelulares.length > 0) {
+        const cel = stockCelulares[0];
+        suggestions.push(`Celular sugerido: ${cel.asset_code} - ${cel.model || "Sem modelo"} (ST: ${cel.service_tag || "N/A"})`);
+      }
+
       return [
         `Colaborador: ${contratacao.colaborador}`,
         `Centro de Custo: ${contratacao.centroCusto}`,
         ...items,
-        description && `Observações: ${description}`,
+        suggestions.length > 0 ? `\nSugestões de estoque:\n${suggestions.map(s => `  - ${s}`).join("\n")}` : "",
+        description && `\nObservações: ${description}`,
       ].filter(Boolean).join("\n");
     }
     return description;
