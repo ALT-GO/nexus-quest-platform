@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
+import { supabase } from "@/integrations/supabase/client";
 import { useTicketComments } from "@/hooks/use-ticket-comments";
 import { useTicketHistory } from "@/hooks/use-ticket-history";
 import { StatusCustom } from "@/hooks/use-custom-status";
