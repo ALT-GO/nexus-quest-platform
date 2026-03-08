@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
+import { CsvImportTab } from "@/components/settings/CsvImportTab";
 import { useAuth } from "@/hooks/use-auth";
 import {
   User,
