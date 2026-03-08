@@ -139,7 +139,7 @@ export function KanbanBoard({
                 const priority = priorityConfig[ticket.priority];
                 const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
                 const availableAssets = getAvailableForCategory(ticket.category);
-
+                const subtaskAssets = (ticket.subtaskAssetIds || []).map(getAsset).filter(Boolean) as HardwareAsset[];
                 return (
                   <div
                     key={ticket.id}
