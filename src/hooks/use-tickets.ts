@@ -16,6 +16,7 @@ export interface Ticket {
   department: string | null;
   assignee: string | null;
   asset_id: string | null;
+  parent_ticket_id: string | null;
   sla_hours: number;
   sla_deadline: string;
   sla_expired: boolean;
