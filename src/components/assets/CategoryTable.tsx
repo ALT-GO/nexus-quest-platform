@@ -127,7 +127,7 @@ export function CategoryTable({ category, label }: Props) {
 
     const { data: inserted, error } = await supabase
       .from("inventory")
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
 
