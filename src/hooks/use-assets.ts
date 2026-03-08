@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type HardwareStatus = "Disponível" | "Em uso" | "Reservado" | "Manutenção";
 
@@ -8,13 +9,14 @@ export interface HardwareAsset {
   costCenter: string;
   sector: string;
   model: string;
-  type: "Notebook" | "Tablet" | "Monitor" | "Teclado" | "Mouse" | "Celular" | "Outros";
+  type: string;
   serviceTag: string;
   notes: string;
   status: HardwareStatus;
   reservedByTicketId?: string;
   deliveredAt?: string;
-  history: AssetHistoryEntry[];
+  category: string;
+  assetCode: string;
 }
 
 export interface AssetHistoryEntry {
@@ -26,191 +28,110 @@ export interface AssetHistoryEntry {
   details: string;
 }
 
-// Map ticket categories to asset types
-const categoryToAssetType: Record<string, HardwareAsset["type"]> = {
-  "Solicitação de novo Computador/Notebook": "Notebook",
-  "Solicitação de novo Celular": "Celular",
-  "Solicitação de Tablet": "Tablet",
+// Map ticket categories to inventory categories
+const categoryToInventoryCategory: Record<string, string> = {
+  "Solicitação de novo Computador/Notebook": "notebooks",
+  "Solicitação de novo Celular": "celulares",
+  "Solicitação de Tablet": "notebooks",
 };
 
-export const assetRequestCategories = Object.keys(categoryToAssetType);
+export const assetRequestCategories = Object.keys(categoryToInventoryCategory);
 
-export function getAssetTypeForCategory(category: string): HardwareAsset["type"] | null {
-  return categoryToAssetType[category] ?? null;
+export function getAssetTypeForCategory(category: string): string | null {
+  const map: Record<string, string> = {
+    "Solicitação de novo Computador/Notebook": "Notebook",
+    "Solicitação de novo Celular": "Celular",
+    "Solicitação de Tablet": "Tablet",
+  };
+  return map[category] ?? null;
 }
 
-const initialAssets: HardwareAsset[] = [
-  {
-    id: "HW-001",
-    collaborator: "Maria Silva",
-    costCenter: "Comercial",
-    sector: "Vendas",
-    model: "Dell Latitude 5520",
-    type: "Notebook",
-    serviceTag: "ABC123XYZ",
-    notes: "Entregue em 01/2024",
-    status: "Em uso",
-    history: [
-      {
-        id: "h1",
-        action: "Atribuído",
-        timestamp: "2024-01-15T10:00:00Z",
-        user: "Admin",
-        details: "Atribuído para Maria Silva",
-      },
-    ],
-  },
-  {
-    id: "HW-002",
-    collaborator: "João Pedro",
-    costCenter: "TI",
-    sector: "Desenvolvimento",
-    model: "Dell Latitude 7420",
-    type: "Notebook",
-    serviceTag: "DEF456UVW",
-    notes: "",
-    status: "Em uso",
-    history: [],
-  },
-  {
-    id: "HW-003",
-    collaborator: "Ana Costa",
-    costCenter: "Marketing",
-    sector: "Criação",
-    model: "iPad Pro 12.9",
-    type: "Tablet",
-    serviceTag: "GHI789RST",
-    notes: "Para apresentações",
-    status: "Em uso",
-    history: [],
-  },
-  {
-    id: "HW-004",
-    collaborator: "",
-    costCenter: "",
-    sector: "",
-    model: "Dell Latitude 5540",
-    type: "Notebook",
-    serviceTag: "JKL012MNO",
-    notes: "Novo, sem uso",
-    status: "Disponível",
-    history: [],
-  },
-  {
-    id: "HW-005",
-    collaborator: "",
-    costCenter: "",
-    sector: "",
-    model: "iPad Air 5ª Geração",
-    type: "Tablet",
-    serviceTag: "PQR345STU",
-    notes: "Estoque",
-    status: "Disponível",
-    history: [],
-  },
-  {
-    id: "HW-006",
-    collaborator: "",
-    costCenter: "",
-    sector: "",
-    model: "Samsung Galaxy S24",
-    type: "Celular",
-    serviceTag: "VWX678YZA",
-    notes: "Estoque",
-    status: "Disponível",
-    history: [],
-  },
-  {
-    id: "HW-007",
-    collaborator: "",
-    costCenter: "",
-    sector: "",
-    model: "Dell Latitude 3540",
-    type: "Notebook",
-    serviceTag: "BCD901EFG",
-    notes: "Recondicionado",
-    status: "Disponível",
-    history: [],
-  },
-];
+function mapDbToAsset(row: any): HardwareAsset {
+  return {
+    id: row.id,
+    collaborator: row.collaborator || "",
+    costCenter: row.cost_center || "",
+    sector: row.sector || "",
+    model: row.model || "",
+    type: row.asset_type || "",
+    serviceTag: row.service_tag || "",
+    notes: row.notes || "",
+    status: row.status as HardwareStatus,
+    reservedByTicketId: row.reserved_by_ticket_id || undefined,
+    deliveredAt: row.delivered_at || undefined,
+    category: row.category,
+    assetCode: row.asset_code,
+  };
+}
 
 export function useAssets() {
-  const [assets, setAssets] = useState<HardwareAsset[]>(initialAssets);
+  const [assets, setAssets] = useState<HardwareAsset[]>([]);
 
-  const getAvailableByType = useCallback(
-    (type: HardwareAsset["type"]) =>
-      assets.filter((a) => a.type === type && a.status === "Disponível"),
+  const fetchAssets = useCallback(async () => {
+    const { data } = await supabase
+      .from("inventory")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) {
+      setAssets(data.map(mapDbToAsset));
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAssets();
+    const channel = supabase
+      .channel("assets-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
+        fetchAssets();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAssets]);
+
+  const getAvailableByCategory = useCallback(
+    (inventoryCategory: string) =>
+      assets.filter((a) => a.category === inventoryCategory && a.status === "Disponível"),
     [assets]
   );
 
   const getAvailableForCategory = useCallback(
-    (category: string) => {
-      const assetType = getAssetTypeForCategory(category);
-      if (!assetType) return [];
-      return getAvailableByType(assetType);
+    (ticketCategory: string) => {
+      const invCat = categoryToInventoryCategory[ticketCategory];
+      if (!invCat) return [];
+      return getAvailableByCategory(invCat);
     },
-    [getAvailableByType]
+    [getAvailableByCategory]
   );
 
   const reserveAsset = useCallback(
-    (assetId: string, ticketId: string) => {
+    async (assetId: string, ticketId: string) => {
+      await supabase.from("inventory").update({
+        status: "Reservado",
+        reserved_by_ticket_id: ticketId,
+        updated_at: new Date().toISOString(),
+      }).eq("id", assetId);
       setAssets((prev) =>
-        prev.map((a) => {
-          if (a.id !== assetId) return a;
-
-          const entry: AssetHistoryEntry = {
-            id: `hist_${Date.now()}`,
-            action: "Reservado",
-            ticketId,
-            timestamp: new Date().toISOString(),
-            user: "Admin",
-            details: `Reservado pelo chamado ${ticketId}`,
-          };
-
-          console.log(
-            `[ATIVO RESERVADO] ${entry.timestamp} | Ativo ${assetId} (${a.model}) reservado pelo chamado ${ticketId}`
-          );
-
-          return {
-            ...a,
-            status: "Reservado" as HardwareStatus,
-            reservedByTicketId: ticketId,
-            history: [entry, ...a.history],
-          };
-        })
+        prev.map((a) =>
+          a.id === assetId ? { ...a, status: "Reservado" as HardwareStatus, reservedByTicketId: ticketId } : a
+        )
       );
     },
     []
   );
 
   const deliverAsset = useCallback(
-    (assetId: string, ticketId: string, collaborator: string) => {
+    async (assetId: string, ticketId: string, collaborator: string) => {
       const now = new Date().toISOString();
+      await supabase.from("inventory").update({
+        status: "Em uso",
+        collaborator,
+        delivered_at: now,
+        updated_at: now,
+      }).eq("id", assetId);
       setAssets((prev) =>
-        prev.map((a) => {
-          if (a.id !== assetId) return a;
-
-          const entry: AssetHistoryEntry = {
-            id: `hist_${Date.now()}`,
-            action: "Entregue",
-            ticketId,
-            timestamp: now,
-            user: "Admin",
-            details: `Entregue para ${collaborator} via chamado ${ticketId}`,
-          };
-
-          console.log(
-            `[ATIVO ENTREGUE] ${now} | Ativo ${assetId} (${a.model}) → Status: Em uso | Colaborador: ${collaborator} | Chamado: ${ticketId}`
-          );
-
-          return {
-            ...a,
-            status: "Em uso" as HardwareStatus,
-            collaborator,
-            deliveredAt: now,
-            history: [entry, ...a.history],
-          };
-        })
+        prev.map((a) =>
+          a.id === assetId ? { ...a, status: "Em uso" as HardwareStatus, collaborator, deliveredAt: now } : a
+        )
       );
     },
     []
@@ -224,10 +145,10 @@ export function useAssets() {
   return {
     assets,
     setAssets,
-    getAvailableByType,
     getAvailableForCategory,
     reserveAsset,
     deliverAsset,
     getAsset,
+    refetch: fetchAssets,
   };
 }
