@@ -1,0 +1,164 @@
+import { useState, useMemo } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon, BarChart3, Monitor, Megaphone, Wallet } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+import { GeralTab } from "@/components/intelligence/GeralTab";
+import { OperacionalTITab } from "@/components/intelligence/OperacionalTITab";
+import { MarketingTab } from "@/components/intelligence/MarketingTab";
+import { FinanceiroTab } from "@/components/intelligence/FinanceiroTab";
+
+type PeriodFilter = "7d" | "30d" | "90d" | "custom";
+
+const periodOptions: { value: PeriodFilter; label: string }[] = [
+  { value: "7d", label: "Últimos 7 dias" },
+  { value: "30d", label: "Últimos 30 dias" },
+  { value: "90d", label: "Últimos 90 dias" },
+  { value: "custom", label: "Personalizado" },
+];
+
+const financeMonths = [
+  { value: "2024-11", label: "Novembro 2024" },
+  { value: "2024-10", label: "Outubro 2024" },
+  { value: "2024-09", label: "Setembro 2024" },
+];
+
+export default function CentralInteligencia() {
+  const [activeTab, setActiveTab] = useState("geral");
+  const [period, setPeriod] = useState<PeriodFilter>("30d");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>();
+  const [customTo, setCustomTo] = useState<Date | undefined>();
+  const [financeMonth, setFinanceMonth] = useState("2024-11");
+
+  const dateRange = useMemo(() => {
+    const end = new Date();
+    let start: Date;
+    if (period === "7d") {
+      start = new Date(end.getTime() - 7 * 86400000);
+    } else if (period === "90d") {
+      start = new Date(end.getTime() - 90 * 86400000);
+    } else if (period === "custom" && customFrom) {
+      start = customFrom;
+      if (customTo) {
+        const customEnd = new Date(customTo);
+        customEnd.setHours(23, 59, 59, 999);
+        return { start, end: customEnd };
+      }
+    } else {
+      start = new Date(end.getTime() - 30 * 86400000);
+    }
+    return { start: start!, end };
+  }, [period, customFrom, customTo]);
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader
+          title="Central de Inteligência"
+          description="Visão consolidada de métricas e KPIs"
+        />
+
+        {/* Global date filter */}
+        <div className="flex flex-wrap items-end gap-2 shrink-0">
+          {activeTab === "financeiro" ? (
+            <Select value={financeMonth} onValueChange={setFinanceMonth}>
+              <SelectTrigger className="w-[180px]">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {financeMonths.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <>
+              <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+                <SelectTrigger className="w-[170px]">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodOptions.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {period === "custom" && (
+                <>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[130px] justify-start text-left font-normal", !customFrom && "text-muted-foreground")}>
+                        {customFrom ? format(customFrom, "dd/MM/yyyy") : "Início"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[130px] justify-start text-left font-normal", !customTo && "text-muted-foreground")}>
+                        {customTo ? format(customTo, "dd/MM/yyyy") : "Fim"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customTo} onSelect={setCustomTo} className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+        <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="geral" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <BarChart3 className="h-4 w-4" />
+            Geral
+          </TabsTrigger>
+          <TabsTrigger value="ti" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Monitor className="h-4 w-4" />
+            Operacional T.I
+          </TabsTrigger>
+          <TabsTrigger value="marketing" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Megaphone className="h-4 w-4" />
+            Marketing
+          </TabsTrigger>
+          <TabsTrigger value="financeiro" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Wallet className="h-4 w-4" />
+            Financeiro
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral" className="mt-6">
+          <GeralTab />
+        </TabsContent>
+        <TabsContent value="ti" className="mt-6">
+          <OperacionalTITab dateRange={dateRange} />
+        </TabsContent>
+        <TabsContent value="marketing" className="mt-6">
+          <MarketingTab />
+        </TabsContent>
+        <TabsContent value="financeiro" className="mt-6">
+          <FinanceiroTab selectedMonth={financeMonth} />
+        </TabsContent>
+      </Tabs>
+    </AppLayout>
+  );
+}
