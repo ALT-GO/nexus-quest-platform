@@ -270,8 +270,13 @@ export function TicketDetailSheet({
       }
     }
 
-    onStatusChange(ticket.ticket_number, finalStatus.id);
-    await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
+    // Mark as completed without changing status/column
+    await supabase
+      .from("tickets")
+      .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+      .eq("id", ticket.id as any);
+
+    await logHistory("completed", "Chamado marcado como concluído", "Admin");
     await logHistory("timesheet", `Cronômetro finalizado. Tempo total: ${formatDuration(totalSeconds)}`, "Admin");
     toast.success(`Chamado ${ticket.ticket_number} concluído!`);
     onOpenChange(false);
