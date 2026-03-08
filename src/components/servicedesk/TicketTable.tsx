@@ -30,6 +30,7 @@ interface TicketForTable {
   slaVencido: boolean;
   assignee?: string;
   ativoId?: string;
+  subtaskAssetIds?: string[];
 }
 
 interface TicketTableProps {
