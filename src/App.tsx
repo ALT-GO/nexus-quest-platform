@@ -7,11 +7,9 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Dashboard from "./pages/Dashboard";
 import Projetos from "./pages/marketing/Projetos";
 import Solicitacoes from "./pages/marketing/Solicitacoes";
-import KPIs from "./pages/marketing/KPIs";
 import ServiceDesk from "./pages/ti/ServiceDesk";
 import GestaoAtivos from "./pages/ti/GestaoAtivos";
-import DashboardFinanceiro from "./pages/ti/DashboardFinanceiro";
-import DashboardTI from "./pages/ti/DashboardTI";
+import CentralInteligencia from "./pages/CentralInteligencia";
 import ChamadoPublico from "./pages/ti/ChamadoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/auth/Login";
@@ -80,12 +78,10 @@ function AppRoutes() {
       <Route path="/marketing/solicitacoes" element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />
       <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
       <Route path="/ti/ativos" element={<ProtectedRoute><GestaoAtivos /></ProtectedRoute>} />
-      <Route path="/ti/financeiro" element={<ProtectedRoute><DashboardFinanceiro /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
-      {/* Admin-only routes (Central de Inteligência) */}
-      <Route path="/ti/dashboard" element={<AdminRoute><DashboardTI /></AdminRoute>} />
-      <Route path="/marketing/kpis" element={<AdminRoute><KPIs /></AdminRoute>} />
+      {/* Admin-only: Central de Inteligência */}
+      <Route path="/central-inteligencia" element={<AdminRoute><CentralInteligencia /></AdminRoute>} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
