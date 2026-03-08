@@ -4,18 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { CustomFieldDef } from "@/hooks/use-inventory";
@@ -26,13 +18,74 @@ interface NewAssetDialogProps {
   onSave: (data: Record<string, string>, fieldValues: Record<string, string>) => Promise<void>;
 }
 
-const statusOptions = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
+interface FieldConfig {
+  key: string;
+  label: string;
+  type?: "text" | "select" | "textarea";
+  options?: string[];
+  required?: boolean;
+  placeholder?: string;
+}
 
-const typeOptions: Record<string, string[]> = {
-  hardware: ["Notebook", "Tablet", "Monitor", "Teclado", "Mouse", "Celular", "Outros"],
-  telecom: ["Corporativo", "Pessoal"],
-  licenses: ["Microsoft 365 E1", "Microsoft 365 E3", "Microsoft 365 E5", "Outros"],
-  passwords: [],
+const statusOptionsDefault = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
+const statusOptionsLicenca = ["Ativo", "Desligado"];
+const tipoNotebook = ["Administrativo", "Campo"];
+
+const fieldsByCategory: Record<string, FieldConfig[]> = {
+  notebooks: [
+    { key: "service_tag", label: "Service tag", placeholder: "Ex: ABC1234" },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca", placeholder: "Ex: Dell" },
+    { key: "model", label: "Modelo", required: true, placeholder: "Ex: Latitude 5520" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
+    { key: "service_tag_2", label: "Service tag 2" },
+    { key: "notes", label: "Notas", type: "textarea" },
+  ],
+  celulares: [
+    { key: "service_tag", label: "Service tag" },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca", placeholder: "Ex: Samsung" },
+    { key: "model", label: "Modelo", required: true, placeholder: "Ex: Galaxy S24" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "imei1", label: "Imei 1" },
+    { key: "imei2", label: "Imei 2" },
+    { key: "notes", label: "Notas", type: "textarea" },
+  ],
+  linhas: [
+    { key: "numero", label: "Número", required: true, placeholder: "Ex: (11) 99999-0000" },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "gestor", label: "Gestor" },
+    { key: "operadora", label: "Operadora", placeholder: "Ex: Vivo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "cost_center_eng", label: "Centro de custo - Eng" },
+    { key: "cost_center_man", label: "Centro de custo - Man" },
+  ],
+  licencas: [
+    { key: "status", label: "Status", type: "select", options: statusOptionsLicenca },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "email_address", label: "E-mail", placeholder: "colaborador@empresa.com" },
+    { key: "licenca", label: "Licença", required: true, placeholder: "Ex: Microsoft 365 E3" },
+    { key: "gestor", label: "Gestor" },
+    { key: "contrato", label: "Contrato" },
+    { key: "cost_center_eng", label: "Centro de custo - Eng" },
+    { key: "cost_center_man", label: "Centro de custo - Man" },
+  ],
+};
+
+const categoryLabels: Record<string, string> = {
+  notebooks: "Notebook",
+  celulares: "Celular",
+  linhas: "Linha",
+  licencas: "Licença",
 };
 
 export function NewAssetDialog({ category, fields, onSave }: NewAssetDialogProps) {
@@ -41,10 +94,13 @@ export function NewAssetDialog({ category, fields, onSave }: NewAssetDialogProps
   const [form, setForm] = useState<Record<string, string>>({});
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
-  const set = (key: string, val: string) => setForm(p => ({ ...p, [key]: val }));
+  const set = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
+
+  const catFields = fieldsByCategory[category] || [];
+  const requiredKey = catFields.find((f) => f.required)?.key || "model";
 
   const handleSave = async () => {
-    if (!form.model?.trim()) return;
+    if (!form[requiredKey]?.trim()) return;
     setSaving(true);
     await onSave(form, customValues);
     setSaving(false);
@@ -58,93 +114,74 @@ export function NewAssetDialog({ category, fields, onSave }: NewAssetDialogProps
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          Novo Ativo
+          Novo ativo
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Ativo — {category.charAt(0).toUpperCase() + category.slice(1)}</DialogTitle>
+          <DialogTitle>Novo ativo — {categoryLabels[category] || category}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label>Modelo / Nome *</Label>
-            <Input value={form.model || ""} onChange={e => set("model", e.target.value)} placeholder="Ex: Dell Latitude 5520" />
-          </div>
-          {typeOptions[category]?.length > 0 && (
-            <div className="grid gap-2">
-              <Label>Tipo</Label>
-              <Select value={form.asset_type || ""} onValueChange={v => set("asset_type", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {typeOptions[category].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
+          {catFields.map((field) => (
+            <div key={field.key} className="grid gap-2">
+              <Label>{field.label}{field.required ? " *" : ""}</Label>
+              {field.type === "select" && field.options ? (
+                <Select value={form[field.key] || ""} onValueChange={(v) => set(field.key, v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {field.options.map((o) => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : field.type === "textarea" ? (
+                <Textarea
+                  value={form[field.key] || ""}
+                  onChange={(e) => set(field.key, e.target.value)}
+                  rows={2}
+                  placeholder={field.placeholder}
+                />
+              ) : (
+                <Input
+                  value={form[field.key] || ""}
+                  onChange={(e) => set(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                />
+              )}
             </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select value={form.status || "Disponível"} onValueChange={v => set("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Service Tag</Label>
-              <Input value={form.service_tag || ""} onChange={e => set("service_tag", e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Colaborador</Label>
-              <Input value={form.collaborator || ""} onChange={e => set("collaborator", e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Centro de Custo</Label>
-              <Input value={form.cost_center || ""} onChange={e => set("cost_center", e.target.value)} />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Setor</Label>
-            <Input value={form.sector || ""} onChange={e => set("sector", e.target.value)} />
-          </div>
+          ))}
 
-          {/* Dynamic custom fields */}
+          {/* Custom fields */}
           {fields.length > 0 && (
             <div className="space-y-3 border-t pt-4">
-              <Label className="text-sm font-semibold text-muted-foreground">Campos Personalizados</Label>
-              {fields.map(field => (
+              <Label className="text-sm font-semibold text-muted-foreground">Campos personalizados</Label>
+              {fields.map((field) => (
                 <div key={field.id} className="grid gap-1">
                   <Label className="text-sm">{field.name}</Label>
                   {field.field_type === "seleção" && field.options ? (
-                    <Select value={customValues[field.id] || ""} onValueChange={v => setCustomValues(p => ({ ...p, [field.id]: v }))}>
+                    <Select value={customValues[field.id] || ""} onValueChange={(v) => setCustomValues((p) => ({ ...p, [field.id]: v }))}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
-                        {field.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        {field.options.map((o) => (
+                          <SelectItem key={o} value={o}>{o}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   ) : (
                     <Input
                       type={field.field_type === "número" ? "number" : field.field_type === "data" ? "date" : "text"}
                       value={customValues[field.id] || ""}
-                      onChange={e => setCustomValues(p => ({ ...p, [field.id]: e.target.value }))}
+                      onChange={(e) => setCustomValues((p) => ({ ...p, [field.id]: e.target.value }))}
                     />
                   )}
                 </div>
               ))}
             </div>
           )}
-
-          <div className="grid gap-2">
-            <Label>Observações</Label>
-            <Textarea value={form.notes || ""} onChange={e => set("notes", e.target.value)} rows={2} />
-          </div>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !form.model?.trim()}>
+          <Button onClick={handleSave} disabled={saving || !form[requiredKey]?.trim()}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>

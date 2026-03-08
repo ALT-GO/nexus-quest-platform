@@ -117,51 +117,90 @@ export type Database = {
         Row: {
           asset_code: string
           asset_type: string | null
+          cargo: string | null
           category: string
           collaborator: string | null
+          contrato: string | null
           cost_center: string | null
+          cost_center_eng: string | null
+          cost_center_man: string | null
           created_at: string
           delivered_at: string | null
+          email_address: string | null
+          gestor: string | null
           id: string
+          imei1: string | null
+          imei2: string | null
+          licenca: string | null
+          marca: string | null
           model: string | null
           notes: string | null
+          numero: string | null
+          operadora: string | null
           reserved_by_ticket_id: string | null
           sector: string | null
           service_tag: string | null
+          service_tag_2: string | null
           status: string
           updated_at: string
         }
         Insert: {
           asset_code: string
           asset_type?: string | null
+          cargo?: string | null
           category?: string
           collaborator?: string | null
+          contrato?: string | null
           cost_center?: string | null
+          cost_center_eng?: string | null
+          cost_center_man?: string | null
           created_at?: string
           delivered_at?: string | null
+          email_address?: string | null
+          gestor?: string | null
           id?: string
+          imei1?: string | null
+          imei2?: string | null
+          licenca?: string | null
+          marca?: string | null
           model?: string | null
           notes?: string | null
+          numero?: string | null
+          operadora?: string | null
           reserved_by_ticket_id?: string | null
           sector?: string | null
           service_tag?: string | null
+          service_tag_2?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           asset_code?: string
           asset_type?: string | null
+          cargo?: string | null
           category?: string
           collaborator?: string | null
+          contrato?: string | null
           cost_center?: string | null
+          cost_center_eng?: string | null
+          cost_center_man?: string | null
           created_at?: string
           delivered_at?: string | null
+          email_address?: string | null
+          gestor?: string | null
           id?: string
+          imei1?: string | null
+          imei2?: string | null
+          licenca?: string | null
+          marca?: string | null
           model?: string | null
           notes?: string | null
+          numero?: string | null
+          operadora?: string | null
           reserved_by_ticket_id?: string | null
           sector?: string | null
           service_tag?: string | null
+          service_tag_2?: string | null
           status?: string
           updated_at?: string
         }
