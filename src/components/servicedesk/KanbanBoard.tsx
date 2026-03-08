@@ -33,6 +33,7 @@ interface KanbanBoardProps {
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
   onTicketClick?: (ticketId: string) => void;
+  onDelete?: (ticketId: string) => void;
 }
 
 const priorityConfig: Record<string, { label: string; dot: string }> = {
