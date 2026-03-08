@@ -3,6 +3,7 @@ import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
 import { SlaInfo } from "@/hooks/use-sla";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -29,6 +30,7 @@ interface TicketForTable {
   slaVencido: boolean;
   assignee?: string;
   ativoId?: string;
+  subtaskAssetIds?: string[];
 }
 
 interface TicketTableProps {
@@ -90,7 +92,8 @@ export function TicketTable({
               const availableAssets = getAvailableForCategory(ticket.category);
               const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
               const hasAssetInfo = availableAssets.length > 0 || !!ticket.ativoId;
-
+              const subtaskAssets = (ticket.subtaskAssetIds || []).map(getAsset).filter(Boolean) as HardwareAsset[];
+              const hasSubtaskAssets = subtaskAssets.length > 0;
               return (
                 <>
                   <TableRow
@@ -132,7 +135,17 @@ export function TicketTable({
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{ticket.id}</TableCell>
-                    <TableCell className={cn("font-medium", isCompleted && "line-through")}>{ticket.title}</TableCell>
+                    <TableCell className={cn("font-medium", isCompleted && "line-through")}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{ticket.title}</span>
+                        {subtaskAssets.map((asset) => (
+                          <Badge key={asset.id} variant="outline" className="bg-success/10 text-success border-success/20 text-xs gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {asset.model}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <span className="rounded-full bg-secondary px-2 py-1 text-xs">{ticket.category}</span>
                     </TableCell>

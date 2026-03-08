@@ -17,6 +17,7 @@ interface KanbanTicket {
   assignee?: string;
   createdAt: string;
   ativoId?: string;
+  subtaskAssetIds?: string[];
 }
 
 interface KanbanBoardProps {
@@ -138,7 +139,7 @@ export function KanbanBoard({
                 const priority = priorityConfig[ticket.priority];
                 const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
                 const availableAssets = getAvailableForCategory(ticket.category);
-
+                const subtaskAssets = (ticket.subtaskAssetIds || []).map(getAsset).filter(Boolean) as HardwareAsset[];
                 return (
                   <div
                     key={ticket.id}
@@ -199,6 +200,19 @@ export function KanbanBoard({
                           availableCount={availableAssets.length}
                         />
                       </div>
+
+                      {/* Subtask asset badges (Contratação) */}
+                      {subtaskAssets.length > 0 && (
+                        <div className="mb-2 space-y-1">
+                          {subtaskAssets.map((asset) => (
+                            <div key={asset.id} className="flex items-center gap-1.5 rounded bg-success/10 px-2 py-1 text-xs">
+                              <CheckCircle2 className="h-3 w-3 text-success" />
+                              <span className="font-medium text-success truncate">{asset.model}</span>
+                              <span className="text-muted-foreground">({asset.type})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="mb-2.5">
                         <SlaIndicator sla={sla} />

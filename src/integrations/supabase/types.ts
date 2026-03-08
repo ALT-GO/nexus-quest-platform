@@ -305,6 +305,7 @@ export type Database = {
           description: string
           email: string
           id: string
+          parent_ticket_id: string | null
           priority: string
           requester: string
           sla_deadline: string
@@ -325,6 +326,7 @@ export type Database = {
           description: string
           email: string
           id?: string
+          parent_ticket_id?: string | null
           priority?: string
           requester: string
           sla_deadline: string
@@ -345,6 +347,7 @@ export type Database = {
           description?: string
           email?: string
           id?: string
+          parent_ticket_id?: string | null
           priority?: string
           requester?: string
           sla_deadline?: string
@@ -355,7 +358,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tickets_parent_ticket_id_fkey"
+            columns: ["parent_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       timesheet_logs: {
         Row: {

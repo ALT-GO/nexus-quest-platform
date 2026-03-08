@@ -45,6 +45,8 @@ const categories = [
   "Solicitação de novo Celular",
   "Solicitação de Tablet",
   "Gerais/Outros",
+  "Contratação",
+  "Desligamento",
 ];
 
 type ViewMode = "list" | "kanban";
@@ -180,8 +182,15 @@ export default function ServiceDesk() {
     (t) => t.sla_expired && !isFinalStatus(t.status_id)
   ).length;
 
-  // Filters
+  // Get subtasks for a parent ticket
+  const getSubtasks = useCallback(
+    (parentId: string) => tickets.filter((t) => t.parent_ticket_id === parentId),
+    [tickets]
+  );
+
+  // Filters - exclude subtasks from main list
   const filteredTickets = tickets.filter((ticket) => {
+    if (ticket.parent_ticket_id) return false; // hide subtasks from main list
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase());
@@ -313,6 +322,7 @@ export default function ServiceDesk() {
             assignee: t.assignee ?? undefined,
             createdAt: t.created_at,
             ativoId: t.asset_id ?? undefined,
+            subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
@@ -338,6 +348,7 @@ export default function ServiceDesk() {
             slaVencido: t.sla_expired,
             assignee: t.assignee ?? undefined,
             ativoId: t.asset_id ?? undefined,
+            subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
@@ -352,6 +363,7 @@ export default function ServiceDesk() {
 
       <TicketDetailSheet
         ticket={selectedTicket}
+        subtasks={selectedTicket ? getSubtasks(selectedTicket.id) : []}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         statuses={activeStatuses}

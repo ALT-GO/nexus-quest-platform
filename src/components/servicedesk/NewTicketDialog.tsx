@@ -351,6 +351,33 @@ export function NewTicketDialog() {
     if (result.success) {
       if (result.ticketId) {
         await runTicketCreatedAutomations(result.ticketId, category);
+
+        // Auto-create subtasks for Contratação
+        if (isContratacao) {
+          const subtasks: { category: string; title: string }[] = [];
+          if (contratacao.notebook) subtasks.push({ category: "Solicitação de novo Computador/Notebook", title: "Solicitação de Notebook" });
+          if (contratacao.celular) subtasks.push({ category: "Solicitação de novo Celular", title: "Solicitação de Celular" });
+
+          for (const sub of subtasks) {
+            const subResult = await createTicket({
+              title: sub.title,
+              category: sub.category,
+              description: `Subtarefa automática da contratação de ${finalRequester}.\nChamado pai: ${result.ticketNumber}`,
+              requester: finalRequester,
+              email: emailField || "interno@empresa.com",
+              department: department || undefined,
+              priority,
+              parent_ticket_id: result.ticketId,
+            });
+            if (subResult.success) {
+              console.log(`[SUBTAREFA] ${subResult.ticketNumber} criada para ${sub.category}`);
+            }
+          }
+
+          if (subtasks.length > 0) {
+            toast.info(`${subtasks.length} subtarefa(s) criada(s) para vinculação de ativos`);
+          }
+        }
       }
       toast.success(`Chamado ${result.ticketNumber} criado com sucesso!`);
       resetForm();
