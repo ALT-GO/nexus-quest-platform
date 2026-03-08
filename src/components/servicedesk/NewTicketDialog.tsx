@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, Send, Search, Package } from "lucide-react";
+import { Plus, Loader2, Send, Search, Package, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createTicket, runTicketCreatedAutomations } from "@/hooks/use-tickets";
