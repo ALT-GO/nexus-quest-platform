@@ -80,12 +80,10 @@ function AppRoutes() {
       <Route path="/marketing/solicitacoes" element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />
       <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
       <Route path="/ti/ativos" element={<ProtectedRoute><GestaoAtivos /></ProtectedRoute>} />
-      <Route path="/ti/financeiro" element={<ProtectedRoute><DashboardFinanceiro /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
-      {/* Admin-only routes (Central de Inteligência) */}
-      <Route path="/ti/dashboard" element={<AdminRoute><DashboardTI /></AdminRoute>} />
-      <Route path="/marketing/kpis" element={<AdminRoute><KPIs /></AdminRoute>} />
+      {/* Admin-only: Central de Inteligência */}
+      <Route path="/central-inteligencia" element={<AdminRoute><CentralInteligencia /></AdminRoute>} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

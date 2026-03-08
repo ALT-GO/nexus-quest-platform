@@ -57,18 +57,14 @@ export function AppSidebar() {
       children: [
         { title: "Service Desk", href: "/ti/service-desk" },
         { title: "Gestão de Ativos", href: "/ti/ativos" },
-        { title: "Dashboard Financeiro", href: "/ti/financeiro" },
       ],
     } as NavItem] : []),
-    {
+    ...(isAdmin ? [{
       title: "Central de Inteligência",
+      href: "/central-inteligencia",
       icon: Brain,
       adminOnly: true,
-      children: [
-        { title: "Dashboard TI", href: "/ti/dashboard", adminOnly: true },
-        { title: "KPIs & Métricas", href: "/marketing/kpis", adminOnly: true },
-      ],
-    },
+    } as NavItem] : []),
   ];
 
   const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI", "Central de Inteligência"]);
