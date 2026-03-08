@@ -147,6 +147,9 @@ export function TicketTable({
                       </div>
                     </TableCell>
                     <TableCell>
+                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">{ticket.category}</span>
+                    </TableCell>
+                    <TableCell>
                       <div>
                         <p className="text-sm">{ticket.requester}</p>
                         <p className="text-xs text-muted-foreground">{ticket.email}</p>
