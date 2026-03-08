@@ -244,17 +244,25 @@ export default function ServiceDesk() {
   );
 
   // Filters - exclude subtasks from main list
-  const filteredTickets = tickets.filter((ticket) => {
-    if (ticket.parent_ticket_id) return false; // hide subtasks from main list
-    const matchesSearch =
-      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      filterCategory === "all" || ticket.category === filterCategory;
-    const matchesStatus =
-      filterStatus === "all" || ticket.status_id === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const filteredTickets = tickets
+    .filter((ticket) => {
+      if (ticket.parent_ticket_id) return false;
+      if (hideCompleted && !!ticket.completed_at) return false;
+      const matchesSearch =
+        ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        filterCategory === "all" || ticket.category === filterCategory;
+      const matchesStatus =
+        filterStatus === "all" || ticket.status_id === filterStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    // Sort: completed tickets go to the bottom
+    .sort((a, b) => {
+      const aCompleted = !!a.completed_at ? 1 : 0;
+      const bCompleted = !!b.completed_at ? 1 : 0;
+      return aCompleted - bCompleted;
+    });
 
   return (
     <AppLayout>
