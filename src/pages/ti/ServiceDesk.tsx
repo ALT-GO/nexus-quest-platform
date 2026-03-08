@@ -62,6 +62,7 @@ export default function ServiceDesk() {
     statuses,
     activeStatuses,
     isFinalStatus,
+    getDoneStatusId,
     addStatus,
     updateStatus,
     reorderStatuses,
@@ -145,6 +146,15 @@ export default function ServiceDesk() {
       }
     },
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
+  );
+
+  // Quick complete - moves ticket to the first "done" status
+  const handleQuickComplete = useCallback(
+    (ticketIdOrNumber: string) => {
+      const doneStatusId = getDoneStatusId();
+      handleStatusChange(ticketIdOrNumber, doneStatusId);
+    },
+    [getDoneStatusId, handleStatusChange]
   );
 
   // Open detail sheet
@@ -306,6 +316,7 @@ export default function ServiceDesk() {
           getSlaInfo={getSlaInfo}
           isFinalStatus={isFinalStatus}
           onStatusChange={handleStatusChange}
+          onQuickComplete={handleQuickComplete}
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
@@ -329,6 +340,7 @@ export default function ServiceDesk() {
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
           isFinalStatus={isFinalStatus}
+          onQuickComplete={handleQuickComplete}
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}

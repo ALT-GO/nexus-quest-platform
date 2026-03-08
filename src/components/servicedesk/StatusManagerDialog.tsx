@@ -1,9 +1,16 @@
 import { useState } from "react";
-import { StatusCustom } from "@/hooks/use-custom-status";
+import { StatusCustom, StatusType } from "@/hooks/use-custom-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +22,8 @@ import { Settings, Plus, GripVertical } from "lucide-react";
 
 interface StatusManagerDialogProps {
   statuses: StatusCustom[];
-  onAdd: (nome: string, cor: string) => Promise<any>;
-  onUpdate: (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo">>) => Promise<void>;
+  onAdd: (nome: string, cor: string, statusType?: StatusType) => Promise<any>;
+  onUpdate: (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo" | "statusType">>) => Promise<void>;
   onReorder: (orderedIds: string[]) => Promise<void>;
 }
 
@@ -31,6 +38,18 @@ const presetColors = [
   "173 80% 40%",
 ];
 
+const statusTypeLabels: Record<StatusType, string> = {
+  todo: "Não Iniciado",
+  in_progress: "Em Andamento",
+  done: "Concluído",
+};
+
+const statusTypeColors: Record<StatusType, string> = {
+  todo: "bg-muted text-muted-foreground",
+  in_progress: "bg-blue-500/15 text-blue-600",
+  done: "bg-emerald-500/15 text-emerald-600",
+};
+
 export function StatusManagerDialog({
   statuses,
   onAdd,
@@ -40,15 +59,17 @@ export function StatusManagerDialog({
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(presetColors[0]);
+  const [newType, setNewType] = useState<StatusType>("todo");
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const sortedStatuses = [...statuses].sort((a, b) => a.ordem - b.ordem);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await onAdd(newName.trim(), newColor);
+    await onAdd(newName.trim(), newColor, newType);
     setNewName("");
     setNewColor(presetColors[0]);
+    setNewType("todo");
   };
 
   const handleDragStart = (id: string) => setDraggedId(id);
@@ -76,15 +97,15 @@ export function StatusManagerDialog({
           Gerenciar Status
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Gerenciar Status</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status Existentes</Label>
-            <p className="text-xs text-muted-foreground">Arraste para reordenar. As alterações são salvas automaticamente.</p>
-            <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Arraste para reordenar. Todas as alterações são salvas automaticamente no banco de dados.</p>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {sortedStatuses.map((status) => (
                 <div
                   key={status.id}
@@ -92,22 +113,40 @@ export function StatusManagerDialog({
                   onDragStart={() => handleDragStart(status.id)}
                   onDragOver={(e) => handleDragOver(e, status.id)}
                   onDragEnd={handleDragEnd}
-                  className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg border p-3 transition-colors ${
                     draggedId === status.id ? "opacity-50" : ""
                   } ${!status.ativo ? "opacity-60" : ""}`}
                 >
-                  <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
+                  <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground flex-shrink-0" />
+
                   <div
                     className="h-5 w-5 rounded-full border flex-shrink-0"
                     style={{ backgroundColor: `hsl(${status.cor})` }}
                   />
+
                   <Input
                     value={status.nome}
                     onChange={(e) => onUpdate(status.id, { nome: e.target.value })}
-                    onBlur={(e) => onUpdate(status.id, { nome: e.target.value })}
-                    className="h-8 flex-1"
+                    className="h-8 flex-1 min-w-0"
                   />
-                  <div className="flex gap-1">
+
+                  {/* Status Type selector */}
+                  <Select
+                    value={status.statusType}
+                    onValueChange={(v: StatusType) => onUpdate(status.id, { statusType: v })}
+                  >
+                    <SelectTrigger className="h-8 w-[130px] text-xs flex-shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">Não Iniciado</SelectItem>
+                      <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="done">Concluído</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Color picker */}
+                  <div className="flex gap-1 flex-shrink-0">
                     {presetColors.slice(0, 4).map((color) => (
                       <button
                         key={color}
@@ -119,6 +158,7 @@ export function StatusManagerDialog({
                       />
                     ))}
                   </div>
+
                   <Switch
                     checked={status.ativo}
                     onCheckedChange={(checked) => onUpdate(status.id, { ativo: checked })}
@@ -127,9 +167,11 @@ export function StatusManagerDialog({
               ))}
             </div>
           </div>
+
+          {/* Add new status */}
           <div className="space-y-3 rounded-lg border border-dashed p-4">
             <Label className="text-sm font-medium">Adicionar Novo Status</Label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -137,6 +179,18 @@ export function StatusManagerDialog({
                 className="flex-1"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
+              <Select value={newType} onValueChange={(v: StatusType) => setNewType(v)}>
+                <SelectTrigger className="w-[130px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">Não Iniciado</SelectItem>
+                  <SelectItem value="in_progress">Em Andamento</SelectItem>
+                  <SelectItem value="done">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="flex gap-1">
                 {presetColors.map((color) => (
                   <button
@@ -149,8 +203,9 @@ export function StatusManagerDialog({
                   />
                 ))}
               </div>
-              <Button size="sm" onClick={handleAdd} disabled={!newName.trim()}>
-                <Plus className="h-4 w-4" />
+              <Button size="sm" onClick={handleAdd} disabled={!newName.trim()} className="ml-auto">
+                <Plus className="mr-1 h-4 w-4" />
+                Adicionar
               </Button>
             </div>
           </div>
