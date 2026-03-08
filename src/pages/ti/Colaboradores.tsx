@@ -103,33 +103,33 @@ export default function Colaboradores() {
                     className="cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
                     onClick={() => setSelectedName(c.name)}
                   >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary flex-shrink-0">
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium leading-tight truncate">{c.name}</p>
-                              <p className="text-xs text-muted-foreground">{c.assetCount} ativo(s)</p>
-                            </div>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary flex-shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
                           </div>
-                          <ConfirmDeleteDialog
-                            description={`Tem certeza que deseja excluir permanentemente o colaborador "${c.name}" e todos os seus ${c.assetCount} ativo(s)?`}
-                            onConfirm={async () => {
-                              const { error } = await supabase
-                                .from("inventory")
-                                .delete()
-                                .eq("collaborator", c.name);
-                              if (error) {
-                                toast.error("Erro ao excluir colaborador");
-                              } else {
-                                toast.success(`Colaborador "${c.name}" e seus ativos excluídos`);
-                                refetch();
-                              }
-                            }}
-                          />
+                          <div className="min-w-0">
+                            <p className="font-medium leading-tight truncate">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.assetCount} ativo(s)</p>
+                          </div>
                         </div>
+                        <ConfirmDeleteDialog
+                          description={`Tem certeza que deseja excluir permanentemente o colaborador "${c.name}" e todos os seus ${c.assetCount} ativo(s)?`}
+                          onConfirm={async () => {
+                            const { error } = await supabase
+                              .from("inventory")
+                              .delete()
+                              .eq("collaborator", c.name);
+                            if (error) {
+                              toast.error("Erro ao excluir colaborador");
+                            } else {
+                              toast.success(`Colaborador "${c.name}" e seus ativos excluídos`);
+                              refetch();
+                            }
+                          }}
+                        />
+                      </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {c.categories.map((cat) => {
                           const Icon = catIcons[cat];
