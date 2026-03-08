@@ -341,8 +341,15 @@ export function CsvImportTab() {
         category: category as string,
         ...record,
       };
-      // Remove any empty strings for optional fields to avoid overwriting with blanks on update
       delete payload.dbColumn;
+
+      // Auto-set status based on collaborator presence
+      const collabValue = (payload.collaborator || "").trim();
+      if (collabValue) {
+        if (!payload.status) payload.status = "Em uso";
+      } else {
+        if (!payload.status) payload.status = "Disponível";
+      }
 
       // Check for duplicate
       const uniqueVal = record[uniqueKeyCol];
@@ -359,7 +366,6 @@ export function CsvImportTab() {
         } else {
           // Insert new
           payload.asset_code = "TEMP"; // trigger generates real code
-          if (!payload.status) payload.status = "Disponível";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) { res.errors++; } else { res.inserted++; }
           // Track unique key to avoid dupes within same file

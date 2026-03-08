@@ -72,6 +72,11 @@ export function useCollaborators() {
 
   useEffect(() => {
     fetchCollaborators();
+    const channel = supabase
+      .channel("collaborators-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchCollaborators())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [fetchCollaborators]);
 
   return { collaborators, loading, refetch: fetchCollaborators };
@@ -150,6 +155,11 @@ export function useAvailableStock() {
 
   useEffect(() => {
     fetchStock();
+    const channel = supabase
+      .channel("stock-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchStock())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [fetchStock]);
 
   const assignToCollaborator = useCallback(async (assetId: string, collaboratorName: string) => {
