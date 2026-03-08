@@ -19,6 +19,7 @@ import {
   Ticket,
   FileText,
   ClipboardList,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -57,6 +58,7 @@ export function AppSidebar() {
       children: [
         { title: "Service Desk", href: "/ti/service-desk" },
         { title: "Gestão de Ativos", href: "/ti/ativos" },
+        { title: "Colaboradores", href: "/ti/colaboradores" },
       ],
     } as NavItem] : []),
     ...(isAdmin ? [{
