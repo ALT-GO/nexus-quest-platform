@@ -164,7 +164,6 @@ export function NewTicketDialog() {
 
     const checkStock = async () => {
       setCheckingStock(true);
-      const promises: Promise<any>[] = [];
 
       if (contratacao.notebook) {
         promises.push(
