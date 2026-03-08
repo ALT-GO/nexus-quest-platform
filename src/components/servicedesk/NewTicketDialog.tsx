@@ -111,6 +111,13 @@ export function NewTicketDialog() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [searchingAssets, setSearchingAssets] = useState(false);
 
+  // Collaborator autocomplete state
+  const [allCollaborators, setAllCollaborators] = useState<string[]>([]);
+  const [filteredCollaborators, setFilteredCollaborators] = useState<string[]>([]);
+  const [showCollaboratorDropdown, setShowCollaboratorDropdown] = useState(false);
+  const [collaboratorSelected, setCollaboratorSelected] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   // Stock check state for Contratação
   const [stockNotebooks, setStockNotebooks] = useState<InventoryAsset[]>([]);
   const [stockCelulares, setStockCelulares] = useState<InventoryAsset[]>([]);
@@ -119,40 +126,82 @@ export function NewTicketDialog() {
   const isDesligamento = category === "Desligamento";
   const isContratacao = category === "Contratação";
 
-  // Real-time search for collaborator assets
-  const searchCollaboratorAssets = useCallback(async (name: string) => {
-    if (name.trim().length < 2) {
+  // Fetch unique collaborators from inventory when entering Desligamento
+  useEffect(() => {
+    if (!isDesligamento) return;
+    const fetchCollaborators = async () => {
+      const { data } = await supabase
+        .from("inventory")
+        .select("collaborator")
+        .neq("collaborator", "")
+        .not("collaborator", "is", null);
+      if (data) {
+        const unique = [...new Set(data.map((d: any) => d.collaborator as string).filter(Boolean))].sort();
+        setAllCollaborators(unique);
+      }
+    };
+    fetchCollaborators();
+  }, [isDesligamento]);
+
+  // Filter collaborators based on typed input
+  useEffect(() => {
+    const q = desligamento.colaborador.trim().toLowerCase();
+    if (!q || collaboratorSelected) {
+      setFilteredCollaborators([]);
+      return;
+    }
+    setFilteredCollaborators(allCollaborators.filter((c) => c.toLowerCase().includes(q)));
+  }, [desligamento.colaborador, allCollaborators, collaboratorSelected]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowCollaboratorDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Fetch exact assets when a collaborator is selected
+  const fetchAssetsForCollaborator = useCallback(async (name: string) => {
+    if (!name.trim()) {
       setFoundAssets([]);
       setSelectedAssetIds(new Set());
       return;
     }
-
     setSearchingAssets(true);
     const { data, error } = await supabase
       .from("inventory")
       .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
-      .ilike("collaborator", `%${name.trim()}%`);
+      .eq("collaborator", name.trim());
 
     if (error) {
       console.error("Error searching assets:", error);
     } else {
       setFoundAssets((data as InventoryAsset[]) || []);
-      // Auto-select all found assets
       setSelectedAssetIds(new Set((data || []).map((a: any) => a.id)));
     }
     setSearchingAssets(false);
   }, []);
 
-  // Debounced search when collaborador changes (only for Desligamento)
-  useEffect(() => {
-    if (!isDesligamento) return;
+  const handleSelectCollaborator = (name: string) => {
+    setDesligamento((prev) => ({ ...prev, colaborador: name }));
+    setCollaboratorSelected(true);
+    setShowCollaboratorDropdown(false);
+    fetchAssetsForCollaborator(name);
+  };
 
-    const timer = setTimeout(() => {
-      searchCollaboratorAssets(desligamento.colaborador);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [desligamento.colaborador, isDesligamento, searchCollaboratorAssets]);
+  const handleCollaboratorInputChange = (value: string) => {
+    setDesligamento((prev) => ({ ...prev, colaborador: value }));
+    setCollaboratorSelected(false);
+    setShowCollaboratorDropdown(true);
+    if (value.trim().length < 2) {
+      setFoundAssets([]);
+      setSelectedAssetIds(new Set());
+    }
+  };
 
   // Stock check for Contratação when celular/notebook toggles change
   useEffect(() => {
