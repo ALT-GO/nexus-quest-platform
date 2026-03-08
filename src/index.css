@@ -153,3 +153,31 @@
     border-radius: 3px;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  [role="dialog"], [role="dialog"] * {
+    visibility: visible;
+  }
+
+  [role="dialog"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    border: none;
+    box-shadow: none;
+    background: white !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

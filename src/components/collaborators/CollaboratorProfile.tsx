@@ -6,13 +6,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
-import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, Plus, FileUp } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { generateResponsibilityPDF } from "@/lib/pdf-responsibility";
+import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
 import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface Props {
   name: string;
@@ -242,14 +243,17 @@ function AssetSection({
 
 export function CollaboratorProfile({ name, onBack }: Props) {
   const { assets, loading, refetch, updateAsset, deleteAsset } = useCollaboratorDetail(name);
+  const [termDialogOpen, setTermDialogOpen] = useState(false);
+  const [termType, setTermType] = useState<"responsabilidade" | "devolucao">("responsabilidade");
 
   const notebooks = assets.filter((a) => a.category === "notebooks" || a.category === "hardware");
   const celulares = assets.filter((a) => a.category === "celulares");
   const linhas = assets.filter((a) => a.category === "linhas" || a.category === "telecom");
   const licencas = assets.filter((a) => a.category === "licencas" || a.category === "licenses");
 
-  const handleGeneratePDF = () => {
-    generateResponsibilityPDF(name, assets, []);
+  const openTermDialog = (type: "responsabilidade" | "devolucao") => {
+    setTermType(type);
+    setTermDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -277,10 +281,16 @@ export function CollaboratorProfile({ name, onBack }: Props) {
             <p className="text-sm text-muted-foreground">{assets.length} ativo(s) vinculado(s)</p>
           </div>
         </div>
-        <Button onClick={handleGeneratePDF} className="gap-2">
-          <FileDown className="h-4 w-4" />
-          Gerar termo de responsabilidade
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => openTermDialog("devolucao")} className="gap-2">
+            <FileUp className="h-4 w-4" />
+            Termo de Devolução
+          </Button>
+          <Button onClick={() => openTermDialog("responsabilidade")} className="gap-2">
+            <FileDown className="h-4 w-4" />
+            Termo de Responsabilidade
+          </Button>
+        </div>
       </div>
 
       {assets.length === 0 ? (
@@ -298,6 +308,14 @@ export function CollaboratorProfile({ name, onBack }: Props) {
         <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
         <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
       </div>
+
+      <PrintableTermDialog 
+        open={termDialogOpen} 
+        onOpenChange={setTermDialogOpen} 
+        collaboratorName={name}
+        assets={assets}
+        type={termType}
+      />
     </div>
   );
 }
