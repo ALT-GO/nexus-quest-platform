@@ -435,17 +435,33 @@ export function NewTicketDialog() {
             <div className="space-y-4 rounded-lg border p-4">
               <p className="text-sm font-semibold text-muted-foreground">Dados do Desligamento</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
+                <div className="space-y-1 relative" ref={dropdownRef}>
                   <Label>Nome do Colaborador <span className="text-destructive">*</span></Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={desligamento.colaborador}
-                      onChange={(e) => setDesligamento({ ...desligamento, colaborador: e.target.value })}
+                      onChange={(e) => handleCollaboratorInputChange(e.target.value)}
+                      onFocus={() => { if (!collaboratorSelected && desligamento.colaborador.trim()) setShowCollaboratorDropdown(true); }}
                       placeholder="Buscar colaborador..."
                       className="pl-9"
+                      autoComplete="off"
                     />
                   </div>
+                  {showCollaboratorDropdown && filteredCollaborators.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                      {filteredCollaborators.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                          onClick={() => handleSelectCollaborator(name)}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label>Gestor</Label>
