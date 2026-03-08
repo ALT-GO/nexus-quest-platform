@@ -8,7 +8,6 @@ import Dashboard from "./pages/Dashboard";
 import Projetos from "./pages/marketing/Projetos";
 import Solicitacoes from "./pages/marketing/Solicitacoes";
 import ServiceDesk from "./pages/ti/ServiceDesk";
-import GestaoAtivos from "./pages/ti/GestaoAtivos";
 import Colaboradores from "./pages/ti/Colaboradores";
 import CentralInteligencia from "./pages/CentralInteligencia";
 import ChamadoPublico from "./pages/ti/ChamadoPublico";
