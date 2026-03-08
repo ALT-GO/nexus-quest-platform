@@ -53,6 +53,12 @@ export default function Configuracoes() {
             <Database className="h-4 w-4" />
             Sistema
           </TabsTrigger>
+          <TabsTrigger value="import" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Importação
+          </TabsTrigger>
+            Sistema
+          </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
