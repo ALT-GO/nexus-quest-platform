@@ -1,24 +1,60 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import type { CollaboratorAsset, CollaboratorCustomField } from "@/hooks/use-collaborators";
+import type { CollaboratorAsset } from "@/hooks/use-collaborators";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const categoryLabels: Record<string, string> = {
+  notebooks: "Notebooks",
+  celulares: "Celulares",
+  linhas: "Linhas",
+  licencas: "Licenças",
   hardware: "Hardware",
   telecom: "Telecom",
   licenses: "Licenças",
 };
 
+const columnsByCategory: Record<string, { key: string; label: string }[]> = {
+  notebooks: [
+    { key: "asset_code", label: "Id" },
+    { key: "service_tag", label: "Service tag" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "contrato", label: "Contrato" },
+  ],
+  celulares: [
+    { key: "asset_code", label: "Id" },
+    { key: "service_tag", label: "Service tag" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "imei1", label: "Imei 1" },
+    { key: "imei2", label: "Imei 2" },
+  ],
+  linhas: [
+    { key: "asset_code", label: "Id" },
+    { key: "numero", label: "Número" },
+    { key: "operadora", label: "Operadora" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "contrato", label: "Contrato" },
+  ],
+  licencas: [
+    { key: "asset_code", label: "Id" },
+    { key: "licenca", label: "Licença" },
+    { key: "email_address", label: "E-mail" },
+    { key: "status", label: "Status" },
+    { key: "contrato", label: "Contrato" },
+  ],
+};
+
 export function generateResponsibilityPDF(
   collaboratorName: string,
   assets: CollaboratorAsset[],
-  customFields: CollaboratorCustomField[]
+  _customFields?: any[]
 ) {
   const doc = new jsPDF();
   const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
-  // Header
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text("Termo de Responsabilidade", 105, 20, { align: "center" });
@@ -34,40 +70,26 @@ export function generateResponsibilityPDF(
 
   let y = 58;
 
-  // Group by category
   const categories = [...new Set(assets.map((a) => a.category))];
 
   for (const cat of categories) {
     const catAssets = assets.filter((a) => a.category === cat);
     const label = categoryLabels[cat] || cat;
+    const cols = columnsByCategory[cat] || [
+      { key: "asset_code", label: "Id" },
+      { key: "model", label: "Modelo" },
+      { key: "status", label: "Status" },
+    ];
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(label, 14, y);
     y += 4;
 
-    const head = [["Código", "Modelo", "Status"]];
-    if (cat === "hardware") {
-      head[0].push("Tipo", "Service Tag");
-    }
-
-    // Add custom field columns
-    const assetIds = new Set(catAssets.map((a) => a.id));
-    const relevantFields = customFields.filter((cf) => assetIds.has(cf.asset_id));
-    const fieldNames = [...new Set(relevantFields.map((f) => f.field_name))];
-    head[0].push(...fieldNames);
-
-    const body = catAssets.map((a) => {
-      const row = [a.asset_code, a.model || "—", a.status];
-      if (cat === "hardware") {
-        row.push(a.asset_type || "—", a.service_tag || "—");
-      }
-      for (const fn of fieldNames) {
-        const val = relevantFields.find((cf) => cf.asset_id === a.id && cf.field_name === fn);
-        row.push(val?.value || "—");
-      }
-      return row;
-    });
+    const head = [cols.map((c) => c.label)];
+    const body = catAssets.map((a) =>
+      cols.map((c) => (a as any)[c.key] || "—")
+    );
 
     autoTable(doc, {
       startY: y,
@@ -82,7 +104,6 @@ export function generateResponsibilityPDF(
     y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // Signature area
   if (y > 240) {
     doc.addPage();
     y = 30;
