@@ -366,7 +366,6 @@ export function CsvImportTab() {
         } else {
           // Insert new
           payload.asset_code = "TEMP"; // trigger generates real code
-          if (!payload.status) payload.status = "Disponível";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) { res.errors++; } else { res.inserted++; }
           // Track unique key to avoid dupes within same file
