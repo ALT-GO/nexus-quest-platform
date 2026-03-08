@@ -116,6 +116,7 @@ export function TicketDetailSheet({
       commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [comments]);
+
   // Parse asset IDs from desligamento description
   const parseDesligamentoAssetIds = useCallback((): string[] => {
     if (!ticket || ticket.category !== "Desligamento") return [];
