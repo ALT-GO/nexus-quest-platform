@@ -528,6 +528,42 @@ export function TicketDetailSheet({
               />
             </div>
 
+            {/* Subtask Assets (Contratação) */}
+            {ticket.category === "Contratação" && subtasks.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Subtarefas de Ativos
+                </label>
+                <div className="space-y-2">
+                  {subtasks.map((sub) => {
+                    const subAsset = sub.asset_id ? getAsset(sub.asset_id) : undefined;
+                    const subAvailable = getAvailableForCategory(sub.category);
+                    return (
+                      <div key={sub.id} className="rounded-lg border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{sub.title}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{sub.ticket_number}</p>
+                          </div>
+                          {isFinalStatus(sub.status_id) && (
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                          )}
+                        </div>
+                        <AssetLinker
+                          ticketId={sub.ticket_number}
+                          ticketCategory={sub.category}
+                          linkedAssetId={sub.asset_id ?? undefined}
+                          linkedAsset={subAsset}
+                          availableAssets={subAvailable}
+                          onLink={(assetId) => onLinkAsset(sub.id, assetId)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <Separator />
 
             {/* Tabs: Comments / History */}
