@@ -34,12 +34,15 @@ const financeMonths = [
   { value: "2024-09", label: "Setembro 2024" },
 ];
 
+export type CostCenterFilter = "all" | "eng" | "man";
+
 export default function CentralInteligencia() {
   const [activeTab, setActiveTab] = useState("geral");
   const [period, setPeriod] = useState<PeriodFilter>("30d");
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
   const [financeMonth, setFinanceMonth] = useState("2024-11");
+  const [costCenter, setCostCenter] = useState<CostCenterFilter>("all");
 
   const dateRange = useMemo(() => {
     const end = new Date();
