@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, BarChart3, Monitor, Megaphone, Wallet } from "lucide-react";
+import { CalendarIcon, BarChart3, Monitor, Megaphone, Wallet, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +34,15 @@ const financeMonths = [
   { value: "2024-09", label: "Setembro 2024" },
 ];
 
+export type CostCenterFilter = "all" | "eng" | "man";
+
 export default function CentralInteligencia() {
   const [activeTab, setActiveTab] = useState("geral");
   const [period, setPeriod] = useState<PeriodFilter>("30d");
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
   const [financeMonth, setFinanceMonth] = useState("2024-11");
+  const [costCenter, setCostCenter] = useState<CostCenterFilter>("all");
 
   const dateRange = useMemo(() => {
     const end = new Date();
@@ -69,8 +72,20 @@ export default function CentralInteligencia() {
           description="Visão consolidada de métricas e KPIs"
         />
 
-        {/* Global date filter */}
+        {/* Global filters */}
         <div className="flex flex-wrap items-end gap-2 shrink-0">
+          {/* Cost Center Filter */}
+          <Select value={costCenter} onValueChange={(v) => setCostCenter(v as CostCenterFilter)}>
+            <SelectTrigger className="w-[200px]">
+              <Building2 className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Centros</SelectItem>
+              <SelectItem value="eng">Centro de Custo - ENG</SelectItem>
+              <SelectItem value="man">Centro de Custo - MAN</SelectItem>
+            </SelectContent>
+          </Select>
           {activeTab === "financeiro" ? (
             <Select value={financeMonth} onValueChange={setFinanceMonth}>
               <SelectTrigger className="w-[180px]">
@@ -147,10 +162,10 @@ export default function CentralInteligencia() {
         </TabsList>
 
         <TabsContent value="geral" className="mt-6">
-          <GeralTab />
+          <GeralTab costCenter={costCenter} />
         </TabsContent>
         <TabsContent value="ti" className="mt-6">
-          <OperacionalTITab dateRange={dateRange} />
+          <OperacionalTITab dateRange={dateRange} costCenter={costCenter} />
         </TabsContent>
         <TabsContent value="marketing" className="mt-6">
           <MarketingTab />

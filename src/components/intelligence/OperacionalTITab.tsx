@@ -17,8 +17,11 @@ import {
 import { useTickets } from "@/hooks/use-tickets";
 import { format } from "date-fns";
 
+import type { CostCenterFilter } from "@/pages/CentralInteligencia";
+
 interface OperacionalTITabProps {
   dateRange: { start: Date; end: Date };
+  costCenter: CostCenterFilter;
 }
 
 const chartColors = [
@@ -36,6 +39,8 @@ interface InventoryItem {
   id: string;
   category: string;
   status: string;
+  cost_center_eng: string | null;
+  cost_center_man: string | null;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -59,7 +64,7 @@ const categoryColorClasses: Record<string, string> = {
   licencas: "text-chart-4",
 };
 
-export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
+export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProps) {
   const { tickets: allTickets, loading } = useTickets();
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -68,13 +73,13 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
 
   // Fetch inventory from Supabase
   useEffect(() => {
-    supabase.from("inventory").select("id, category, status").then(({ data }) => {
+    supabase.from("inventory").select("id, category, status, cost_center_eng, cost_center_man").then(({ data }) => {
       if (data) setInventoryItems(data as InventoryItem[]);
     });
     const channel = supabase
       .channel("operacional-inventory-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
-        supabase.from("inventory").select("id, category, status").then(({ data }) => {
+        supabase.from("inventory").select("id, category, status, cost_center_eng, cost_center_man").then(({ data }) => {
           if (data) setInventoryItems(data as InventoryItem[]);
         });
       })
@@ -145,16 +150,22 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
       .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const assetsDisponivel = inventoryItems.filter((a) => a.status === "Disponível").length;
-  const assetsManutencao = inventoryItems.filter((a) => a.status === "Manutenção").length;
+  const filteredInv = useMemo(() => {
+    if (costCenter === "all") return inventoryItems;
+    if (costCenter === "eng") return inventoryItems.filter((i) => i.cost_center_eng && i.cost_center_eng.trim() !== "");
+    return inventoryItems.filter((i) => i.cost_center_man && i.cost_center_man.trim() !== "");
+  }, [inventoryItems, costCenter]);
+
+  const assetsDisponivel = filteredInv.filter((a) => a.status === "Disponível").length;
+  const assetsManutencao = filteredInv.filter((a) => a.status === "Manutenção").length;
   const inventoryByCategory = useMemo(() => {
     const cats = ["notebooks", "celulares", "linhas", "licencas"];
     return cats.map((cat) => ({
       category: cat,
-      available: inventoryItems.filter((i) => i.category === cat && i.status === "Disponível").length,
-      total: inventoryItems.filter((i) => i.category === cat).length,
+      available: filteredInv.filter((i) => i.category === cat && i.status === "Disponível").length,
+      total: filteredInv.filter((i) => i.category === cat).length,
     }));
-  }, [inventoryItems]);
+  }, [filteredInv]);
   const categories = useMemo(() => [...new Set(allTickets.map((t) => t.category))], [allTickets]);
 
   if (loading) {
