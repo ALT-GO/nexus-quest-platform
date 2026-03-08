@@ -340,6 +340,7 @@ export default function ServiceDesk() {
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
           isFinalStatus={isFinalStatus}
+          onQuickComplete={handleQuickComplete}
           getAvailableForCategory={getAvailableForCategory}
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
