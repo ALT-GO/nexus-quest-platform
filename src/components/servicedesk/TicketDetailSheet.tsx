@@ -525,6 +525,7 @@ export function TicketDetailSheet({
                 linkedAsset={linkedAsset}
                 availableAssets={availableAssets}
                 onLink={(assetId) => onLinkAsset(ticket.ticket_number, assetId)}
+                requesterName={ticket.requester}
               />
             </div>
 
