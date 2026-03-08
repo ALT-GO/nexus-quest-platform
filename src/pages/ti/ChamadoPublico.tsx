@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Monitor, Upload, CheckCircle2, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createTicket } from "@/hooks/use-tickets";
+import { createTicket, runTicketCreatedAutomations } from "@/hooks/use-tickets";
 
 const categories = [
   "Acesso e permissões",
@@ -64,6 +64,10 @@ export default function ChamadoPublico() {
     setIsSubmitting(false);
 
     if (result.success && result.ticketNumber) {
+      // Run automations for the newly created ticket
+      if (result.ticketId) {
+        await runTicketCreatedAutomations(result.ticketId, formData.category);
+      }
       setTicketId(result.ticketNumber);
       setIsSubmitted(true);
       toast.success("Chamado aberto com sucesso!");

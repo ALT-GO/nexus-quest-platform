@@ -110,7 +110,7 @@ export async function createTicket(data: {
   email: string;
   department?: string;
   priority?: "low" | "medium" | "high";
-}): Promise<{ success: boolean; ticketNumber?: string }> {
+}): Promise<{ success: boolean; ticketNumber?: string; ticketId?: string }> {
   const slaHours = slaByCategory[data.category] ?? 24;
   const now = new Date();
   const slaDeadline = new Date(now.getTime() + slaHours * 3600000);
@@ -130,7 +130,7 @@ export async function createTicket(data: {
       sla_deadline: slaDeadline.toISOString(),
       ticket_number: "",
     } as any)
-    .select("ticket_number")
+    .select("id, ticket_number")
     .single();
 
   if (error) {
@@ -138,5 +138,65 @@ export async function createTicket(data: {
     return { success: false };
   }
 
-  return { success: true, ticketNumber: (result as any)?.ticket_number };
+  return {
+    success: true,
+    ticketNumber: (result as any)?.ticket_number,
+    ticketId: (result as any)?.id,
+  };
+}
+
+// Run automations for a newly created ticket
+export async function runTicketCreatedAutomations(
+  ticketId: string,
+  category: string
+) {
+  // Fetch active automation rules for ticket_created trigger
+  const { data: rules } = await supabase
+    .from("automation_rules")
+    .select("*")
+    .eq("is_active", true)
+    .eq("trigger_type", "ticket_created");
+
+  if (!rules || rules.length === 0) return;
+
+  for (const rule of rules) {
+    const config = rule.trigger_config as Record<string, any>;
+    // Check if category matches
+    if (config.category && config.category !== "__all__" && config.category !== category) continue;
+
+    const actionConfig = rule.action_config as Record<string, any>;
+
+    switch (rule.action_type) {
+      case "move_to_status":
+        if (actionConfig.status_id) {
+          await supabase
+            .from("tickets")
+            .update({ status_id: actionConfig.status_id, updated_at: new Date().toISOString() } as any)
+            .eq("id", ticketId as any);
+          console.log(`[AUTOMAÇÃO] "${rule.name}": chamado movido para status ${actionConfig.status_id}`);
+        }
+        break;
+      case "assign_to":
+        if (actionConfig.assignee) {
+          await supabase
+            .from("tickets")
+            .update({ assignee: actionConfig.assignee, updated_at: new Date().toISOString() } as any)
+            .eq("id", ticketId as any);
+          console.log(`[AUTOMAÇÃO] "${rule.name}": chamado atribuído a ${actionConfig.assignee}`);
+        }
+        break;
+      case "change_priority":
+        if (actionConfig.priority) {
+          await supabase
+            .from("tickets")
+            .update({ priority: actionConfig.priority, updated_at: new Date().toISOString() } as any)
+            .eq("id", ticketId as any);
+          console.log(`[AUTOMAÇÃO] "${rule.name}": prioridade alterada para ${actionConfig.priority}`);
+        }
+        break;
+      case "send_notification":
+        console.log(`[AUTOMAÇÃO] "${rule.name}": notificação - ${actionConfig.message}`);
+        break;
+    }
+  }
 }
