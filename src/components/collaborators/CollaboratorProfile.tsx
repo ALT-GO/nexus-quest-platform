@@ -1,12 +1,17 @@
-import { useCollaboratorDetail, CollaboratorAsset, CollaboratorCustomField } from "@/hooks/use-collaborators";
+import { useCollaboratorDetail, CollaboratorAsset } from "@/hooks/use-collaborators";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, FileDown, Laptop, Phone, FileText, Loader2 } from "lucide-react";
+import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
+import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, Trash2, Plus } from "lucide-react";
 import { generateResponsibilityPDF } from "@/lib/pdf-responsibility";
+import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   name: string;
@@ -19,84 +24,215 @@ const statusColors: Record<string, string> = {
   "Manutenção": "bg-amber-500/15 text-amber-600",
   "Baixado": "bg-muted text-muted-foreground",
   "Reservado": "bg-muted text-muted-foreground",
+  "Ativo": "bg-emerald-500/15 text-emerald-600",
+  "Desligado": "bg-red-500/15 text-red-600",
+};
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColors[status] || "bg-secondary text-secondary-foreground")}>
+      {status}
+    </span>
+  );
+}
+
+// Column definitions per category
+interface ColDef {
+  key: string;
+  label: string;
+  type?: "text" | "select" | "date" | "status";
+  options?: string[];
+  readOnly?: boolean;
+}
+
+const statusOptionsDefault = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
+const statusOptionsLicenca = ["Ativo", "Desligado"];
+const tipoNotebook = ["Administrativo", "Campo"];
+
+const columnsByCategory: Record<string, ColDef[]> = {
+  notebooks: [
+    { key: "service_tag", label: "Service tag" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
+    { key: "notes", label: "Notas" },
+    { key: "service_tag_2", label: "Service tag 2" },
+  ],
+  celulares: [
+    { key: "service_tag", label: "Service tag" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "notes", label: "Notas" },
+    { key: "imei1", label: "Imei 1" },
+    { key: "imei2", label: "Imei 2" },
+  ],
+  linhas: [
+    { key: "numero", label: "Número" },
+    { key: "cargo", label: "Cargo" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "gestor", label: "Gestor" },
+    { key: "operadora", label: "Operadora" },
+    { key: "contrato", label: "Contrato" },
+    { key: "cost_center_eng", label: "Centro de custo - Eng" },
+    { key: "cost_center_man", label: "Centro de custo - Man" },
+  ],
+  licencas: [
+    { key: "status", label: "Status", type: "status" },
+    { key: "cargo", label: "Cargo" },
+    { key: "email_address", label: "E-mail" },
+    { key: "created_at", label: "Data criação", readOnly: true },
+    { key: "licenca", label: "Licença" },
+    { key: "gestor", label: "Gestor" },
+    { key: "contrato", label: "Contrato" },
+    { key: "cost_center_eng", label: "Centro de custo - Eng" },
+    { key: "cost_center_man", label: "Centro de custo - Man" },
+  ],
 };
 
 const categoryConfig: Record<string, { label: string; icon: React.ElementType }> = {
-  hardware: { label: "Hardware (Notebooks / Tablets / Periféricos)", icon: Laptop },
-  telecom: { label: "Telecom (Linhas / Chips)", icon: Phone },
-  licenses: { label: "Licenças de Software", icon: FileText },
+  notebooks: { label: "Notebooks", icon: Laptop },
+  celulares: { label: "Celulares", icon: Smartphone },
+  linhas: { label: "Linhas telefônicas", icon: Phone },
+  licencas: { label: "Licenças", icon: FileText },
 };
 
 function AssetSection({
   category,
   assets,
-  customFields,
+  collaboratorName,
+  onUpdate,
+  onDelete,
+  onRefetch,
 }: {
   category: string;
   assets: CollaboratorAsset[];
-  customFields: CollaboratorCustomField[];
+  collaboratorName: string;
+  onUpdate: (id: string, updates: Partial<CollaboratorAsset>) => void;
+  onDelete: (id: string) => void;
+  onRefetch: () => void;
 }) {
   const config = categoryConfig[category];
-  if (!config || assets.length === 0) return null;
+  if (!config) return null;
   const Icon = config.icon;
+  const columns = columnsByCategory[category] || [];
 
-  // Get unique custom field names for this category's assets
-  const assetIds = new Set(assets.map((a) => a.id));
-  const relevantFields = customFields.filter((cf) => assetIds.has(cf.asset_id));
-  const fieldNames = [...new Set(relevantFields.map((f) => f.field_name))];
+  const handleNewAsset = async (data: Record<string, string>) => {
+    const payload: Record<string, any> = {
+      category,
+      asset_code: "TEMP",
+      collaborator: collaboratorName,
+      status: category === "licencas" ? "Ativo" : "Em uso",
+    };
+    for (const col of columns) {
+      if (col.key === "created_at") continue;
+      if (data[col.key] !== undefined) payload[col.key] = data[col.key];
+    }
+    // Copy extra fields from data
+    Object.keys(data).forEach((k) => {
+      if (!payload[k] && data[k]) payload[k] = data[k];
+    });
+
+    const { error } = await supabase.from("inventory").insert(payload as any);
+    if (error) {
+      toast.error("Erro ao criar ativo");
+      return;
+    }
+    toast.success("Ativo criado com sucesso");
+    onRefetch();
+  };
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <Icon className="h-5 w-5 text-muted-foreground" />
           {config.label}
           <Badge variant="secondary" className="ml-2">{assets.length}</Badge>
         </CardTitle>
+        <NewAssetDialog
+          category={category}
+          fields={[]}
+          onSave={async (data) => { await handleNewAsset(data); }}
+        />
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Modelo</TableHead>
-                {category === "hardware" && <TableHead>Tipo</TableHead>}
-                {category === "hardware" && <TableHead>Service Tag</TableHead>}
-                <TableHead>Setor</TableHead>
-                {fieldNames.map((fn) => (
-                  <TableHead key={fn}>{fn}</TableHead>
+                <TableHead>Id</TableHead>
+                {columns.map((col) => (
+                  <TableHead key={col.key} className="whitespace-nowrap">{col.label}</TableHead>
                 ))}
-                <TableHead>Notas</TableHead>
+                <TableHead className="w-[60px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assets.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[item.status] || "bg-secondary text-secondary-foreground"}`}>
-                      {item.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>{item.model || "—"}</TableCell>
-                  {category === "hardware" && (
-                    <TableCell>
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{item.asset_type || "—"}</span>
-                    </TableCell>
-                  )}
-                  {category === "hardware" && (
-                    <TableCell className="font-mono text-xs">{item.service_tag || "—"}</TableCell>
-                  )}
-                  <TableCell>{item.sector || "—"}</TableCell>
-                  {fieldNames.map((fn) => {
-                    const val = relevantFields.find((cf) => cf.asset_id === item.id && cf.field_name === fn);
-                    return <TableCell key={fn}>{val?.value || "—"}</TableCell>;
+                  {columns.map((col) => {
+                    if (col.readOnly) {
+                      const val = col.key === "created_at"
+                        ? new Date(item.created_at).toLocaleDateString("pt-BR")
+                        : (item as any)[col.key] || "—";
+                      return <TableCell key={col.key} className="text-sm">{val}</TableCell>;
+                    }
+                    if (col.type === "status") {
+                      return (
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={(item as any)[col.key] || ""}
+                            onSave={(v) => onUpdate(item.id, { [col.key]: v } as any)}
+                            type="select"
+                            options={category === "licencas" ? statusOptionsLicenca : statusOptionsDefault}
+                            displayRender={(v) => <StatusBadge status={v} />}
+                          />
+                        </TableCell>
+                      );
+                    }
+                    if (col.type === "select" && col.options) {
+                      return (
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={(item as any)[col.key] || ""}
+                            onSave={(v) => onUpdate(item.id, { [col.key]: v } as any)}
+                            type="select"
+                            options={col.options}
+                          />
+                        </TableCell>
+                      );
+                    }
+                    return (
+                      <TableCell key={col.key}>
+                        <InlineCellEditor
+                          value={(item as any)[col.key] || ""}
+                          onSave={(v) => onUpdate(item.id, { [col.key]: v } as any)}
+                        />
+                      </TableCell>
+                    );
                   })}
-                  <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">{item.notes || "—"}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => onDelete(item.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
+              {assets.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 2} className="text-center py-6 text-muted-foreground">
+                    Nenhum item nesta categoria
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -106,14 +242,24 @@ function AssetSection({
 }
 
 export function CollaboratorProfile({ name, onBack }: Props) {
-  const { assets, customFields, loading } = useCollaboratorDetail(name);
+  const { assets, loading, refetch, updateAsset, deleteAsset } = useCollaboratorDetail(name);
 
+  const notebooks = assets.filter((a) => a.category === "notebooks");
+  const celulares = assets.filter((a) => a.category === "celulares");
+  const linhas = assets.filter((a) => a.category === "linhas");
+  const licencas = assets.filter((a) => a.category === "licencas");
+  // Legacy fallbacks
   const hardware = assets.filter((a) => a.category === "hardware");
   const telecom = assets.filter((a) => a.category === "telecom");
   const licenses = assets.filter((a) => a.category === "licenses");
 
   const handleGeneratePDF = () => {
-    generateResponsibilityPDF(name, assets, customFields);
+    generateResponsibilityPDF(name, assets, []);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteAsset(id);
+    toast.success("Ativo excluído");
   };
 
   if (loading) {
@@ -126,7 +272,7 @@ export function CollaboratorProfile({ name, onBack }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
@@ -138,23 +284,25 @@ export function CollaboratorProfile({ name, onBack }: Props) {
         </div>
         <Button onClick={handleGeneratePDF} className="gap-2">
           <FileDown className="h-4 w-4" />
-          Gerar Termo de Responsabilidade
+          Gerar termo de responsabilidade
         </Button>
       </div>
 
       {assets.length === 0 ? (
         <Card>
-          <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
-            Nenhum ativo vinculado a este colaborador.
+          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <p>Nenhum ativo vinculado a este colaborador.</p>
+            <p className="text-xs mt-1">Use o botão "Novo ativo" em cada seção para adicionar.</p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-6">
-          <AssetSection category="hardware" assets={hardware} customFields={customFields} />
-          <AssetSection category="telecom" assets={telecom} customFields={customFields} />
-          <AssetSection category="licenses" assets={licenses} customFields={customFields} />
-        </div>
-      )}
+      ) : null}
+
+      <div className="space-y-6">
+        <AssetSection category="notebooks" assets={[...notebooks, ...hardware]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="linhas" assets={[...linhas, ...telecom]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="licencas" assets={[...licencas, ...licenses]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+      </div>
     </div>
   );
 }
