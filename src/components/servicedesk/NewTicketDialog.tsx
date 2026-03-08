@@ -111,6 +111,11 @@ export function NewTicketDialog() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [searchingAssets, setSearchingAssets] = useState(false);
 
+  // Stock check state for Contratação
+  const [stockNotebooks, setStockNotebooks] = useState<InventoryAsset[]>([]);
+  const [stockCelulares, setStockCelulares] = useState<InventoryAsset[]>([]);
+  const [checkingStock, setCheckingStock] = useState(false);
+
   const isDesligamento = category === "Desligamento";
   const isContratacao = category === "Contratação";
 
