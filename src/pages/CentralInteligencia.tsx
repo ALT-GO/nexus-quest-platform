@@ -72,8 +72,20 @@ export default function CentralInteligencia() {
           description="Visão consolidada de métricas e KPIs"
         />
 
-        {/* Global date filter */}
+        {/* Global filters */}
         <div className="flex flex-wrap items-end gap-2 shrink-0">
+          {/* Cost Center Filter */}
+          <Select value={costCenter} onValueChange={(v) => setCostCenter(v as CostCenterFilter)}>
+            <SelectTrigger className="w-[200px]">
+              <Building2 className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Centros</SelectItem>
+              <SelectItem value="eng">Centro de Custo - ENG</SelectItem>
+              <SelectItem value="man">Centro de Custo - MAN</SelectItem>
+            </SelectContent>
+          </Select>
           {activeTab === "financeiro" ? (
             <Select value={financeMonth} onValueChange={setFinanceMonth}>
               <SelectTrigger className="w-[180px]">
