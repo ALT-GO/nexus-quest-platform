@@ -77,7 +77,7 @@ function AppRoutes() {
       <Route path="/marketing/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
       <Route path="/marketing/solicitacoes" element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />
       <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
-      <Route path="/ti/ativos" element={<ProtectedRoute><GestaoAtivos /></ProtectedRoute>} />
+      <Route path="/ti/ativos" element={<Navigate to="/ti/colaboradores" replace />} />
       <Route path="/ti/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
