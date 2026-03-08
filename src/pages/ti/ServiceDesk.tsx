@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
+import { NewTicketDialog } from "@/components/servicedesk/NewTicketDialog";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,6 +204,7 @@ export default function ServiceDesk() {
           onUpdate={updateStatus}
           onReorder={reorderStatuses}
         />
+        <NewTicketDialog />
         <Button variant="outline" asChild>
           <a href="/chamado-publico" target="_blank">
             Ver Formulário Público
