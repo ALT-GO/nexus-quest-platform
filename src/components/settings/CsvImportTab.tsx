@@ -351,15 +351,16 @@ export function CsvImportTab() {
       try {
         if (existingId) {
           // Update existing
-          delete payload.category; // don't change category
-          payload.updated_at = new Date().toISOString();
-          await supabase.from("inventory").update(payload).eq("id", existingId);
+          const updatePayload = { ...payload };
+          delete updatePayload.category;
+          updatePayload.updated_at = new Date().toISOString();
+          await supabase.from("inventory").update(updatePayload).eq("id", existingId);
           res.updated++;
         } else {
           // Insert new
           payload.asset_code = "TEMP"; // trigger generates real code
           if (!payload.status) payload.status = "Disponível";
-          const { error } = await supabase.from("inventory").insert(payload);
+          const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) { res.errors++; } else { res.inserted++; }
           // Track unique key to avoid dupes within same file
           if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
