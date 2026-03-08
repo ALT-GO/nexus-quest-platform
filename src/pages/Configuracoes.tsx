@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
+import { CsvImportTab } from "@/components/settings/CsvImportTab";
 import { useAuth } from "@/hooks/use-auth";
 import {
   User,
@@ -18,6 +19,7 @@ import {
   Zap,
   Save,
   Users,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -50,6 +52,10 @@ export default function Configuracoes() {
           <TabsTrigger value="system" className="gap-2">
             <Database className="h-4 w-4" />
             Sistema
+          </TabsTrigger>
+          <TabsTrigger value="import" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Importação
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
@@ -211,6 +217,9 @@ export default function Configuracoes() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="import">
+          <CsvImportTab />
         </TabsContent>
         {isAdmin && (
           <TabsContent value="users">
