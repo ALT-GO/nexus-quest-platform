@@ -72,6 +72,11 @@ export function useCollaborators() {
 
   useEffect(() => {
     fetchCollaborators();
+    const channel = supabase
+      .channel("collaborators-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchCollaborators())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [fetchCollaborators]);
 
   return { collaborators, loading, refetch: fetchCollaborators };
