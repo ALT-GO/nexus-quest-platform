@@ -62,6 +62,7 @@ export default function ServiceDesk() {
     statuses,
     activeStatuses,
     isFinalStatus,
+    getDoneStatusId,
     addStatus,
     updateStatus,
     reorderStatuses,
