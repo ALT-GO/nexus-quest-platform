@@ -39,6 +39,8 @@ interface InventoryItem {
   id: string;
   category: string;
   status: string;
+  cost_center_eng: string | null;
+  cost_center_man: string | null;
 }
 
 const categoryLabels: Record<string, string> = {
