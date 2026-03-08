@@ -9,8 +9,9 @@ import { Monitor, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Signup() {
+  const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -26,6 +27,20 @@ export default function Signup() {
       return;
     }
     setLoading(true);
+
+    // Validate invite
+    const { data: invite, error: inviteError } = await supabase
+      .from("user_invites")
+      .select("id, accepted_at")
+      .eq("email", email.toLowerCase().trim())
+      .maybeSingle();
+
+    if (inviteError || !invite || invite.accepted_at) {
+      setLoading(false);
+      toast.error("Acesso negado. Este e-mail não possui um convite ativo.");
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,

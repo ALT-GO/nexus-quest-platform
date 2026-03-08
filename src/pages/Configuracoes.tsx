@@ -212,6 +212,11 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="users">
+            <UserManagementTab />
+          </TabsContent>
+        )}
       </Tabs>
     </AppLayout>
   );
