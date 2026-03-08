@@ -86,7 +86,7 @@ export function TicketTable({
           </TableHeader>
           <TableBody>
             {tickets.map((ticket) => {
-              const isCompleted = isFinalStatus(ticket.statusId);
+              const isCompleted = !!ticket.completedAt;
               const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
               const statusDisplay = getStatusDisplay(ticket.statusId);
               const isExpanded = expandedTicket === ticket.id;
