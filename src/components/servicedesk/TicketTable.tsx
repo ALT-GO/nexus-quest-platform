@@ -92,7 +92,8 @@ export function TicketTable({
               const availableAssets = getAvailableForCategory(ticket.category);
               const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
               const hasAssetInfo = availableAssets.length > 0 || !!ticket.ativoId;
-
+              const subtaskAssets = (ticket.subtaskAssetIds || []).map(getAsset).filter(Boolean) as HardwareAsset[];
+              const hasSubtaskAssets = subtaskAssets.length > 0;
               return (
                 <>
                   <TableRow
