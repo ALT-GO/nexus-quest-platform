@@ -45,6 +45,7 @@ interface TicketTableProps {
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
   onTicketClick?: (ticketId: string) => void;
+  onDelete?: (ticketId: string) => void;
 }
 
 export function TicketTable({
