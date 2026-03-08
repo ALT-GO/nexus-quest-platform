@@ -360,6 +360,7 @@ export default function ServiceDesk() {
             requester: t.requester,
             assignee: t.assignee ?? undefined,
             createdAt: t.created_at,
+            completedAt: t.completed_at ?? undefined,
             ativoId: t.asset_id ?? undefined,
             subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
           }))}
