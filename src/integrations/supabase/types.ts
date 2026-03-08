@@ -131,6 +131,36 @@ export type Database = {
         }
         Relationships: []
       }
+      status_config: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          id: string
+          is_final: boolean
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id: string
+          is_final?: boolean
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          id?: string
+          is_final?: boolean
+          nome?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
       ticket_comments: {
         Row: {
           author: string

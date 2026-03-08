@@ -1,12 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface StatusCustom {
   id: string;
   nome: string;
   ordem: number;
-  cor: string; // HSL string like "221 83% 53%"
+  cor: string;
   ativo: boolean;
-  isFinal?: boolean; // marks "completed" type statuses
+  isFinal?: boolean;
 }
 
 export interface StatusChangeLog {
@@ -17,17 +19,51 @@ export interface StatusChangeLog {
   user: string;
 }
 
-const defaultStatuses: StatusCustom[] = [
-  { id: "pending", nome: "Pendente", ordem: 1, cor: "38 92% 50%", ativo: true },
-  { id: "inProgress", nome: "Em Andamento", ordem: 2, cor: "199 89% 48%", ativo: true },
-  { id: "waitingUser", nome: "Aguardando Usuário", ordem: 3, cor: "280 67% 60%", ativo: true },
-  { id: "completed", nome: "Concluído", ordem: 4, cor: "142 76% 36%", ativo: true, isFinal: true },
-  { id: "cancelled", nome: "Cancelado", ordem: 5, cor: "0 84% 60%", ativo: true, isFinal: true },
-];
-
 export function useCustomStatuses() {
-  const [statuses, setStatuses] = useState<StatusCustom[]>(defaultStatuses);
+  const [statuses, setStatuses] = useState<StatusCustom[]>([]);
   const [changelog, setChangelog] = useState<StatusChangeLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStatuses = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("status_config")
+      .select("*")
+      .order("ordem", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching statuses:", error);
+      return;
+    }
+
+    if (data) {
+      setStatuses(
+        data.map((s: any) => ({
+          id: s.id,
+          nome: s.nome,
+          ordem: s.ordem,
+          cor: s.cor,
+          ativo: s.ativo,
+          isFinal: s.is_final,
+        }))
+      );
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchStatuses();
+  }, [fetchStatuses]);
+
+  // Realtime
+  useEffect(() => {
+    const channel = supabase
+      .channel("status-config-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "status_config" }, () => {
+        fetchStatuses();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchStatuses]);
 
   const activeStatuses = statuses.filter((s) => s.ativo).sort((a, b) => a.ordem - b.ordem);
 
@@ -45,23 +81,47 @@ export function useCustomStatuses() {
   );
 
   const addStatus = useCallback(
-    (nome: string, cor: string) => {
+    async (nome: string, cor: string) => {
       const maxOrdem = Math.max(...statuses.map((s) => s.ordem), 0);
-      const newStatus: StatusCustom = {
-        id: `custom_${Date.now()}`,
+      const id = `custom_${Date.now()}`;
+      const { error } = await supabase.from("status_config").insert({
+        id,
         nome,
-        ordem: maxOrdem + 1,
         cor,
+        ordem: maxOrdem + 1,
         ativo: true,
-      };
-      setStatuses((prev) => [...prev, newStatus]);
-      return newStatus;
+        is_final: false,
+      } as any);
+
+      if (error) {
+        toast.error("Erro ao criar status");
+        return null;
+      }
+      toast.success(`Status "${nome}" criado`);
+      return { id, nome, cor, ordem: maxOrdem + 1, ativo: true };
     },
     [statuses]
   );
 
   const updateStatus = useCallback(
-    (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo" | "ordem">>) => {
+    async (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo" | "ordem">>) => {
+      const dbUpdates: any = {};
+      if (updates.nome !== undefined) dbUpdates.nome = updates.nome;
+      if (updates.cor !== undefined) dbUpdates.cor = updates.cor;
+      if (updates.ativo !== undefined) dbUpdates.ativo = updates.ativo;
+      if (updates.ordem !== undefined) dbUpdates.ordem = updates.ordem;
+
+      const { error } = await supabase
+        .from("status_config")
+        .update(dbUpdates)
+        .eq("id", id as any);
+
+      if (error) {
+        console.error("Error updating status:", error);
+        toast.error("Erro ao atualizar status");
+        return;
+      }
+      // Optimistic update
       setStatuses((prev) =>
         prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
       );
@@ -69,13 +129,20 @@ export function useCustomStatuses() {
     []
   );
 
-  const reorderStatuses = useCallback((orderedIds: string[]) => {
+  const reorderStatuses = useCallback(async (orderedIds: string[]) => {
+    // Optimistic update
     setStatuses((prev) =>
       prev.map((s) => {
         const newIndex = orderedIds.indexOf(s.id);
         return newIndex >= 0 ? { ...s, ordem: newIndex + 1 } : s;
       })
     );
+
+    // Persist all orders
+    const updates = orderedIds.map((id, index) =>
+      supabase.from("status_config").update({ ordem: index + 1 } as any).eq("id", id as any)
+    );
+    await Promise.all(updates);
   }, []);
 
   const logStatusChange = useCallback(
@@ -103,6 +170,7 @@ export function useCustomStatuses() {
     statuses,
     activeStatuses,
     changelog,
+    loading,
     getStatus,
     isFinalStatus,
     addStatus,
