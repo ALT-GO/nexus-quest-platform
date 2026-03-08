@@ -140,6 +140,7 @@ export type Database = {
           is_final: boolean
           nome: string
           ordem: number
+          status_type: string
         }
         Insert: {
           ativo?: boolean
@@ -149,6 +150,7 @@ export type Database = {
           is_final?: boolean
           nome: string
           ordem?: number
+          status_type?: string
         }
         Update: {
           ativo?: boolean
@@ -158,6 +160,7 @@ export type Database = {
           is_final?: boolean
           nome?: string
           ordem?: number
+          status_type?: string
         }
         Relationships: []
       }
