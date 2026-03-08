@@ -16,6 +16,7 @@ interface KanbanTicket {
   requester: string;
   assignee?: string;
   createdAt: string;
+  completedAt?: string;
   ativoId?: string;
   subtaskAssetIds?: string[];
 }
