@@ -10,6 +10,7 @@ import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProf
 import { StockTab } from "@/components/collaborators/StockTab";
 import { Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaboratorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
