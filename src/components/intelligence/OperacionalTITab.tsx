@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, AlertTriangle, Monitor, Wrench, Users, BarChart3, Ticket, Loader2,
+  Laptop, Smartphone, Phone, KeyRound,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -30,23 +32,55 @@ const tooltipStyle = {
   borderRadius: "8px",
 };
 
-const mockAssets = [
-  { id: "HW-001", status: "Em uso", type: "Notebook", costCenter: "Comercial" },
-  { id: "HW-002", status: "Em uso", type: "Notebook", costCenter: "TI" },
-  { id: "HW-003", status: "Em uso", type: "Tablet", costCenter: "Marketing" },
-  { id: "HW-004", status: "Disponível", type: "Notebook", costCenter: "" },
-  { id: "HW-005", status: "Disponível", type: "Tablet", costCenter: "" },
-  { id: "HW-006", status: "Disponível", type: "Celular", costCenter: "" },
-  { id: "HW-007", status: "Disponível", type: "Notebook", costCenter: "" },
-  { id: "HW-008", status: "Manutenção", type: "Monitor", costCenter: "Financeiro" },
-  { id: "HW-009", status: "Manutenção", type: "Notebook", costCenter: "RH" },
-];
+interface InventoryItem {
+  id: string;
+  category: string;
+  status: string;
+}
+
+const categoryLabels: Record<string, string> = {
+  notebooks: "Notebooks",
+  celulares: "Celulares",
+  linhas: "Linhas",
+  licencas: "Licenças",
+};
+
+const categoryIcons: Record<string, React.ElementType> = {
+  notebooks: Laptop,
+  celulares: Smartphone,
+  linhas: Phone,
+  licencas: KeyRound,
+};
+
+const categoryColorClasses: Record<string, string> = {
+  notebooks: "text-primary",
+  celulares: "text-info",
+  linhas: "text-warning",
+  licencas: "text-chart-4",
+};
 
 export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
   const { tickets: allTickets, loading } = useTickets();
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [timesheetTotals, setTimesheetTotals] = useState<Record<string, number>>({});
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+
+  // Fetch inventory from Supabase
+  useEffect(() => {
+    supabase.from("inventory").select("id, category, status").then(({ data }) => {
+      if (data) setInventoryItems(data as InventoryItem[]);
+    });
+    const channel = supabase
+      .channel("operacional-inventory-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
+        supabase.from("inventory").select("id, category, status").then(({ data }) => {
+          if (data) setInventoryItems(data as InventoryItem[]);
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   useEffect(() => {
     const ids = allTickets.filter((t) => t.completed_at).map((t) => t.id);
@@ -111,8 +145,16 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
       .sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const assetsDisponivel = mockAssets.filter((a) => a.status === "Disponível").length;
-  const assetsManutencao = mockAssets.filter((a) => a.status === "Manutenção").length;
+  const assetsDisponivel = inventoryItems.filter((a) => a.status === "Disponível").length;
+  const assetsManutencao = inventoryItems.filter((a) => a.status === "Manutenção").length;
+  const inventoryByCategory = useMemo(() => {
+    const cats = ["notebooks", "celulares", "linhas", "licencas"];
+    return cats.map((cat) => ({
+      category: cat,
+      available: inventoryItems.filter((i) => i.category === cat && i.status === "Disponível").length,
+      total: inventoryItems.filter((i) => i.category === cat).length,
+    }));
+  }, [inventoryItems]);
   const categories = useMemo(() => [...new Set(allTickets.map((t) => t.category))], [allTickets]);
 
   if (loading) {
@@ -251,7 +293,7 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4 py-4 mb-4">
               <div className="flex flex-col items-center gap-2 rounded-lg border p-4">
                 <Monitor className="h-8 w-8 text-primary" />
                 <span className="text-2xl font-bold">{assetsDisponivel}</span>
@@ -260,8 +302,21 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
               <div className="flex flex-col items-center gap-2 rounded-lg border p-4">
                 <Wrench className="h-8 w-8 text-warning" />
                 <span className="text-2xl font-bold">{assetsManutencao}</span>
-                <span className="text-sm text-muted-foreground">Em Manutenção</span>
+                <span className="text-sm text-muted-foreground">Em manutenção</span>
               </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {inventoryByCategory.map((item) => {
+                const Icon = categoryIcons[item.category] || Monitor;
+                return (
+                  <div key={item.category} className="flex flex-col items-center gap-1 rounded-lg border p-3">
+                    <Icon className={`h-6 w-6 ${categoryColorClasses[item.category] || "text-muted-foreground"}`} />
+                    <span className="text-lg font-bold">{item.available}</span>
+                    <span className="text-xs text-muted-foreground">{categoryLabels[item.category]} disp.</span>
+                    <span className="text-[10px] text-muted-foreground/60">{item.total} total</span>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
