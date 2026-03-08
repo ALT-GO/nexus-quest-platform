@@ -281,10 +281,16 @@ export function CollaboratorProfile({ name, onBack }: Props) {
             <p className="text-sm text-muted-foreground">{assets.length} ativo(s) vinculado(s)</p>
           </div>
         </div>
-        <Button onClick={handleGeneratePDF} className="gap-2">
-          <FileDown className="h-4 w-4" />
-          Gerar termo de responsabilidade
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => openTermDialog("devolucao")} className="gap-2">
+            <FileUp className="h-4 w-4" />
+            Termo de Devolução
+          </Button>
+          <Button onClick={() => openTermDialog("responsabilidade")} className="gap-2">
+            <FileDown className="h-4 w-4" />
+            Termo de Responsabilidade
+          </Button>
+        </div>
       </div>
 
       {assets.length === 0 ? (
