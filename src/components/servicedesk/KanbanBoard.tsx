@@ -199,6 +199,7 @@ export function KanbanBoard({
                         )}
                         <GripVertical className="h-4 w-4 text-muted-foreground/40" />
                       </div>
+                    </div>
 
                     {/* Category */}
                     <div onClick={() => onTicketClick?.(ticket.id)}>
