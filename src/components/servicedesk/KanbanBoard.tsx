@@ -4,7 +4,7 @@ import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinkerCompact } from "@/components/servicedesk/AssetLinker";
 import { SlaInfo } from "@/hooks/use-sla";
-import { User, GripVertical } from "lucide-react";
+import { User, GripVertical, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KanbanTicket {
@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   getSlaInfo: (createdAt: string, category: string, isCompleted: boolean) => SlaInfo;
   isFinalStatus: (statusId: string) => boolean;
   onStatusChange: (ticketId: string, newStatusId: string) => void;
+  onQuickComplete: (ticketId: string) => void;
   getAvailableForCategory: (category: string) => HardwareAsset[];
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
@@ -43,6 +44,7 @@ export function KanbanBoard({
   getSlaInfo,
   isFinalStatus,
   onStatusChange,
+  onQuickComplete,
   getAvailableForCategory,
   getAsset,
   onLinkAsset,
@@ -63,22 +65,17 @@ export function KanbanBoard({
     setDragOverColumn(columnId);
   };
 
-  const handleDragLeave = () => {
-    setDragOverColumn(null);
-  };
+  const handleDragLeave = () => setDragOverColumn(null);
 
   const handleDrop = (e: React.DragEvent, columnId: string) => {
     e.preventDefault();
     setDragOverColumn(null);
-
     const ticketId = draggedTicketId || e.dataTransfer.getData("text/plain");
     if (!ticketId) return;
-
     const ticket = tickets.find((t) => t.id === ticketId);
     if (ticket && ticket.statusId !== columnId) {
       onStatusChange(ticketId, columnId);
     }
-
     setDraggedTicketId(null);
   };
 
@@ -104,9 +101,7 @@ export function KanbanBoard({
             <div
               className={cn(
                 "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors",
-                dragOverColumn === status.id
-                  ? "ring-2 ring-ring ring-offset-2"
-                  : ""
+                dragOverColumn === status.id ? "ring-2 ring-ring ring-offset-2" : ""
               )}
               style={{
                 backgroundColor: `hsl(${status.cor} / 0.15)`,
@@ -114,18 +109,22 @@ export function KanbanBoard({
               }}
             >
               <div className="flex items-center gap-2">
-                <div
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: `hsl(${status.cor})` }}
-                />
+                <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `hsl(${status.cor})` }} />
                 <h3 className="text-sm font-semibold">{status.nome}</h3>
+                {status.statusType && (
+                  <span className={cn(
+                    "text-[10px] rounded px-1.5 py-0.5 font-medium",
+                    status.statusType === "todo" ? "bg-muted text-muted-foreground" :
+                    status.statusType === "in_progress" ? "bg-blue-500/15 text-blue-600" :
+                    "bg-emerald-500/15 text-emerald-600"
+                  )}>
+                    {status.statusType === "todo" ? "To Do" : status.statusType === "in_progress" ? "In Progress" : "Done"}
+                  </span>
+                )}
               </div>
               <span
                 className="flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-medium"
-                style={{
-                  backgroundColor: `hsl(${status.cor} / 0.2)`,
-                  color: `hsl(${status.cor})`,
-                }}
+                style={{ backgroundColor: `hsl(${status.cor} / 0.2)`, color: `hsl(${status.cor})` }}
               >
                 {columnTickets.length}
               </span>
@@ -146,61 +145,79 @@ export function KanbanBoard({
                     draggable
                     onDragStart={(e) => handleDragStart(e, ticket.id)}
                     onDragEnd={handleDragEnd}
-                    onClick={() => onTicketClick?.(ticket.id)}
                     className={cn(
-                      "cursor-grab rounded-lg border bg-card p-3.5 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
-                      draggedTicketId === ticket.id ? "opacity-40 scale-95" : ""
+                      "group cursor-grab rounded-lg border bg-card p-3.5 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
+                      draggedTicketId === ticket.id ? "opacity-40 scale-95" : "",
+                      isCompleted ? "opacity-60" : ""
                     )}
                   >
-                    {/* Header */}
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="text-xs font-mono text-muted-foreground mb-1">
-                          {ticket.id}
-                        </p>
-                        <p className="font-medium text-sm leading-tight">
-                          {ticket.title}
-                        </p>
+                    {/* Header with check button */}
+                    <div className="mb-2 flex items-start gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isCompleted) onQuickComplete(ticket.id);
+                        }}
+                        className={cn(
+                          "mt-0.5 flex-shrink-0 transition-colors",
+                          isCompleted
+                            ? "text-emerald-500"
+                            : "text-muted-foreground/40 hover:text-emerald-500"
+                        )}
+                        title={isCompleted ? "Concluído" : "Marcar como concluído"}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <Circle className="h-5 w-5 group-hover:hidden" />
+                        )}
+                        {!isCompleted && (
+                          <CheckCircle2 className="h-5 w-5 hidden group-hover:block" />
+                        )}
+                      </button>
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => onTicketClick?.(ticket.id)}
+                      >
+                        <p className="text-xs font-mono text-muted-foreground mb-1">{ticket.id}</p>
+                        <p className={cn("font-medium text-sm leading-tight", isCompleted && "line-through")}>{ticket.title}</p>
                       </div>
                       <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground/40" />
                     </div>
 
                     {/* Category */}
-                    <span className="inline-block rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground mb-2.5">
-                      {ticket.category}
-                    </span>
+                    <div onClick={() => onTicketClick?.(ticket.id)}>
+                      <span className="inline-block rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground mb-2.5">
+                        {ticket.category}
+                      </span>
 
-                    {/* Asset indicator */}
-                    <div className="mb-2">
-                      <AssetLinkerCompact
-                        ticketCategory={ticket.category}
-                        linkedAssetId={ticket.ativoId}
-                        linkedAsset={linkedAsset}
-                        availableCount={availableAssets.length}
-                      />
-                    </div>
-
-                    {/* SLA */}
-                    <div className="mb-2.5">
-                      <SlaIndicator sla={sla} />
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <div className={cn("h-2 w-2 rounded-full", priority.dot)} />
-                        <span>{priority.label}</span>
+                      <div className="mb-2">
+                        <AssetLinkerCompact
+                          ticketCategory={ticket.category}
+                          linkedAssetId={ticket.ativoId}
+                          linkedAsset={linkedAsset}
+                          availableCount={availableAssets.length}
+                        />
                       </div>
-                      {ticket.assignee ? (
+
+                      <div className="mb-2.5">
+                        <SlaIndicator sla={sla} />
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{ticket.assignee}</span>
+                          <div className={cn("h-2 w-2 rounded-full", priority.dot)} />
+                          <span>{priority.label}</span>
                         </div>
-                      ) : (
-                        <span className="italic text-muted-foreground/60">
-                          Sem responsável
-                        </span>
-                      )}
+                        {ticket.assignee ? (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>{ticket.assignee}</span>
+                          </div>
+                        ) : (
+                          <span className="italic text-muted-foreground/60">Sem responsável</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -210,9 +227,7 @@ export function KanbanBoard({
                 <div
                   className={cn(
                     "flex min-h-[80px] items-center justify-center rounded-lg border border-dashed p-4 text-xs text-muted-foreground transition-colors",
-                    dragOverColumn === status.id
-                      ? "border-ring bg-accent/50"
-                      : ""
+                    dragOverColumn === status.id ? "border-ring bg-accent/50" : ""
                   )}
                 >
                   Arraste chamados aqui

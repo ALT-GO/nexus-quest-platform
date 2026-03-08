@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type StatusType = "todo" | "in_progress" | "done";
+
 export interface StatusCustom {
   id: string;
   nome: string;
@@ -9,6 +11,7 @@ export interface StatusCustom {
   cor: string;
   ativo: boolean;
   isFinal?: boolean;
+  statusType: StatusType;
 }
 
 export interface StatusChangeLog {
@@ -44,6 +47,7 @@ export function useCustomStatuses() {
           cor: s.cor,
           ativo: s.ativo,
           isFinal: s.is_final,
+          statusType: (s.status_type as StatusType) || "todo",
         }))
       );
     }
@@ -54,7 +58,6 @@ export function useCustomStatuses() {
     fetchStatuses();
   }, [fetchStatuses]);
 
-  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel("status-config-realtime")
@@ -80,17 +83,24 @@ export function useCustomStatuses() {
     [statuses]
   );
 
+  const getDoneStatusId = useCallback(() => {
+    const done = statuses.find((s) => s.statusType === "done" && s.ativo);
+    return done?.id ?? "completed";
+  }, [statuses]);
+
   const addStatus = useCallback(
-    async (nome: string, cor: string) => {
+    async (nome: string, cor: string, statusType: StatusType = "todo") => {
       const maxOrdem = Math.max(...statuses.map((s) => s.ordem), 0);
       const id = `custom_${Date.now()}`;
+      const isFinal = statusType === "done";
       const { error } = await supabase.from("status_config").insert({
         id,
         nome,
         cor,
         ordem: maxOrdem + 1,
         ativo: true,
-        is_final: false,
+        is_final: isFinal,
+        status_type: statusType,
       } as any);
 
       if (error) {
@@ -98,18 +108,22 @@ export function useCustomStatuses() {
         return null;
       }
       toast.success(`Status "${nome}" criado`);
-      return { id, nome, cor, ordem: maxOrdem + 1, ativo: true };
+      return { id, nome, cor, ordem: maxOrdem + 1, ativo: true, statusType };
     },
     [statuses]
   );
 
   const updateStatus = useCallback(
-    async (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo" | "ordem">>) => {
+    async (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo" | "ordem" | "statusType">>) => {
       const dbUpdates: any = {};
       if (updates.nome !== undefined) dbUpdates.nome = updates.nome;
       if (updates.cor !== undefined) dbUpdates.cor = updates.cor;
       if (updates.ativo !== undefined) dbUpdates.ativo = updates.ativo;
       if (updates.ordem !== undefined) dbUpdates.ordem = updates.ordem;
+      if (updates.statusType !== undefined) {
+        dbUpdates.status_type = updates.statusType;
+        dbUpdates.is_final = updates.statusType === "done";
+      }
 
       const { error } = await supabase
         .from("status_config")
@@ -121,24 +135,27 @@ export function useCustomStatuses() {
         toast.error("Erro ao atualizar status");
         return;
       }
-      // Optimistic update
       setStatuses((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+        prev.map((s) => {
+          if (s.id !== id) return s;
+          const updated = { ...s, ...updates };
+          if (updates.statusType !== undefined) {
+            updated.isFinal = updates.statusType === "done";
+          }
+          return updated;
+        })
       );
     },
     []
   );
 
   const reorderStatuses = useCallback(async (orderedIds: string[]) => {
-    // Optimistic update
     setStatuses((prev) =>
       prev.map((s) => {
         const newIndex = orderedIds.indexOf(s.id);
         return newIndex >= 0 ? { ...s, ordem: newIndex + 1 } : s;
       })
     );
-
-    // Persist all orders
     const updates = orderedIds.map((id, index) =>
       supabase.from("status_config").update({ ordem: index + 1 } as any).eq("id", id as any)
     );
@@ -155,15 +172,8 @@ export function useCustomStatuses() {
         user: "Admin",
       };
       setChangelog((prev) => [entry, ...prev]);
-
-      const fromName = statuses.find((s) => s.id === fromStatusId)?.nome ?? fromStatusId;
-      const toName = statuses.find((s) => s.id === toStatusId)?.nome ?? toStatusId;
-
-      console.log(
-        `[STATUS CHANGE] ${entry.timestamp} | Chamado ${ticketId} | "${fromName}" → "${toName}" | Usuário: ${entry.user}`
-      );
     },
-    [statuses]
+    []
   );
 
   return {
@@ -173,6 +183,7 @@ export function useCustomStatuses() {
     loading,
     getStatus,
     isFinalStatus,
+    getDoneStatusId,
     addStatus,
     updateStatus,
     reorderStatuses,
