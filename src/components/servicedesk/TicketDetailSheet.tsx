@@ -263,11 +263,11 @@ export function TicketDetailSheet({
             .eq("id", sub.asset_id as any);
           deliveredCount++;
         }
-        // Also complete the subtask
-        if (!isFinalStatus(sub.status_id)) {
+        // Also complete the subtask (set completed_at, keep status)
+        if (!sub.completed_at) {
           await supabase
             .from("tickets")
-            .update({ status_id: finalStatus.id, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+            .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
             .eq("id", sub.id as any);
         }
       }
