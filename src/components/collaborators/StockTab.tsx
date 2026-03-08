@@ -166,16 +166,11 @@ export function StockTab({ onAssigned }: StockTabProps) {
             );
           })}
         </div>
-        <div className="flex gap-2">
-          {categories.map((cat) => (
-            <NewAssetDialog
-              key={cat}
-              category={cat}
-              fields={[]}
-              onSave={(data, fv) => handleNewAsset(data, fv, cat)}
-            />
-          ))}
-        </div>
+        <NewAssetDialog
+          category={catFilter !== "all" ? catFilter : "notebooks"}
+          fields={[]}
+          onSave={(data, fv) => handleNewAsset(data, fv, catFilter !== "all" ? catFilter : "notebooks")}
+        />
       </div>
 
       <Card>
