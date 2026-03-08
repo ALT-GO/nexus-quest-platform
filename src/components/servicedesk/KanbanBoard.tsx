@@ -17,6 +17,7 @@ interface KanbanTicket {
   assignee?: string;
   createdAt: string;
   ativoId?: string;
+  subtaskAssetIds?: string[];
 }
 
 interface KanbanBoardProps {
