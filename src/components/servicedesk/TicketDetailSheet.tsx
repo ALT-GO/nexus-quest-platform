@@ -138,9 +138,34 @@ export function TicketDetailSheet({
   const linkedAsset = ticket.asset_id ? getAsset(ticket.asset_id) : undefined;
   const availableAssets = getAvailableForCategory(ticket.category);
 
+  // Handle play/pause toggle
+  const handleTimerToggle = async () => {
+    if (isCompleted) return;
+
+    if (timerRunning) {
+      await pauseTimer();
+      await logHistory("timesheet", "Cronômetro pausado", "Admin");
+    } else {
+      await startTimer();
+      // Auto-move to "In Progress" on first play if still in a "todo" status
+      const currentSt = statuses.find((s) => s.id === ticket.status_id);
+      if (currentSt?.statusType === "todo") {
+        const inProgressStatus = statuses.find((s) => s.statusType === "in_progress" && s.ativo);
+        if (inProgressStatus) {
+          onStatusChange(ticket.ticket_number, inProgressStatus.id);
+          await logHistory("status_change", `Status alterado automaticamente para ${inProgressStatus.nome} (cronômetro iniciado)`, "Admin");
+        }
+      }
+      await logHistory("timesheet", "Cronômetro iniciado", "Admin");
+    }
+  };
+
   const handleComplete = async () => {
     const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
     if (!finalStatus) return;
+
+    // Stop timer automatically
+    await stopTimer();
 
     // Handle Desligamento asset release
     const assetIds = parseDesligamentoAssetIds();
@@ -166,6 +191,7 @@ export function TicketDetailSheet({
 
     onStatusChange(ticket.ticket_number, finalStatus.id);
     await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
+    await logHistory("timesheet", `Cronômetro finalizado. Tempo total: ${formatDuration(totalSeconds)}`, "Admin");
     toast.success(`Chamado ${ticket.ticket_number} concluído!`);
     onOpenChange(false);
   };
