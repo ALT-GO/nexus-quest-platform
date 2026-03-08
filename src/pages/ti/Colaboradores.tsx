@@ -119,17 +119,25 @@ export default function Colaboradores() {
                           </div>
                         </div>
                         <ConfirmDeleteDialog
-                          description={`Tem certeza que deseja excluir permanentemente o colaborador "${c.name}" e todos os seus ${c.assetCount} ativo(s)?`}
+                          description={`Tem certeza que deseja excluir o colaborador "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
                           onConfirm={async () => {
-                            const { error } = await supabase
-                              .from("inventory")
-                              .delete()
-                              .eq("collaborator", c.name);
-                            if (error) {
-                              toast.error("Erro ao excluir colaborador");
-                            } else {
-                              toast.success(`Colaborador "${c.name}" e seus ativos excluídos`);
+                            try {
+                              // Return notebooks, celulares, linhas to stock
+                              await supabase.from("inventory").update({
+                                collaborator: "",
+                                status: "Disponível",
+                                updated_at: new Date().toISOString(),
+                              }).eq("collaborator", c.name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
+
+                              // Delete licenças
+                              await supabase.from("inventory").delete()
+                                .eq("collaborator", c.name)
+                                .in("category", ["licencas", "licenses"]);
+
+                              toast.success(`Colaborador "${c.name}" removido. Ativos devolvidos ao estoque.`);
                               refetch();
+                            } catch {
+                              toast.error("Erro ao excluir colaborador");
                             }
                           }}
                         />
