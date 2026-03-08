@@ -135,9 +135,16 @@ export function TicketTable({
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{ticket.id}</TableCell>
-                    <TableCell className={cn("font-medium", isCompleted && "line-through")}>{ticket.title}</TableCell>
-                    <TableCell>
-                      <span className="rounded-full bg-secondary px-2 py-1 text-xs">{ticket.category}</span>
+                    <TableCell className={cn("font-medium", isCompleted && "line-through")}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{ticket.title}</span>
+                        {subtaskAssets.map((asset) => (
+                          <Badge key={asset.id} variant="outline" className="bg-success/10 text-success border-success/20 text-xs gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {asset.model}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>
