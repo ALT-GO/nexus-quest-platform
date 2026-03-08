@@ -53,6 +53,7 @@ export function KanbanBoard({
   getAsset,
   onLinkAsset,
   onTicketClick,
+  onDelete,
 }: KanbanBoardProps) {
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
