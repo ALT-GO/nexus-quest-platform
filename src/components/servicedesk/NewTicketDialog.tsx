@@ -490,7 +490,7 @@ export function NewTicketDialog() {
               </div>
 
               {/* Found assets from inventory */}
-              {desligamento.colaborador.trim().length >= 2 && (
+              {collaboratorSelected && desligamento.colaborador.trim() && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5 text-sm">
                     <Package className="h-4 w-4" />
