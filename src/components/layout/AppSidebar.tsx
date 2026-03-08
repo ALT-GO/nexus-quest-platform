@@ -35,21 +35,23 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, isAdmin, roles, signOut } = useAuth();
 
+  const hasAnyRole = (...r: string[]) => r.some((role) => roles.includes(role as any));
+
   const navigation: NavItem[] = [
     {
       title: "Dashboard",
       href: "/",
       icon: LayoutDashboard,
     },
-    {
+    ...(hasAnyRole("admin", "marketing") ? [{
       title: "Marketing",
       icon: Megaphone,
       children: [
         { title: "Projetos", href: "/marketing/projetos" },
         { title: "Solicitações", href: "/marketing/solicitacoes" },
       ],
-    },
-    {
+    } as NavItem] : []),
+    ...(hasAnyRole("admin", "ti") ? [{
       title: "TI",
       icon: Monitor,
       children: [
@@ -57,7 +59,7 @@ export function AppSidebar() {
         { title: "Gestão de Ativos", href: "/ti/ativos" },
         { title: "Dashboard Financeiro", href: "/ti/financeiro" },
       ],
-    },
+    } as NavItem] : []),
     {
       title: "Central de Inteligência",
       icon: Brain,

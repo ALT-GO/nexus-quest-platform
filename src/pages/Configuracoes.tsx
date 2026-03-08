@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
+import { UserManagementTab } from "@/components/settings/UserManagementTab";
+import { useAuth } from "@/hooks/use-auth";
 import {
   User,
   Bell,
@@ -15,9 +17,11 @@ import {
   Database,
   Zap,
   Save,
+  Users,
 } from "lucide-react";
 
 export default function Configuracoes() {
+  const { isAdmin } = useAuth();
   return (
     <AppLayout>
       <PageHeader
@@ -47,6 +51,12 @@ export default function Configuracoes() {
             <Database className="h-4 w-4" />
             Sistema
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -202,6 +212,11 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="users">
+            <UserManagementTab />
+          </TabsContent>
+        )}
       </Tabs>
     </AppLayout>
   );
