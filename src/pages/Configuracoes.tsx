@@ -220,6 +220,9 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="import">
+          <CsvImportTab />
+        </TabsContent>
         {isAdmin && (
           <TabsContent value="users">
             <UserManagementTab />
