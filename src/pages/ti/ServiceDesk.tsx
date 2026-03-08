@@ -204,6 +204,7 @@ export default function ServiceDesk() {
           onUpdate={updateStatus}
           onReorder={reorderStatuses}
         />
+        <NewTicketDialog />
         <Button variant="outline" asChild>
           <a href="/chamado-publico" target="_blank">
             Ver Formulário Público
