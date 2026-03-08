@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, Send } from "lucide-react";
+import { Plus, Loader2, Send, Search, Package } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { createTicket, runTicketCreatedAutomations } from "@/hooks/use-tickets";
 
 const baseCategories = [
@@ -38,6 +40,17 @@ const baseCategories = [
   "Desligamento",
   "Contratação",
 ];
+
+interface InventoryAsset {
+  id: string;
+  asset_code: string;
+  model: string | null;
+  asset_type: string | null;
+  category: string;
+  status: string;
+  service_tag: string | null;
+  collaborator: string | null;
+}
 
 interface DesligamentoFields {
   colaborador: string;
@@ -93,25 +106,89 @@ export function NewTicketDialog() {
   const [desligamento, setDesligamento] = useState<DesligamentoFields>(defaultDesligamento);
   const [contratacao, setContratacao] = useState<ContratacaoFields>(defaultContratacao);
 
+  // Asset search state for Desligamento
+  const [foundAssets, setFoundAssets] = useState<InventoryAsset[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [searchingAssets, setSearchingAssets] = useState(false);
+
   const isDesligamento = category === "Desligamento";
   const isContratacao = category === "Contratação";
 
+  // Real-time search for collaborator assets
+  const searchCollaboratorAssets = useCallback(async (name: string) => {
+    if (name.trim().length < 2) {
+      setFoundAssets([]);
+      setSelectedAssetIds(new Set());
+      return;
+    }
+
+    setSearchingAssets(true);
+    const { data, error } = await supabase
+      .from("inventory")
+      .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+      .ilike("collaborator", `%${name.trim()}%`);
+
+    if (error) {
+      console.error("Error searching assets:", error);
+    } else {
+      setFoundAssets((data as InventoryAsset[]) || []);
+      // Auto-select all found assets
+      setSelectedAssetIds(new Set((data || []).map((a: any) => a.id)));
+    }
+    setSearchingAssets(false);
+  }, []);
+
+  // Debounced search when collaborador changes (only for Desligamento)
+  useEffect(() => {
+    if (!isDesligamento) return;
+
+    const timer = setTimeout(() => {
+      searchCollaboratorAssets(desligamento.colaborador);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [desligamento.colaborador, isDesligamento, searchCollaboratorAssets]);
+
+  const toggleAssetSelection = (assetId: string) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  };
+
   const buildDescription = () => {
     if (isDesligamento) {
-      const items = [
+      const checkboxItems = [
         desligamento.celular && "Celular",
         desligamento.chip && "Chip",
         desligamento.notebook && "Notebook",
         desligamento.modem && "Modem",
         desligamento.email && "E-mail",
       ].filter(Boolean);
+
+      const selectedAssets = foundAssets.filter((a) => selectedAssetIds.has(a.id));
+      const assetLines = selectedAssets.map(
+        (a) => `  - ${a.asset_code} | ${a.model || "Sem modelo"} (${a.asset_type || a.category}) [${a.status}]`
+      );
+
       return [
         `Colaborador: ${desligamento.colaborador}`,
         `Gestor: ${desligamento.gestor}`,
         `Contrato: ${desligamento.contrato}`,
-        `Itens para devolução: ${items.length > 0 ? items.join(", ") : "Nenhum"}`,
+        `Itens para devolução: ${checkboxItems.length > 0 ? checkboxItems.join(", ") : "Nenhum"}`,
         `Data do Desligamento: ${desligamento.dataDesligamento}`,
-        description && `Observações: ${description}`,
+        selectedAssets.length > 0
+          ? `\nAtivos vinculados para devolução (${selectedAssets.length}):\n${assetLines.join("\n")}`
+          : "",
+        selectedAssets.length > 0
+          ? `\n[ASSET_IDS_DEVOLUCAO:${selectedAssets.map((a) => a.id).join(",")}]`
+          : "",
+        description && `\nObservações: ${description}`,
       ].filter(Boolean).join("\n");
     }
     if (isContratacao) {
@@ -188,6 +265,18 @@ export function NewTicketDialog() {
     setPriority("medium");
     setDesligamento(defaultDesligamento);
     setContratacao(defaultContratacao);
+    setFoundAssets([]);
+    setSelectedAssetIds(new Set());
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Em uso": return "bg-info/10 text-info border-info/20";
+      case "Disponível": return "bg-success/10 text-success border-success/20";
+      case "Reservado": return "bg-warning/10 text-warning border-warning/20";
+      case "Manutenção": return "bg-destructive/10 text-destructive border-destructive/20";
+      default: return "bg-muted text-muted-foreground";
+    }
   };
 
   return (
@@ -241,11 +330,15 @@ export function NewTicketDialog() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Nome do Colaborador <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={desligamento.colaborador}
-                    onChange={(e) => setDesligamento({ ...desligamento, colaborador: e.target.value })}
-                    placeholder="Buscar colaborador..."
-                  />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={desligamento.colaborador}
+                      onChange={(e) => setDesligamento({ ...desligamento, colaborador: e.target.value })}
+                      placeholder="Buscar colaborador..."
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label>Gestor</Label>
@@ -272,8 +365,68 @@ export function NewTicketDialog() {
                   />
                 </div>
               </div>
+
+              {/* Found assets from inventory */}
+              {desligamento.colaborador.trim().length >= 2 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Package className="h-4 w-4" />
+                    Ativos Identificados
+                    {foundAssets.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {foundAssets.length}
+                      </Badge>
+                    )}
+                  </Label>
+
+                  {searchingAssets ? (
+                    <div className="flex items-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Buscando ativos...
+                    </div>
+                  ) : foundAssets.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                      Nenhum ativo encontrado para "{desligamento.colaborador}"
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-md border p-3">
+                      {foundAssets.map((asset) => (
+                        <label
+                          key={asset.id}
+                          className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedAssetIds.has(asset.id)}
+                            onCheckedChange={() => toggleAssetSelection(asset.id)}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-muted-foreground">{asset.asset_code}</span>
+                              <Badge variant="outline" className={`text-xs ${getStatusColor(asset.status)}`}>
+                                {asset.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm font-medium truncate">
+                              {asset.model || "Sem modelo"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {asset.asset_type || asset.category}
+                              {asset.service_tag && ` • ST: ${asset.service_tag}`}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                      <p className="text-xs text-muted-foreground pt-1">
+                        {selectedAssetIds.size} de {foundAssets.length} selecionado(s) para devolução
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label className="text-sm">Itens para devolução</Label>
+                <Label className="text-sm">Itens adicionais para devolução</Label>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {(["celular", "chip", "notebook", "modem", "email"] as const).map((key) => (
                     <label key={key} className="flex items-center gap-2 text-sm">

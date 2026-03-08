@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
+import { supabase } from "@/integrations/supabase/client";
 import { useTicketComments } from "@/hooks/use-ticket-comments";
 import { useTicketHistory } from "@/hooks/use-ticket-history";
 import { StatusCustom } from "@/hooks/use-custom-status";
@@ -115,6 +116,13 @@ export function TicketDetailSheet({
       commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [comments]);
+  // Parse asset IDs from desligamento description
+  const parseDesligamentoAssetIds = useCallback((): string[] => {
+    if (!ticket || ticket.category !== "Desligamento") return [];
+    const match = ticket.description.match(/\[ASSET_IDS_DEVOLUCAO:([^\]]+)\]/);
+    if (!match) return [];
+    return match[1].split(",").filter(Boolean);
+  }, [ticket]);
 
   if (!ticket) return null;
 
@@ -126,12 +134,34 @@ export function TicketDetailSheet({
 
   const handleComplete = async () => {
     const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
-    if (finalStatus) {
-      onStatusChange(ticket.ticket_number, finalStatus.id);
-      await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
-      toast.success(`Chamado ${ticket.ticket_number} concluído!`);
-      onOpenChange(false);
+    if (!finalStatus) return;
+
+    // Handle Desligamento asset release
+    const assetIds = parseDesligamentoAssetIds();
+    if (assetIds.length > 0) {
+      for (const assetId of assetIds) {
+        await supabase
+          .from("inventory")
+          .update({
+            status: "Disponível",
+            collaborator: "",
+            reserved_by_ticket_id: null,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq("id", assetId as any);
+      }
+      await logHistory(
+        "asset_release",
+        `${assetIds.length} ativo(s) liberado(s) e marcado(s) como Disponível`,
+        "Admin"
+      );
+      toast.success(`${assetIds.length} ativo(s) liberado(s) para o estoque`);
     }
+
+    onStatusChange(ticket.ticket_number, finalStatus.id);
+    await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
+    toast.success(`Chamado ${ticket.ticket_number} concluído!`);
+    onOpenChange(false);
   };
 
   const handleSaveTitle = async () => {
