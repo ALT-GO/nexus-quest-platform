@@ -1,10 +1,11 @@
-import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Printer, X } from "lucide-react";
 import type { CollaboratorAsset } from "@/hooks/use-collaborators";
+import { HeaderTimbrado } from "./HeaderTimbrado";
+import { FooterTimbrado } from "./FooterTimbrado";
 
 interface Props {
   open: boolean;
@@ -26,25 +27,22 @@ const categoryLabels: Record<string, string> = {
 
 export function PrintableTermDialog({ open, onOpenChange, collaboratorName, assets, type }: Props) {
   const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  
-  // Extrair o cargo do primeiro ativo que tenha cargo, se houver
   const cargo = assets.find((a: any) => a.cargo)?.cargo || "___________________________";
-  
-  // Agrupar ativos por categoria
   const categories = [...new Set(assets.map((a) => a.category))];
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   const isDevolucao = type === "devolucao";
-  const title = isDevolucao ? "Termo de Devolução de Equipamentos" : "Termo de Responsabilidade de Equipamentos";
+  
+  const headerTitle = isDevolucao ? "TERMO DE DEVOLUÇÃO" : "TERMO DE RESPONSABILIDADE";
+  const dialogTitle = isDevolucao ? "Termo de Devolução de Equipamentos" : "Termo de Responsabilidade de Equipamentos";
+  const docCode = isDevolucao ? "FF.165" : "FF.164";
+
+  const handlePrint = () => window.print();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 print:max-w-none print:max-h-none print:overflow-visible print:p-0 print:border-none print:shadow-none bg-background">
-        <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background border-b print:hidden shadow-sm">
-          <DialogTitle className="text-lg font-bold">{title}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-background print-term-dialog">
+        {/* Toolbar - hidden on print */}
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background border-b shadow-sm print:hidden">
+          <DialogTitle className="text-lg font-bold">{dialogTitle}</DialogTitle>
           <div className="flex items-center gap-2">
             <Button onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" />
@@ -56,72 +54,57 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
           </div>
         </div>
 
-        {/* Print Area - A4 Format */}
-        <div className="p-8 mx-auto bg-background text-foreground print:p-0 print:m-0 w-full max-w-[210mm] min-h-[297mm] font-sans text-sm print:text-xs">
+        {/* A4 printable page */}
+        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans text-sm flex flex-col" style={{ color: "#333" }}>
           
-          {/* Header / Logo Orion */}
-          <div className="flex items-center justify-between border-b-2 border-primary/20 pb-6 mb-8 print:pb-4 print:mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-primary print:text-xl uppercase tracking-wider">ORION</h1>
-              <p className="text-muted-foreground mt-1">Gestão de Tecnologia da Informação</p>
-            </div>
-            <div className="text-right text-muted-foreground">
-              <p>{title}</p>
-              <p>Data: {today}</p>
-            </div>
-          </div>
+          <HeaderTimbrado title={headerTitle} docCode={docCode} />
 
           {/* Collaborator Info */}
-          <div className="mb-8 p-4 bg-muted/30 rounded-lg print:bg-transparent print:border print:border-border print:p-4 print:rounded-none">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Dados do Colaborador</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-semibold text-muted-foreground">Nome:</span> {collaboratorName}
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">CPF:</span> ___________________________
-              </div>
-              <div>
-                <span className="font-semibold text-muted-foreground">Cargo:</span> {cargo}
-              </div>
+          <div className="mb-6 text-xs">
+            <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-2">
+              <span className="font-bold text-[#555]">Colaborador:</span>
+              <span className="border-b border-[#ccc]">{collaboratorName}</span>
+              <span className="font-bold text-[#555]">Data:</span>
+              <span className="border-b border-[#ccc]">{today}</span>
+              <span className="font-bold text-[#555]">Cargo:</span>
+              <span className="border-b border-[#ccc]">{cargo}</span>
+              <span className="font-bold text-[#555]">CPF:</span>
+              <span className="border-b border-[#ccc]">___________________________</span>
             </div>
           </div>
 
-          {/* Asset List */}
-          <div className="mb-8">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Equipamentos e Recursos Vinculados</h3>
-            
+          {/* Asset Tables */}
+          <div className="mb-6 flex-1">
             {assets.length === 0 ? (
-              <p className="text-muted-foreground italic py-4">Nenhum ativo vinculado a este colaborador no momento.</p>
+              <p className="text-[#999] italic py-4 text-center text-xs">Nenhum ativo vinculado.</p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {categories.map((cat) => {
                   const catAssets = assets.filter((a) => a.category === cat);
                   const label = categoryLabels[cat] || cat;
-                  
                   return (
                     <div key={cat}>
-                      <h4 className="font-semibold text-primary/80 mb-2">{label}</h4>
-                      <table className="w-full text-left border-collapse border border-border">
+                      <p className="font-bold text-xs mb-1 text-[#444] uppercase">{label}</p>
+                      <table className="w-full text-left border-collapse text-xs">
                         <thead>
-                          <tr className="bg-muted/50">
-                            <th className="p-2 border border-border w-24">ID</th>
-                            <th className="p-2 border border-border">Detalhes do Ativo</th>
-                            <th className="p-2 border border-border w-32">Identificador</th>
+                          <tr style={{ backgroundColor: "#f0f0f0" }}>
+                            <th className="p-1.5 border border-[#ccc] font-semibold w-20">ID</th>
+                            <th className="p-1.5 border border-[#ccc] font-semibold">Marca / Modelo</th>
+                            <th className="p-1.5 border border-[#ccc] font-semibold w-40">Identificador</th>
+                            <th className="p-1.5 border border-[#ccc] font-semibold w-24">Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {catAssets.map((asset: any) => {
-                            let detalhes = asset.model || asset.asset_type || asset.licenca || "-";
+                            let detalhes = asset.model || asset.asset_type || asset.licenca || "—";
                             if (asset.marca) detalhes = `${asset.marca} ${detalhes}`;
-                            
-                            let identificador = asset.service_tag || asset.numero || asset.imei1 || asset.email_address || "-";
-
+                            const identificador = asset.service_tag || asset.numero || asset.imei1 || asset.email_address || "—";
                             return (
-                              <tr key={asset.id} className="text-foreground">
-                                <td className="p-2 border border-border font-mono text-xs">{asset.asset_code}</td>
-                                <td className="p-2 border border-border">{detalhes}</td>
-                                <td className="p-2 border border-border font-mono text-xs">{identificador}</td>
+                              <tr key={asset.id}>
+                                <td className="p-1.5 border border-[#ccc] font-mono">{asset.asset_code}</td>
+                                <td className="p-1.5 border border-[#ccc]">{detalhes}</td>
+                                <td className="p-1.5 border border-[#ccc] font-mono">{identificador}</td>
+                                <td className="p-1.5 border border-[#ccc]">{asset.status || "—"}</td>
                               </tr>
                             );
                           })}
@@ -134,47 +117,47 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
             )}
           </div>
 
-          {/* Term Text (Placeholder para o usuário fornecer) */}
-          <div className="mb-16 text-justify leading-relaxed text-foreground space-y-4">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Declaração</h3>
+          {/* Declaration */}
+          <div className="mb-8 text-xs text-justify leading-relaxed space-y-3">
             {isDevolucao ? (
               <p>
-                [TEXTO PADRÃO AQUI: P. ex: Declaro para os devidos fins que estou devolvendo os equipamentos e/ou acessos acima listados, 
-                de propriedade da Orion, nas mesmas condições em que os recebi, ressalvado o desgaste natural pelo uso. 
-                Estou ciente de que a entrega destes itens encerra a minha responsabilidade sobre a guarda e zelo dos mesmos.]
+                Declaro para os devidos fins que estou devolvendo os equipamentos e/ou acessos acima listados,
+                de propriedade da Orion, nas mesmas condições em que os recebi, ressalvado o desgaste natural pelo uso.
+                Estou ciente de que a entrega destes itens encerra a minha responsabilidade sobre a guarda e zelo dos mesmos.
               </p>
             ) : (
               <>
                 <p>
-                  [TEXTO PADRÃO AQUI: P. ex: Declaro para os devidos fins que recebi os equipamentos e/ou acessos acima listados, 
-                  de propriedade da Orion, em perfeitas condições de uso e funcionamento.]
+                  Declaro para os devidos fins que recebi os equipamentos e/ou acessos acima listados,
+                  de propriedade da Orion, em perfeitas condições de uso e funcionamento.
                 </p>
                 <p>
-                  [Comprometo-me a zelar pela integridade, conservação e uso estritamente profissional dos recursos disponibilizados, 
-                  bem como devolvê-los imediatamente em caso de desligamento ou quando solicitado pela empresa.]
+                  Comprometo-me a zelar pela integridade, conservação e uso estritamente profissional dos recursos disponibilizados,
+                  bem como devolvê-los imediatamente em caso de desligamento ou quando solicitado pela empresa.
                 </p>
               </>
             )}
           </div>
 
           {/* Signatures */}
-          <div className="mt-20 pt-8 grid grid-cols-2 gap-12 text-center break-inside-avoid">
-            <div>
-              <div className="border-t border-border w-full mb-2 mx-auto"></div>
+          <div className="grid grid-cols-2 gap-16 text-center text-xs mb-6 break-inside-avoid">
+            <div className="pt-12">
+              <div className="border-t border-[#666] mx-4 mb-1"></div>
               <p className="font-semibold">{collaboratorName}</p>
-              <p className="text-muted-foreground text-sm">Colaborador(a)</p>
+              <p className="text-[#888]">Colaborador(a)</p>
             </div>
-            <div>
-              <div className="border-t border-border w-full mb-2 mx-auto"></div>
+            <div className="pt-12">
+              <div className="border-t border-[#666] mx-4 mb-1"></div>
               <p className="font-semibold">Responsável de TI</p>
-              <p className="text-muted-foreground text-sm">Orion</p>
+              <p className="text-[#888]">Orion</p>
             </div>
           </div>
-          
-          <div className="mt-12 text-center text-muted-foreground text-xs break-inside-avoid">
+
+          <div className="text-center text-[10px] text-[#888] mb-4">
             Local e data: _____________________________________, {today}
           </div>
 
+          <FooterTimbrado />
         </div>
       </DialogContent>
     </Dialog>

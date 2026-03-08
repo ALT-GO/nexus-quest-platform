@@ -1,0 +1,48 @@
+import orionLogo from "@/assets/orion-header.png";
+
+interface Props {
+  title: string;
+  docCode?: string;
+  revision?: string;
+  pageInfo?: string;
+}
+
+export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02", pageInfo }: Props) {
+  return (
+    <table className="w-full border-collapse border border-[#999] mb-6 print:mb-4" style={{ borderColor: "#999" }}>
+      <tbody>
+        <tr>
+          <td
+            className="border border-[#999] p-3 align-middle"
+            style={{ width: "35%", borderColor: "#999" }}
+            rowSpan={2}
+          >
+            <img src={orionLogo} alt="Orion" className="h-12 object-contain" />
+          </td>
+          <td
+            className="border border-[#999] p-2 text-center align-middle"
+            style={{ width: "45%", borderColor: "#999" }}
+            rowSpan={2}
+          >
+            <p className="text-xs uppercase tracking-wide text-[#666]">FORMULÁRIO</p>
+            <p className="font-bold text-sm uppercase tracking-wide text-[#444]">{title}</p>
+          </td>
+          <td
+            className="border border-[#999] p-2 text-center align-middle text-xs text-[#666]"
+            style={{ width: "20%", borderColor: "#999" }}
+          >
+            {docCode}<br />{revision}
+          </td>
+        </tr>
+        <tr>
+          <td
+            className="border border-[#999] p-2 text-center align-middle text-xs text-[#666]"
+            style={{ borderColor: "#999" }}
+          >
+            {pageInfo || "Página 1 de 1"}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}

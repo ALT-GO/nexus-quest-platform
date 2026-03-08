@@ -158,26 +158,43 @@
   body * {
     visibility: hidden;
   }
-  
-  [role="dialog"], [role="dialog"] * {
-    visibility: visible;
+
+  .print-term-dialog,
+  .print-term-dialog * {
+    visibility: visible !important;
   }
 
-  [role="dialog"] {
-    position: absolute;
-    left: 0;
-    top: 0;
+  .print-term-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: auto;
     margin: 0;
     padding: 0;
-    width: 100%;
-    min-height: 100vh;
     border: none;
     box-shadow: none;
     background: white !important;
+    overflow: visible;
+    max-height: none;
+    max-width: none;
+  }
+
+  .print-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: auto !important;
+    color: #333 !important;
+    background: white !important;
+  }
+
+  /* Hide the overlay backdrop */
+  [data-radix-portal] > [data-state] {
+    background: transparent !important;
   }
 
   @page {
     size: A4;
-    margin: 15mm;
+    margin: 12mm 15mm;
   }
 }
