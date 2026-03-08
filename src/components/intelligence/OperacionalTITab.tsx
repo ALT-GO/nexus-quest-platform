@@ -64,7 +64,7 @@ const categoryColorClasses: Record<string, string> = {
   licencas: "text-chart-4",
 };
 
-export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
+export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProps) {
   const { tickets: allTickets, loading } = useTickets();
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
