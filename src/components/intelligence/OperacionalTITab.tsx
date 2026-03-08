@@ -64,6 +64,23 @@ export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [timesheetTotals, setTimesheetTotals] = useState<Record<string, number>>({});
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+
+  // Fetch inventory from Supabase
+  useEffect(() => {
+    supabase.from("inventory").select("id, category, status").then(({ data }) => {
+      if (data) setInventoryItems(data as InventoryItem[]);
+    });
+    const channel = supabase
+      .channel("operacional-inventory-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
+        supabase.from("inventory").select("id, category, status").then(({ data }) => {
+          if (data) setInventoryItems(data as InventoryItem[]);
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   useEffect(() => {
     const ids = allTickets.filter((t) => t.completed_at).map((t) => t.id);
