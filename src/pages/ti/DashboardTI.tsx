@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -92,6 +93,15 @@ export default function DashboardTI() {
   const [customTo, setCustomTo] = useState<Date | undefined>();
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [timesheetTotals, setTimesheetTotals] = useState<Record<string, number>>({});
+
+  // Fetch timesheet totals when tickets change
+  useEffect(() => {
+    const ids = allTickets.filter((t) => t.completed_at).map((t) => t.id);
+    if (ids.length > 0) {
+      fetchTimesheetTotals(ids).then(setTimesheetTotals);
+    }
+  }, [allTickets]);
 
   // Date range from period
   const dateRange = useMemo(() => {
@@ -129,13 +139,19 @@ export default function DashboardTI() {
   // Metrics
   const completedTickets = filtered.filter((t) => t.completed_at);
 
+  // Use real timesheet data when available, fallback to created→completed diff
   const avgResolutionHours = useMemo(() => {
     if (completedTickets.length === 0) return 0;
-    const totalMs = completedTickets.reduce((sum, t) => {
-      return sum + (new Date(t.completed_at!).getTime() - new Date(t.created_at).getTime());
+    const totalSeconds = completedTickets.reduce((sum, t) => {
+      const timesheetSecs = timesheetTotals[t.id];
+      if (timesheetSecs && timesheetSecs > 0) {
+        return sum + timesheetSecs;
+      }
+      // Fallback: use created_at → completed_at diff
+      return sum + (new Date(t.completed_at!).getTime() - new Date(t.created_at).getTime()) / 1000;
     }, 0);
-    return Math.round((totalMs / completedTickets.length / 3600000) * 10) / 10;
-  }, [completedTickets]);
+    return Math.round((totalSeconds / completedTickets.length / 3600) * 10) / 10;
+  }, [completedTickets, timesheetTotals]);
 
   const slaCumprido = useMemo(() => {
     if (completedTickets.length === 0) return 100;

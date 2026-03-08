@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
 import { supabase } from "@/integrations/supabase/client";
+import { useTimesheet, formatDuration } from "@/hooks/use-timesheet";
 import { useTicketComments } from "@/hooks/use-ticket-comments";
 import { useTicketHistory } from "@/hooks/use-ticket-history";
 import { StatusCustom } from "@/hooks/use-custom-status";
@@ -40,6 +41,9 @@ import {
   AlertTriangle,
   CalendarDays,
   Loader2,
+  Play,
+  Pause,
+  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -100,6 +104,7 @@ export function TicketDetailSheet({
 
   const { comments, loading: commentsLoading, addComment } = useTicketComments(ticket?.id ?? null);
   const { history, loading: historyLoading, logHistory } = useTicketHistory(ticket?.id ?? null);
+  const { running: timerRunning, totalSeconds, start: startTimer, pause: pauseTimer, stop: stopTimer } = useTimesheet(ticket?.id ?? null);
 
   useEffect(() => {
     if (ticket) {
@@ -133,9 +138,34 @@ export function TicketDetailSheet({
   const linkedAsset = ticket.asset_id ? getAsset(ticket.asset_id) : undefined;
   const availableAssets = getAvailableForCategory(ticket.category);
 
+  // Handle play/pause toggle
+  const handleTimerToggle = async () => {
+    if (isCompleted) return;
+
+    if (timerRunning) {
+      await pauseTimer();
+      await logHistory("timesheet", "Cronômetro pausado", "Admin");
+    } else {
+      await startTimer();
+      // Auto-move to "In Progress" on first play if still in a "todo" status
+      const currentSt = statuses.find((s) => s.id === ticket.status_id);
+      if (currentSt?.statusType === "todo") {
+        const inProgressStatus = statuses.find((s) => s.statusType === "in_progress" && s.ativo);
+        if (inProgressStatus) {
+          onStatusChange(ticket.ticket_number, inProgressStatus.id);
+          await logHistory("status_change", `Status alterado automaticamente para ${inProgressStatus.nome} (cronômetro iniciado)`, "Admin");
+        }
+      }
+      await logHistory("timesheet", "Cronômetro iniciado", "Admin");
+    }
+  };
+
   const handleComplete = async () => {
     const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
     if (!finalStatus) return;
+
+    // Stop timer automatically
+    await stopTimer();
 
     // Handle Desligamento asset release
     const assetIds = parseDesligamentoAssetIds();
@@ -161,6 +191,7 @@ export function TicketDetailSheet({
 
     onStatusChange(ticket.ticket_number, finalStatus.id);
     await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
+    await logHistory("timesheet", `Cronômetro finalizado. Tempo total: ${formatDuration(totalSeconds)}`, "Admin");
     toast.success(`Chamado ${ticket.ticket_number} concluído!`);
     onOpenChange(false);
   };
@@ -247,6 +278,42 @@ export function TicketDetailSheet({
               </h2>
             )}
           </div>
+
+          {/* Timer button */}
+          {!isCompleted && (
+            <button
+              onClick={handleTimerToggle}
+              className={cn(
+                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all",
+                timerRunning
+                  ? "bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25"
+                  : "bg-success/15 text-success border border-success/30 hover:bg-success/25"
+              )}
+            >
+              {timerRunning ? (
+                <>
+                  <Pause className="h-4 w-4" />
+                  <span className={cn("font-mono tabular-nums", timerRunning && "animate-pulse")}>
+                    {formatDuration(totalSeconds)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  <span className="font-mono tabular-nums">
+                    {totalSeconds > 0 ? formatDuration(totalSeconds) : "Iniciar"}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
+          {isCompleted && totalSeconds > 0 && (
+            <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+              <Timer className="h-3.5 w-3.5" />
+              <span className="font-mono">{formatDuration(totalSeconds)}</span>
+            </div>
+          )}
         </div>
 
         <ScrollArea className="flex-1">
