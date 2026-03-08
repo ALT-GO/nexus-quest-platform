@@ -363,6 +363,7 @@ export default function ServiceDesk() {
 
       <TicketDetailSheet
         ticket={selectedTicket}
+        subtasks={selectedTicket ? getSubtasks(selectedTicket.id) : []}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         statuses={activeStatuses}
