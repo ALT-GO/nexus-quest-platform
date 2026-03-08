@@ -11,24 +11,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Settings, Plus, GripVertical, Trash2 } from "lucide-react";
+import { Settings, Plus, GripVertical } from "lucide-react";
 
 interface StatusManagerDialogProps {
   statuses: StatusCustom[];
-  onAdd: (nome: string, cor: string) => void;
-  onUpdate: (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo">>) => void;
-  onReorder: (orderedIds: string[]) => void;
+  onAdd: (nome: string, cor: string) => Promise<any>;
+  onUpdate: (id: string, updates: Partial<Pick<StatusCustom, "nome" | "cor" | "ativo">>) => Promise<void>;
+  onReorder: (orderedIds: string[]) => Promise<void>;
 }
 
 const presetColors = [
-  "38 92% 50%",    // warning/yellow
-  "199 89% 48%",   // info/blue
-  "142 76% 36%",   // success/green
-  "280 67% 60%",   // purple
-  "0 84% 60%",     // red
-  "221 83% 53%",   // primary/blue
-  "25 95% 53%",    // orange
-  "173 80% 40%",   // teal
+  "38 92% 50%",
+  "199 89% 48%",
+  "142 76% 36%",
+  "280 67% 60%",
+  "0 84% 60%",
+  "221 83% 53%",
+  "25 95% 53%",
+  "173 80% 40%",
 ];
 
 export function StatusManagerDialog({
@@ -44,35 +44,29 @@ export function StatusManagerDialog({
 
   const sortedStatuses = [...statuses].sort((a, b) => a.ordem - b.ordem);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) return;
-    onAdd(newName.trim(), newColor);
+    await onAdd(newName.trim(), newColor);
     setNewName("");
     setNewColor(presetColors[0]);
   };
 
-  const handleDragStart = (id: string) => {
-    setDraggedId(id);
-  };
+  const handleDragStart = (id: string) => setDraggedId(id);
 
   const handleDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     if (!draggedId || draggedId === targetId) return;
-
     const ids = sortedStatuses.map((s) => s.id);
     const fromIndex = ids.indexOf(draggedId);
     const toIndex = ids.indexOf(targetId);
     if (fromIndex === -1 || toIndex === -1) return;
-
     const reordered = [...ids];
     reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, draggedId);
     onReorder(reordered);
   };
 
-  const handleDragEnd = () => {
-    setDraggedId(null);
-  };
+  const handleDragEnd = () => setDraggedId(null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -86,14 +80,10 @@ export function StatusManagerDialog({
         <DialogHeader>
           <DialogTitle>Gerenciar Status</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4">
-          {/* Existing statuses */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status Existentes</Label>
-            <p className="text-xs text-muted-foreground">
-              Arraste para reordenar, clique para editar
-            </p>
+            <p className="text-xs text-muted-foreground">Arraste para reordenar. As alterações são salvas automaticamente.</p>
             <div className="space-y-2">
               {sortedStatuses.map((status) => (
                 <div
@@ -107,19 +97,16 @@ export function StatusManagerDialog({
                   } ${!status.ativo ? "opacity-60" : ""}`}
                 >
                   <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
-
                   <div
                     className="h-5 w-5 rounded-full border flex-shrink-0"
                     style={{ backgroundColor: `hsl(${status.cor})` }}
                   />
-
                   <Input
                     value={status.nome}
                     onChange={(e) => onUpdate(status.id, { nome: e.target.value })}
+                    onBlur={(e) => onUpdate(status.id, { nome: e.target.value })}
                     className="h-8 flex-1"
                   />
-
-                  {/* Color picker */}
                   <div className="flex gap-1">
                     {presetColors.slice(0, 4).map((color) => (
                       <button
@@ -132,19 +119,14 @@ export function StatusManagerDialog({
                       />
                     ))}
                   </div>
-
                   <Switch
                     checked={status.ativo}
-                    onCheckedChange={(checked) =>
-                      onUpdate(status.id, { ativo: checked })
-                    }
+                    onCheckedChange={(checked) => onUpdate(status.id, { ativo: checked })}
                   />
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Add new status */}
           <div className="space-y-3 rounded-lg border border-dashed p-4">
             <Label className="text-sm font-medium">Adicionar Novo Status</Label>
             <div className="flex items-center gap-3">
