@@ -57,8 +57,6 @@ export default function Configuracoes() {
             <FileSpreadsheet className="h-4 w-4" />
             Importação
           </TabsTrigger>
-            Sistema
-          </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
