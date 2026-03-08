@@ -104,6 +104,7 @@ export function TicketDetailSheet({
 
   const { comments, loading: commentsLoading, addComment } = useTicketComments(ticket?.id ?? null);
   const { history, loading: historyLoading, logHistory } = useTicketHistory(ticket?.id ?? null);
+  const { running: timerRunning, totalSeconds, start: startTimer, pause: pauseTimer, stop: stopTimer } = useTimesheet(ticket?.id ?? null);
 
   useEffect(() => {
     if (ticket) {
