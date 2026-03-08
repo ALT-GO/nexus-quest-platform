@@ -162,10 +162,10 @@ export default function CentralInteligencia() {
         </TabsList>
 
         <TabsContent value="geral" className="mt-6">
-          <GeralTab />
+          <GeralTab costCenter={costCenter} />
         </TabsContent>
         <TabsContent value="ti" className="mt-6">
-          <OperacionalTITab dateRange={dateRange} />
+          <OperacionalTITab dateRange={dateRange} costCenter={costCenter} />
         </TabsContent>
         <TabsContent value="marketing" className="mt-6">
           <MarketingTab />
