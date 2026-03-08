@@ -51,6 +51,12 @@ export default function Configuracoes() {
             <Database className="h-4 w-4" />
             Sistema
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
