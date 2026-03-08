@@ -73,7 +73,7 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
 
   // Fetch inventory from Supabase
   useEffect(() => {
-    supabase.from("inventory").select("id, category, status").then(({ data }) => {
+    supabase.from("inventory").select("id, category, status, cost_center_eng, cost_center_man").then(({ data }) => {
       if (data) setInventoryItems(data as InventoryItem[]);
     });
     const channel = supabase
