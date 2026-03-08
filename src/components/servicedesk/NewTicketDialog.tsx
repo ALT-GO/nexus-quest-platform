@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -111,6 +111,13 @@ export function NewTicketDialog() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [searchingAssets, setSearchingAssets] = useState(false);
 
+  // Collaborator autocomplete state
+  const [allCollaborators, setAllCollaborators] = useState<string[]>([]);
+  const [filteredCollaborators, setFilteredCollaborators] = useState<string[]>([]);
+  const [showCollaboratorDropdown, setShowCollaboratorDropdown] = useState(false);
+  const [collaboratorSelected, setCollaboratorSelected] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   // Stock check state for Contratação
   const [stockNotebooks, setStockNotebooks] = useState<InventoryAsset[]>([]);
   const [stockCelulares, setStockCelulares] = useState<InventoryAsset[]>([]);
@@ -119,40 +126,82 @@ export function NewTicketDialog() {
   const isDesligamento = category === "Desligamento";
   const isContratacao = category === "Contratação";
 
-  // Real-time search for collaborator assets
-  const searchCollaboratorAssets = useCallback(async (name: string) => {
-    if (name.trim().length < 2) {
+  // Fetch unique collaborators from inventory when entering Desligamento
+  useEffect(() => {
+    if (!isDesligamento) return;
+    const fetchCollaborators = async () => {
+      const { data } = await supabase
+        .from("inventory")
+        .select("collaborator")
+        .neq("collaborator", "")
+        .not("collaborator", "is", null);
+      if (data) {
+        const unique = [...new Set(data.map((d: any) => d.collaborator as string).filter(Boolean))].sort();
+        setAllCollaborators(unique);
+      }
+    };
+    fetchCollaborators();
+  }, [isDesligamento]);
+
+  // Filter collaborators based on typed input
+  useEffect(() => {
+    const q = desligamento.colaborador.trim().toLowerCase();
+    if (!q || collaboratorSelected) {
+      setFilteredCollaborators([]);
+      return;
+    }
+    setFilteredCollaborators(allCollaborators.filter((c) => c.toLowerCase().includes(q)));
+  }, [desligamento.colaborador, allCollaborators, collaboratorSelected]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowCollaboratorDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Fetch exact assets when a collaborator is selected
+  const fetchAssetsForCollaborator = useCallback(async (name: string) => {
+    if (!name.trim()) {
       setFoundAssets([]);
       setSelectedAssetIds(new Set());
       return;
     }
-
     setSearchingAssets(true);
     const { data, error } = await supabase
       .from("inventory")
       .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
-      .ilike("collaborator", `%${name.trim()}%`);
+      .eq("collaborator", name.trim());
 
     if (error) {
       console.error("Error searching assets:", error);
     } else {
       setFoundAssets((data as InventoryAsset[]) || []);
-      // Auto-select all found assets
       setSelectedAssetIds(new Set((data || []).map((a: any) => a.id)));
     }
     setSearchingAssets(false);
   }, []);
 
-  // Debounced search when collaborador changes (only for Desligamento)
-  useEffect(() => {
-    if (!isDesligamento) return;
+  const handleSelectCollaborator = (name: string) => {
+    setDesligamento((prev) => ({ ...prev, colaborador: name }));
+    setCollaboratorSelected(true);
+    setShowCollaboratorDropdown(false);
+    fetchAssetsForCollaborator(name);
+  };
 
-    const timer = setTimeout(() => {
-      searchCollaboratorAssets(desligamento.colaborador);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [desligamento.colaborador, isDesligamento, searchCollaboratorAssets]);
+  const handleCollaboratorInputChange = (value: string) => {
+    setDesligamento((prev) => ({ ...prev, colaborador: value }));
+    setCollaboratorSelected(false);
+    setShowCollaboratorDropdown(true);
+    if (value.trim().length < 2) {
+      setFoundAssets([]);
+      setSelectedAssetIds(new Set());
+    }
+  };
 
   // Stock check for Contratação when celular/notebook toggles change
   useEffect(() => {
@@ -386,17 +435,33 @@ export function NewTicketDialog() {
             <div className="space-y-4 rounded-lg border p-4">
               <p className="text-sm font-semibold text-muted-foreground">Dados do Desligamento</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
+                <div className="space-y-1 relative" ref={dropdownRef}>
                   <Label>Nome do Colaborador <span className="text-destructive">*</span></Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={desligamento.colaborador}
-                      onChange={(e) => setDesligamento({ ...desligamento, colaborador: e.target.value })}
+                      onChange={(e) => handleCollaboratorInputChange(e.target.value)}
+                      onFocus={() => { if (!collaboratorSelected && desligamento.colaborador.trim()) setShowCollaboratorDropdown(true); }}
                       placeholder="Buscar colaborador..."
                       className="pl-9"
+                      autoComplete="off"
                     />
                   </div>
+                  {showCollaboratorDropdown && filteredCollaborators.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                      {filteredCollaborators.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                          onClick={() => handleSelectCollaborator(name)}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label>Gestor</Label>
@@ -425,7 +490,7 @@ export function NewTicketDialog() {
               </div>
 
               {/* Found assets from inventory */}
-              {desligamento.colaborador.trim().length >= 2 && (
+              {collaboratorSelected && desligamento.colaborador.trim() && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5 text-sm">
                     <Package className="h-4 w-4" />
