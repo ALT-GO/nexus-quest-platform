@@ -135,7 +135,7 @@ export function KanbanBoard({
             {/* Cards */}
             <div className="space-y-2.5">
               {columnTickets.map((ticket) => {
-                const isCompleted = isFinalStatus(ticket.statusId);
+                const isCompleted = !!ticket.completedAt;
                 const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
                 const priority = priorityConfig[ticket.priority];
                 const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
