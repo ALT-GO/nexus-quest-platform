@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, Send, Search, Package } from "lucide-react";
+import { Plus, Loader2, Send, Search, Package, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createTicket, runTicketCreatedAutomations } from "@/hooks/use-tickets";
@@ -111,6 +111,11 @@ export function NewTicketDialog() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [searchingAssets, setSearchingAssets] = useState(false);
 
+  // Stock check state for Contratação
+  const [stockNotebooks, setStockNotebooks] = useState<InventoryAsset[]>([]);
+  const [stockCelulares, setStockCelulares] = useState<InventoryAsset[]>([]);
+  const [checkingStock, setCheckingStock] = useState(false);
+
   const isDesligamento = category === "Desligamento";
   const isContratacao = category === "Contratação";
 
@@ -148,6 +153,45 @@ export function NewTicketDialog() {
 
     return () => clearTimeout(timer);
   }, [desligamento.colaborador, isDesligamento, searchCollaboratorAssets]);
+
+  // Stock check for Contratação when celular/notebook toggles change
+  useEffect(() => {
+    if (!isContratacao) {
+      setStockNotebooks([]);
+      setStockCelulares([]);
+      return;
+    }
+
+    const checkStock = async () => {
+      setCheckingStock(true);
+
+      if (contratacao.notebook) {
+        const { data } = await supabase
+          .from("inventory")
+          .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+          .eq("status", "Disponível")
+          .ilike("asset_type", "%notebook%");
+        setStockNotebooks((data as InventoryAsset[]) || []);
+      } else {
+        setStockNotebooks([]);
+      }
+
+      if (contratacao.celular) {
+        const { data } = await supabase
+          .from("inventory")
+          .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+          .eq("status", "Disponível")
+          .ilike("asset_type", "%celular%");
+        setStockCelulares((data as InventoryAsset[]) || []);
+      } else {
+        setStockCelulares([]);
+      }
+
+      setCheckingStock(false);
+    };
+
+    checkStock();
+  }, [isContratacao, contratacao.notebook, contratacao.celular]);
 
   const toggleAssetSelection = (assetId: string) => {
     setSelectedAssetIds((prev) => {
@@ -198,11 +242,23 @@ export function NewTicketDialog() {
         `Notebook: ${contratacao.notebook ? "Sim" : "Não"}`,
         `E-mail: ${contratacao.email ? "Sim" : "Não"}`,
       ];
+
+      const suggestions: string[] = [];
+      if (contratacao.notebook && stockNotebooks.length > 0) {
+        const nb = stockNotebooks[0];
+        suggestions.push(`Notebook sugerido: ${nb.asset_code} - ${nb.model || "Sem modelo"} (ST: ${nb.service_tag || "N/A"})`);
+      }
+      if (contratacao.celular && stockCelulares.length > 0) {
+        const cel = stockCelulares[0];
+        suggestions.push(`Celular sugerido: ${cel.asset_code} - ${cel.model || "Sem modelo"} (ST: ${cel.service_tag || "N/A"})`);
+      }
+
       return [
         `Colaborador: ${contratacao.colaborador}`,
         `Centro de Custo: ${contratacao.centroCusto}`,
         ...items,
-        description && `Observações: ${description}`,
+        suggestions.length > 0 ? `\nSugestões de estoque:\n${suggestions.map(s => `  - ${s}`).join("\n")}` : "",
+        description && `\nObservações: ${description}`,
       ].filter(Boolean).join("\n");
     }
     return description;
@@ -267,6 +323,8 @@ export function NewTicketDialog() {
     setContratacao(defaultContratacao);
     setFoundAssets([]);
     setSelectedAssetIds(new Set());
+    setStockNotebooks([]);
+    setStockCelulares([]);
   };
 
   const getStatusColor = (status: string) => {
@@ -478,6 +536,75 @@ export function NewTicketDialog() {
                   ))}
                 </div>
               </div>
+
+              {/* Stock indicators */}
+              {(contratacao.notebook || contratacao.celular) && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Package className="h-4 w-4" />
+                    Verificação de Estoque
+                  </Label>
+                  {checkingStock ? (
+                    <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verificando estoque...
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-md border p-3">
+                      {contratacao.notebook && (
+                        <div className="flex items-start gap-2">
+                          {stockNotebooks.length > 0 ? (
+                            <>
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                              <div>
+                                <p className="text-sm font-medium text-success">
+                                  Notebook disponível em estoque ({stockNotebooks.length})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Sugestão: {stockNotebooks[0].asset_code} - {stockNotebooks[0].model || "Sem modelo"}
+                                  {stockNotebooks[0].service_tag && ` (ST: ${stockNotebooks[0].service_tag})`}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                              <p className="text-sm font-medium text-warning">
+                                Nenhum notebook disponível no momento
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {contratacao.celular && (
+                        <div className="flex items-start gap-2">
+                          {stockCelulares.length > 0 ? (
+                            <>
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                              <div>
+                                <p className="text-sm font-medium text-success">
+                                  Celular disponível em estoque ({stockCelulares.length})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Sugestão: {stockCelulares[0].asset_code} - {stockCelulares[0].model || "Sem modelo"}
+                                  {stockCelulares[0].service_tag && ` (ST: ${stockCelulares[0].service_tag})`}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                              <p className="text-sm font-medium text-warning">
+                                Nenhum celular disponível no momento
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
