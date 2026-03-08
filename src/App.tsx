@@ -79,6 +79,7 @@ function AppRoutes() {
       <Route path="/marketing/solicitacoes" element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />
       <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
       <Route path="/ti/ativos" element={<ProtectedRoute><GestaoAtivos /></ProtectedRoute>} />
+      <Route path="/ti/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
       {/* Admin-only: Central de Inteligência */}
