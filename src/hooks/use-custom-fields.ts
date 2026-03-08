@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 
 export type FieldType = "texto" | "número" | "data" | "seleção";
 
-export type AssetCategory = "hardware" | "telecom" | "licenses" | "passwords";
+export type AssetCategory = "notebooks" | "celulares" | "linhas" | "licencas";
 
 export interface CustomField {
   id: string;
