@@ -323,6 +323,8 @@ export function NewTicketDialog() {
     setContratacao(defaultContratacao);
     setFoundAssets([]);
     setSelectedAssetIds(new Set());
+    setStockNotebooks([]);
+    setStockCelulares([]);
   };
 
   const getStatusColor = (status: string) => {
