@@ -15,18 +15,25 @@ export interface CollaboratorAsset {
   model: string;
   asset_type: string;
   service_tag: string;
+  service_tag_2: string;
   sector: string;
   cost_center: string;
+  cost_center_eng: string;
+  cost_center_man: string;
   notes: string;
   delivered_at: string | null;
   created_at: string;
-}
-
-export interface CollaboratorCustomField {
-  asset_id: string;
-  field_name: string;
-  field_type: string;
-  value: string;
+  collaborator: string;
+  cargo: string;
+  marca: string;
+  contrato: string;
+  gestor: string;
+  email_address: string;
+  operadora: string;
+  numero: string;
+  imei1: string;
+  imei2: string;
+  licenca: string;
 }
 
 export function useCollaborators() {
@@ -72,7 +79,6 @@ export function useCollaborators() {
 
 export function useCollaboratorDetail(name: string) {
   const [assets, setAssets] = useState<CollaboratorAsset[]>([]);
-  const [customFields, setCustomFields] = useState<CollaboratorCustomField[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDetail = useCallback(async () => {
@@ -87,33 +93,7 @@ export function useCollaboratorDetail(name: string) {
       .order("created_at", { ascending: false });
 
     if (items) {
-      setAssets(items as CollaboratorAsset[]);
-
-      // Fetch custom field values for these assets
-      const ids = items.map((i: any) => i.id);
-      if (ids.length > 0) {
-        const { data: vals } = await supabase
-          .from("custom_field_values")
-          .select("asset_id, field_id, value")
-          .in("asset_id", ids);
-
-        const { data: fields } = await supabase
-          .from("custom_fields")
-          .select("id, name, field_type");
-
-        if (vals && fields) {
-          const fieldMap = new Map(fields.map((f: any) => [f.id, f]));
-          const mapped: CollaboratorCustomField[] = vals
-            .filter((v: any) => v.value && fieldMap.has(v.field_id))
-            .map((v: any) => ({
-              asset_id: v.asset_id,
-              field_name: fieldMap.get(v.field_id)!.name,
-              field_type: fieldMap.get(v.field_id)!.field_type,
-              value: v.value,
-            }));
-          setCustomFields(mapped);
-        }
-      }
+      setAssets(items as unknown as CollaboratorAsset[]);
     }
     setLoading(false);
   }, [name]);
@@ -122,5 +102,64 @@ export function useCollaboratorDetail(name: string) {
     fetchDetail();
   }, [fetchDetail]);
 
-  return { assets, customFields, loading, refetch: fetchDetail };
+  const updateAsset = useCallback(async (id: string, updates: Partial<CollaboratorAsset>) => {
+    await supabase.from("inventory").update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    } as any).eq("id", id);
+    setAssets((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)));
+  }, []);
+
+  const deleteAsset = useCallback(async (id: string) => {
+    await supabase.from("inventory").delete().eq("id", id);
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  return { assets, loading, refetch: fetchDetail, updateAsset, deleteAsset };
+}
+
+export function useAvailableStock() {
+  const [items, setItems] = useState<CollaboratorAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStock = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("inventory")
+      .select("*")
+      .or("collaborator.eq.,collaborator.is.null")
+      .order("category")
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      // Also include items with status "Disponível" regardless of collaborator
+      const { data: available } = await supabase
+        .from("inventory")
+        .select("*")
+        .eq("status", "Disponível")
+        .order("category")
+        .order("created_at", { ascending: false });
+
+      // Merge and deduplicate
+      const allItems = [...(data || []), ...(available || [])];
+      const unique = Array.from(new Map(allItems.map((i: any) => [i.id, i])).values());
+      setItems(unique as unknown as CollaboratorAsset[]);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchStock();
+  }, [fetchStock]);
+
+  const assignToCollaborator = useCallback(async (assetId: string, collaboratorName: string) => {
+    await supabase.from("inventory").update({
+      collaborator: collaboratorName,
+      status: "Em uso",
+      updated_at: new Date().toISOString(),
+    }).eq("id", assetId);
+    await fetchStock();
+  }, [fetchStock]);
+
+  return { items, loading, refetch: fetchStock, assignToCollaborator };
 }
