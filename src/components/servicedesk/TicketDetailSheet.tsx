@@ -163,8 +163,15 @@ export function TicketDetailSheet({
   };
 
   const handleComplete = async () => {
-    const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
-    if (!finalStatus) return;
+    // If already completed, toggle it off
+    if (isCompleted) {
+      await supabase
+        .from("tickets")
+        .update({ completed_at: null, updated_at: new Date().toISOString() } as any)
+        .eq("id", ticket.id as any);
+      toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+      return;
+    }
 
     // Stop timer automatically
     await stopTimer();
