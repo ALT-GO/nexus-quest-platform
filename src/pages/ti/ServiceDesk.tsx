@@ -347,6 +347,19 @@ export default function ServiceDesk() {
           </SelectContent>
         </Select>
 
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hide-completed"
+              checked={hideCompleted}
+              onCheckedChange={setHideCompleted}
+            />
+            <Label htmlFor="hide-completed" className="text-sm text-muted-foreground whitespace-nowrap cursor-pointer">
+              Ocultar concluídos
+            </Label>
+          </div>
+        </div>
+
         <div className="flex rounded-lg border bg-muted p-1">
           <Button
             variant={viewMode === "kanban" ? "default" : "ghost"}
