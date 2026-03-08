@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Monitor, Upload, CheckCircle2, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createTicket } from "@/hooks/use-tickets";
+import { createTicket, runTicketCreatedAutomations } from "@/hooks/use-tickets";
 
 const categories = [
   "Acesso e permissões",
