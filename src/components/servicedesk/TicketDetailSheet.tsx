@@ -278,6 +278,42 @@ export function TicketDetailSheet({
               </h2>
             )}
           </div>
+
+          {/* Timer button */}
+          {!isCompleted && (
+            <button
+              onClick={handleTimerToggle}
+              className={cn(
+                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all",
+                timerRunning
+                  ? "bg-warning/15 text-warning border border-warning/30 hover:bg-warning/25"
+                  : "bg-success/15 text-success border border-success/30 hover:bg-success/25"
+              )}
+            >
+              {timerRunning ? (
+                <>
+                  <Pause className="h-4 w-4" />
+                  <span className={cn("font-mono tabular-nums", timerRunning && "animate-pulse")}>
+                    {formatDuration(totalSeconds)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  <span className="font-mono tabular-nums">
+                    {totalSeconds > 0 ? formatDuration(totalSeconds) : "Iniciar"}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
+          {isCompleted && totalSeconds > 0 && (
+            <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+              <Timer className="h-3.5 w-3.5" />
+              <span className="font-mono">{formatDuration(totalSeconds)}</span>
+            </div>
+          )}
         </div>
 
         <ScrollArea className="flex-1">
