@@ -229,7 +229,7 @@ export default function ServiceDesk() {
   // Stats
   const pendingCount = tickets.filter((t) => t.status_id === "pending").length;
   const inProgressCount = tickets.filter((t) => t.status_id === "inProgress").length;
-  const completedCount = tickets.filter((t) => isFinalStatus(t.status_id)).length;
+  const completedCount = tickets.filter((t) => !!t.completed_at).length;
   const slaExpiredCount = tickets.filter(
     (t) => t.sla_expired && !isFinalStatus(t.status_id)
   ).length;
