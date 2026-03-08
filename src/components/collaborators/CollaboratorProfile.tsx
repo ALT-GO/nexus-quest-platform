@@ -221,9 +221,7 @@ function AssetSection({
                     );
                   })}
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => onDelete(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
                   </TableCell>
                 </TableRow>
               ))}
