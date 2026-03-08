@@ -341,7 +341,6 @@ export function TicketDetailSheet({
         <div className="flex items-center gap-3 border-b px-5 py-4">
           <button
             onClick={handleComplete}
-            disabled={isCompleted}
             className={cn(
               "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
               isCompleted
