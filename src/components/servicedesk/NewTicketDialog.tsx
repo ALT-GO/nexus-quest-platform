@@ -536,6 +536,75 @@ export function NewTicketDialog() {
                   ))}
                 </div>
               </div>
+
+              {/* Stock indicators */}
+              {(contratacao.notebook || contratacao.celular) && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Package className="h-4 w-4" />
+                    Verificação de Estoque
+                  </Label>
+                  {checkingStock ? (
+                    <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verificando estoque...
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-md border p-3">
+                      {contratacao.notebook && (
+                        <div className="flex items-start gap-2">
+                          {stockNotebooks.length > 0 ? (
+                            <>
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                              <div>
+                                <p className="text-sm font-medium text-success">
+                                  Notebook disponível em estoque ({stockNotebooks.length})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Sugestão: {stockNotebooks[0].asset_code} - {stockNotebooks[0].model || "Sem modelo"}
+                                  {stockNotebooks[0].service_tag && ` (ST: ${stockNotebooks[0].service_tag})`}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                              <p className="text-sm font-medium text-warning">
+                                Nenhum notebook disponível no momento
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {contratacao.celular && (
+                        <div className="flex items-start gap-2">
+                          {stockCelulares.length > 0 ? (
+                            <>
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                              <div>
+                                <p className="text-sm font-medium text-success">
+                                  Celular disponível em estoque ({stockCelulares.length})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Sugestão: {stockCelulares[0].asset_code} - {stockCelulares[0].model || "Sem modelo"}
+                                  {stockCelulares[0].service_tag && ` (ST: ${stockCelulares[0].service_tag})`}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                              <p className="text-sm font-medium text-warning">
+                                Nenhum celular disponível no momento
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
