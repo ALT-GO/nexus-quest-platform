@@ -243,14 +243,17 @@ function AssetSection({
 
 export function CollaboratorProfile({ name, onBack }: Props) {
   const { assets, loading, refetch, updateAsset, deleteAsset } = useCollaboratorDetail(name);
+  const [termDialogOpen, setTermDialogOpen] = useState(false);
+  const [termType, setTermType] = useState<"responsabilidade" | "devolucao">("responsabilidade");
 
   const notebooks = assets.filter((a) => a.category === "notebooks" || a.category === "hardware");
   const celulares = assets.filter((a) => a.category === "celulares");
   const linhas = assets.filter((a) => a.category === "linhas" || a.category === "telecom");
   const licencas = assets.filter((a) => a.category === "licencas" || a.category === "licenses");
 
-  const handleGeneratePDF = () => {
-    generateResponsibilityPDF(name, assets, []);
+  const openTermDialog = (type: "responsabilidade" | "devolucao") => {
+    setTermType(type);
+    setTermDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
