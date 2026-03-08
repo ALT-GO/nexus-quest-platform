@@ -341,8 +341,15 @@ export function CsvImportTab() {
         category: category as string,
         ...record,
       };
-      // Remove any empty strings for optional fields to avoid overwriting with blanks on update
       delete payload.dbColumn;
+
+      // Auto-set status based on collaborator presence
+      const collabValue = (payload.collaborator || "").trim();
+      if (collabValue) {
+        if (!payload.status) payload.status = "Em uso";
+      } else {
+        if (!payload.status) payload.status = "Disponível";
+      }
 
       // Check for duplicate
       const uniqueVal = record[uniqueKeyCol];
