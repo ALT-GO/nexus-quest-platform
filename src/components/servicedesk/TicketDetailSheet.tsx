@@ -83,6 +83,7 @@ interface TicketDetailSheetProps {
 
 export function TicketDetailSheet({
   ticket,
+  subtasks = [],
   open,
   onOpenChange,
   statuses,
