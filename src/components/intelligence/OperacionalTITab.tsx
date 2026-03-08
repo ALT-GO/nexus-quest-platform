@@ -32,17 +32,32 @@ const tooltipStyle = {
   borderRadius: "8px",
 };
 
-const mockAssets = [
-  { id: "HW-001", status: "Em uso", type: "Notebook", costCenter: "Comercial" },
-  { id: "HW-002", status: "Em uso", type: "Notebook", costCenter: "TI" },
-  { id: "HW-003", status: "Em uso", type: "Tablet", costCenter: "Marketing" },
-  { id: "HW-004", status: "Disponível", type: "Notebook", costCenter: "" },
-  { id: "HW-005", status: "Disponível", type: "Tablet", costCenter: "" },
-  { id: "HW-006", status: "Disponível", type: "Celular", costCenter: "" },
-  { id: "HW-007", status: "Disponível", type: "Notebook", costCenter: "" },
-  { id: "HW-008", status: "Manutenção", type: "Monitor", costCenter: "Financeiro" },
-  { id: "HW-009", status: "Manutenção", type: "Notebook", costCenter: "RH" },
-];
+interface InventoryItem {
+  id: string;
+  category: string;
+  status: string;
+}
+
+const categoryLabels: Record<string, string> = {
+  notebooks: "Notebooks",
+  celulares: "Celulares",
+  linhas: "Linhas",
+  licencas: "Licenças",
+};
+
+const categoryIcons: Record<string, React.ElementType> = {
+  notebooks: Laptop,
+  celulares: Smartphone,
+  linhas: Phone,
+  licencas: KeyRound,
+};
+
+const categoryColorClasses: Record<string, string> = {
+  notebooks: "text-primary",
+  celulares: "text-info",
+  linhas: "text-warning",
+  licencas: "text-chart-4",
+};
 
 export function OperacionalTITab({ dateRange }: OperacionalTITabProps) {
   const { tickets: allTickets, loading } = useTickets();
