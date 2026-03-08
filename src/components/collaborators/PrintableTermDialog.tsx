@@ -57,42 +57,42 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         </div>
 
         {/* Print Area - A4 Format */}
-        <div className="p-8 mx-auto bg-white text-black print:p-0 print:m-0 w-full max-w-[210mm] min-h-[297mm] font-sans text-sm print:text-xs">
+        <div className="p-8 mx-auto bg-background text-foreground print:p-0 print:m-0 w-full max-w-[210mm] min-h-[297mm] font-sans text-sm print:text-xs">
           
           {/* Header / Logo Orion */}
           <div className="flex items-center justify-between border-b-2 border-primary/20 pb-6 mb-8 print:pb-4 print:mb-6">
             <div>
               <h1 className="text-2xl font-bold text-primary print:text-xl uppercase tracking-wider">ORION</h1>
-              <p className="text-muted-foreground print:text-gray-500 mt-1">Gestão de Tecnologia da Informação</p>
+              <p className="text-muted-foreground mt-1">Gestão de Tecnologia da Informação</p>
             </div>
-            <div className="text-right text-muted-foreground print:text-gray-500">
+            <div className="text-right text-muted-foreground">
               <p>{title}</p>
               <p>Data: {today}</p>
             </div>
           </div>
 
           {/* Collaborator Info */}
-          <div className="mb-8 p-4 bg-gray-50 rounded-lg print:bg-transparent print:border print:p-4 print:rounded-none">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b pb-2">Dados do Colaborador</h3>
+          <div className="mb-8 p-4 bg-muted/30 rounded-lg print:bg-transparent print:border print:border-border print:p-4 print:rounded-none">
+            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Dados do Colaborador</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="font-semibold text-gray-600">Nome:</span> {collaboratorName}
+                <span className="font-semibold text-muted-foreground">Nome:</span> {collaboratorName}
               </div>
               <div>
-                <span className="font-semibold text-gray-600">CPF:</span> ___________________________
+                <span className="font-semibold text-muted-foreground">CPF:</span> ___________________________
               </div>
               <div>
-                <span className="font-semibold text-gray-600">Cargo:</span> {cargo}
+                <span className="font-semibold text-muted-foreground">Cargo:</span> {cargo}
               </div>
             </div>
           </div>
 
           {/* Asset List */}
           <div className="mb-8">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b pb-2">Equipamentos e Recursos Vinculados</h3>
+            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Equipamentos e Recursos Vinculados</h3>
             
             {assets.length === 0 ? (
-              <p className="text-gray-500 italic py-4">Nenhum ativo vinculado a este colaborador no momento.</p>
+              <p className="text-muted-foreground italic py-4">Nenhum ativo vinculado a este colaborador no momento.</p>
             ) : (
               <div className="space-y-6">
                 {categories.map((cat) => {
@@ -102,27 +102,26 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                   return (
                     <div key={cat}>
                       <h4 className="font-semibold text-primary/80 mb-2">{label}</h4>
-                      <table className="w-full text-left border-collapse border border-gray-200">
+                      <table className="w-full text-left border-collapse border border-border">
                         <thead>
-                          <tr className="bg-gray-100">
-                            <th className="p-2 border border-gray-200 w-24">ID</th>
-                            <th className="p-2 border border-gray-200">Detalhes do Ativo</th>
-                            <th className="p-2 border border-gray-200 w-32">Identificador</th>
+                          <tr className="bg-muted/50">
+                            <th className="p-2 border border-border w-24">ID</th>
+                            <th className="p-2 border border-border">Detalhes do Ativo</th>
+                            <th className="p-2 border border-border w-32">Identificador</th>
                           </tr>
                         </thead>
                         <tbody>
                           {catAssets.map((asset: any) => {
-                            // Extrair informações relevantes baseadas na categoria
                             let detalhes = asset.model || asset.asset_type || asset.licenca || "-";
                             if (asset.marca) detalhes = `${asset.marca} ${detalhes}`;
                             
                             let identificador = asset.service_tag || asset.numero || asset.imei1 || asset.email_address || "-";
 
                             return (
-                              <tr key={asset.id} className="text-gray-800 print:text-black">
-                                <td className="p-2 border border-gray-200 font-mono text-xs">{asset.asset_code}</td>
-                                <td className="p-2 border border-gray-200">{detalhes}</td>
-                                <td className="p-2 border border-gray-200 font-mono text-xs">{identificador}</td>
+                              <tr key={asset.id} className="text-foreground">
+                                <td className="p-2 border border-border font-mono text-xs">{asset.asset_code}</td>
+                                <td className="p-2 border border-border">{detalhes}</td>
+                                <td className="p-2 border border-border font-mono text-xs">{identificador}</td>
                               </tr>
                             );
                           })}
@@ -136,8 +135,8 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
           </div>
 
           {/* Term Text (Placeholder para o usuário fornecer) */}
-          <div className="mb-16 text-justify leading-relaxed text-gray-700 print:text-black space-y-4">
-            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b pb-2">Declaração</h3>
+          <div className="mb-16 text-justify leading-relaxed text-foreground space-y-4">
+            <h3 className="font-bold text-base mb-3 uppercase tracking-wide border-b border-border pb-2">Declaração</h3>
             {isDevolucao ? (
               <p>
                 [TEXTO PADRÃO AQUI: P. ex: Declaro para os devidos fins que estou devolvendo os equipamentos e/ou acessos acima listados, 
@@ -161,18 +160,18 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
           {/* Signatures */}
           <div className="mt-20 pt-8 grid grid-cols-2 gap-12 text-center break-inside-avoid">
             <div>
-              <div className="border-t border-gray-400 w-full mb-2 mx-auto"></div>
+              <div className="border-t border-border w-full mb-2 mx-auto"></div>
               <p className="font-semibold">{collaboratorName}</p>
-              <p className="text-gray-500 text-sm">Colaborador(a)</p>
+              <p className="text-muted-foreground text-sm">Colaborador(a)</p>
             </div>
             <div>
-              <div className="border-t border-gray-400 w-full mb-2 mx-auto"></div>
+              <div className="border-t border-border w-full mb-2 mx-auto"></div>
               <p className="font-semibold">Responsável de TI</p>
-              <p className="text-gray-500 text-sm">Orion</p>
+              <p className="text-muted-foreground text-sm">Orion</p>
             </div>
           </div>
           
-          <div className="mt-12 text-center text-gray-500 text-xs break-inside-avoid">
+          <div className="mt-12 text-center text-muted-foreground text-xs break-inside-avoid">
             Local e data: _____________________________________, {today}
           </div>
 
