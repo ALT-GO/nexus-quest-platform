@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
