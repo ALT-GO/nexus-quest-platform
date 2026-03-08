@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,116 +11,273 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { useAssets, HardwareStatus } from "@/hooks/use-assets";
-import { useCustomFields } from "@/hooks/use-custom-fields";
-import { CustomFieldManager } from "@/components/assets/CustomFieldManager";
-import { InlineFieldEditor } from "@/components/assets/InlineFieldEditor";
+import { Button } from "@/components/ui/button";
+import { useInventory } from "@/hooks/use-inventory";
+import { FieldManagerDialog } from "@/components/assets/FieldManagerDialog";
+import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
+import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
 import {
-  Plus,
   Laptop,
   Key,
   Phone,
   FileText,
   Eye,
   EyeOff,
-  Edit,
-  History,
+  Trash2,
+  Loader2,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
-// Password vault
-interface PasswordEntry {
-  id: string;
-  accountName: string;
-  login: string;
-  password: string;
-  notes: string;
-}
-
-// Telecom
-interface TelecomLine {
-  id: string;
-  number: string;
-  collaborator: string;
-  type: string;
-  manager: string;
-  operator: string;
-  contract: string;
-  costCenter: string;
-}
-
-// Microsoft License
-interface MicrosoftLicense {
-  id: string;
-  status: "active" | "inactive";
-  collaborator: string;
-  email: string;
-  createdDate: string;
-  licenseType: string;
-  manager: string;
-  contract: string;
-  costCenter: string;
-  notes: string;
-}
-
-const initialPasswords: PasswordEntry[] = [
-  { id: "1", accountName: "AWS Console", login: "admin@empresa.com", password: "S3cur3P@ssw0rd!", notes: "Conta principal AWS" },
-  { id: "2", accountName: "Google Workspace Admin", login: "admin@empresa.com", password: "G00gl3Adm1n#2024", notes: "Administração do Workspace" },
-  { id: "3", accountName: "Cloudflare", login: "ti@empresa.com", password: "Cl0udfl@r3!Secure", notes: "DNS e CDN" },
-];
-
-const initialTelecom: TelecomLine[] = [
-  { id: "1", number: "(11) 99999-1234", collaborator: "Maria Silva", type: "Corporativo", manager: "Carlos Diretor", operator: "Vivo", contract: "CONT-2024-001", costCenter: "Comercial" },
-  { id: "2", number: "(11) 99999-5678", collaborator: "João Pedro", type: "Corporativo", manager: "Carlos Diretor", operator: "Vivo", contract: "CONT-2024-001", costCenter: "TI" },
-];
-
-const initialLicenses: MicrosoftLicense[] = [
-  { id: "1", status: "active", collaborator: "Maria Silva", email: "maria.silva@empresa.com", createdDate: "2024-01-15", licenseType: "Microsoft 365 E3", manager: "Carlos Diretor", contract: "EA-2024-001", costCenter: "Comercial", notes: "" },
-  { id: "2", status: "active", collaborator: "João Pedro", email: "joao.pedro@empresa.com", createdDate: "2024-02-10", licenseType: "Microsoft 365 E3", manager: "Carlos Diretor", contract: "EA-2024-001", costCenter: "TI", notes: "" },
-  { id: "3", status: "inactive", collaborator: "Ex-Funcionário", email: "ex.funcionario@empresa.com", createdDate: "2023-06-01", licenseType: "Microsoft 365 E1", manager: "Carlos Diretor", contract: "EA-2024-001", costCenter: "RH", notes: "Desligado em 11/2024" },
-];
-
-const statusVariant: Record<HardwareStatus, "active" | "pending" | "inProgress" | "default"> = {
-  "Disponível": "active",
-  "Em uso": "inProgress",
-  "Reservado": "pending",
-  "Manutenção": "default",
+const statusColors: Record<string, string> = {
+  "Disponível": "bg-emerald-500/15 text-emerald-600",
+  "Em uso": "bg-blue-500/15 text-blue-600",
+  "Manutenção": "bg-amber-500/15 text-amber-600",
+  "Baixado": "bg-muted text-muted-foreground",
+  "Reservado": "bg-muted text-muted-foreground",
 };
 
-export default function GestaoAtivos() {
-  const { assets } = useAssets();
-  const {
-    fields,
-    getFieldsByCategory,
-    getValue,
-    addField,
-    updateField,
-    deleteField,
-    setValue,
-  } = useCustomFields();
+const statusOptions = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
 
-  const [passwords] = useState<PasswordEntry[]>(initialPasswords);
-  const [telecom] = useState<TelecomLine[]>(initialTelecom);
-  const [licenses] = useState<MicrosoftLicense[]>(initialLicenses);
+function StatusBadgeColored({ status }: { status: string }) {
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColors[status] || "bg-secondary text-secondary-foreground")}>
+      {status}
+    </span>
+  );
+}
+
+function CategoryTab({ category, label }: { category: string; label: string }) {
+  const {
+    items, fields, loading,
+    addItem, updateItem, deleteItem,
+    addField, updateField, deleteField,
+    getFieldValue, setFieldValue,
+  } = useInventory(category);
+
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
 
-  const hardwareFields = getFieldsByCategory("hardware");
-
-  const togglePasswordVisibility = (id: string) => {
-    setVisiblePasswords((prev) => {
-      const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-      return newSet;
+  const togglePw = (id: string) => {
+    setVisiblePasswords(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
     });
   };
 
+  const handleNewAsset = async (data: Record<string, string>, fieldVals: Record<string, string>) => {
+    // Insert into inventory
+    const { data: inserted, error } = await supabase.from("inventory").insert({
+      category,
+      status: data.status || "Disponível",
+      collaborator: data.collaborator || "",
+      cost_center: data.cost_center || "",
+      sector: data.sector || "",
+      model: data.model || "",
+      asset_type: data.asset_type || "",
+      service_tag: data.service_tag || "",
+      notes: data.notes || "",
+      asset_code: "TEMP",
+    }).select().single();
+
+    if (error || !inserted) return;
+
+    // Save custom field values
+    const entries = Object.entries(fieldVals).filter(([, v]) => v.trim() !== "");
+    if (entries.length > 0) {
+      await supabase.from("custom_field_values").insert(
+        entries.map(([fieldId, value]) => ({ asset_id: (inserted as any).id, field_id: fieldId, value }))
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Password-specific layout
+  if (category === "passwords") {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-semibold">Cofre de Senhas</CardTitle>
+          <div className="flex items-center gap-2">
+            <FieldManagerDialog categoryLabel={label} fields={fields} onAdd={addField} onUpdate={updateField} onDelete={deleteField} />
+            <NewAssetDialog category={category} fields={fields} onSave={handleNewAsset} />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Nome / Conta</TableHead>
+                  <TableHead>Login</TableHead>
+                  <TableHead>Senha</TableHead>
+                  {fields.map(f => <TableHead key={f.id}>{f.name}</TableHead>)}
+                  <TableHead>Notas</TableHead>
+                  <TableHead className="w-[80px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
+                    <TableCell>
+                      <InlineCellEditor value={item.model} onSave={v => updateItem(item.id, { model: v })} />
+                    </TableCell>
+                    <TableCell>
+                      <InlineCellEditor value={item.collaborator} onSave={v => updateItem(item.id, { collaborator: v })} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-sm">
+                          {visiblePasswords.has(item.id) ? item.service_tag : "••••••••"}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => togglePw(item.id)}>
+                          {visiblePasswords.has(item.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                    </TableCell>
+                    {fields.map(f => (
+                      <TableCell key={f.id}>
+                        <InlineCellEditor
+                          value={getFieldValue(item.id, f.id)}
+                          onSave={v => setFieldValue(item.id, f.id, v)}
+                          type={f.field_type === "seleção" ? "select" : f.field_type === "número" ? "number" : f.field_type === "data" ? "date" : "text"}
+                          options={f.options || undefined}
+                        />
+                      </TableCell>
+                    ))}
+                    <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">{item.notes || "—"}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteItem(item.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {items.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5 + fields.length} className="text-center py-8 text-muted-foreground">
+                      Nenhum registro encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Generic layout for hardware, telecom, licenses
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base font-semibold">{label}</CardTitle>
+        <div className="flex items-center gap-2">
+          <FieldManagerDialog categoryLabel={label} fields={fields} onAdd={addField} onUpdate={updateField} onDelete={deleteField} />
+          <NewAssetDialog category={category} fields={fields} onSave={handleNewAsset} />
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Colaborador</TableHead>
+                <TableHead>Modelo</TableHead>
+                {category === "hardware" && <TableHead>Tipo</TableHead>}
+                {category === "hardware" && <TableHead>Service Tag</TableHead>}
+                <TableHead>Centro de Custo</TableHead>
+                {category !== "passwords" && <TableHead>Setor</TableHead>}
+                {fields.map(f => <TableHead key={f.id} className="whitespace-nowrap">{f.name}</TableHead>)}
+                <TableHead>Notas</TableHead>
+                <TableHead className="w-[80px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map(item => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
+                  <TableCell>
+                    <InlineCellEditor
+                      value={item.status}
+                      onSave={v => updateItem(item.id, { status: v })}
+                      type="select"
+                      options={statusOptions}
+                      displayRender={v => <StatusBadgeColored status={v} />}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <InlineCellEditor value={item.collaborator} onSave={v => updateItem(item.id, { collaborator: v })} />
+                  </TableCell>
+                  <TableCell>
+                    <InlineCellEditor value={item.model} onSave={v => updateItem(item.id, { model: v })} />
+                  </TableCell>
+                  {category === "hardware" && (
+                    <TableCell>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{item.asset_type || "—"}</span>
+                    </TableCell>
+                  )}
+                  {category === "hardware" && (
+                    <TableCell className="font-mono text-xs">
+                      <InlineCellEditor value={item.service_tag} onSave={v => updateItem(item.id, { service_tag: v })} />
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <InlineCellEditor value={item.cost_center} onSave={v => updateItem(item.id, { cost_center: v })} />
+                  </TableCell>
+                  {category !== "passwords" && (
+                    <TableCell>
+                      <InlineCellEditor value={item.sector} onSave={v => updateItem(item.id, { sector: v })} />
+                    </TableCell>
+                  )}
+                  {fields.map(f => (
+                    <TableCell key={f.id}>
+                      <InlineCellEditor
+                        value={getFieldValue(item.id, f.id)}
+                        onSave={v => setFieldValue(item.id, f.id, v)}
+                        type={f.field_type === "seleção" ? "select" : f.field_type === "número" ? "number" : f.field_type === "data" ? "date" : "text"}
+                        options={f.options || undefined}
+                      />
+                    </TableCell>
+                  ))}
+                  <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">{item.notes || "—"}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteItem(item.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10 + fields.length} className="text-center py-8 text-muted-foreground">
+                    Nenhum registro encontrado. Clique em "Novo Ativo" para adicionar.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function GestaoAtivos() {
   return (
     <AppLayout>
       <PageHeader
@@ -131,277 +286,36 @@ export default function GestaoAtivos() {
       />
 
       <Tabs defaultValue="hardware" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-none lg:gap-2">
-          <TabsTrigger value="hardware" className="gap-2">
-            <Laptop className="h-4 w-4 hidden sm:inline" />
-            Hardware
+        <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="hardware" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Laptop className="h-4 w-4" />
+            <span>Hardware</span>
           </TabsTrigger>
-          <TabsTrigger value="passwords" className="gap-2">
-            <Key className="h-4 w-4 hidden sm:inline" />
-            Senhas
+          <TabsTrigger value="passwords" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Key className="h-4 w-4" />
+            <span>Senhas</span>
           </TabsTrigger>
-          <TabsTrigger value="telecom" className="gap-2">
-            <Phone className="h-4 w-4 hidden sm:inline" />
-            Telecom
+          <TabsTrigger value="telecom" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Phone className="h-4 w-4" />
+            <span>Telecom</span>
           </TabsTrigger>
-          <TabsTrigger value="licenses" className="gap-2">
-            <FileText className="h-4 w-4 hidden sm:inline" />
-            Licenças
+          <TabsTrigger value="licenses" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <FileText className="h-4 w-4" />
+            <span>Licenças</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Hardware Tab */}
         <TabsContent value="hardware">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-semibold">
-                Hardware (Notebooks/Tablets/Periféricos)
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <CustomFieldManager
-                  category="hardware"
-                  categoryLabel="Hardware"
-                  fields={fields}
-                  onAdd={addField}
-                  onUpdate={updateField}
-                  onDelete={deleteField}
-                />
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Ativo
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Colaborador</TableHead>
-                      <TableHead>Modelo</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Service Tag</TableHead>
-                      <TableHead>Centro de Custo</TableHead>
-                      {hardwareFields.map((field) => (
-                        <TableHead key={field.id} className="whitespace-nowrap">
-                          {field.nome}
-                        </TableHead>
-                      ))}
-                      <TableHead>Notas</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assets.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-mono text-sm">{item.id}</TableCell>
-                        <TableCell>
-                          <StatusBadge variant={statusVariant[item.status]}>
-                            {item.status}
-                          </StatusBadge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {item.collaborator || <span className="text-muted-foreground italic">-</span>}
-                        </TableCell>
-                        <TableCell>{item.model}</TableCell>
-                        <TableCell>
-                          <span className="rounded-full bg-secondary px-2 py-1 text-xs">
-                            {item.type}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{item.serviceTag}</TableCell>
-                        <TableCell>{item.costCenter || "-"}</TableCell>
-                        {hardwareFields.map((field) => (
-                          <TableCell key={field.id}>
-                            <InlineFieldEditor
-                              field={field}
-                              value={getValue(item.id, field.id)}
-                              onSave={(val) => setValue(item.id, field.id, val)}
-                            />
-                          </TableCell>
-                        ))}
-                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                          {item.notes || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {item.history.length > 0 && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <History className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>
-                                      Histórico - {item.model} ({item.id})
-                                    </DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                                    {item.history.map((entry) => (
-                                      <div key={entry.id} className="flex gap-3 border-l-2 border-primary pl-3 py-1">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium">{entry.action}</p>
-                                          <p className="text-xs text-muted-foreground">{entry.details}</p>
-                                          {entry.ticketId && (
-                                            <p className="text-xs font-mono text-primary">{entry.ticketId}</p>
-                                          )}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                          {new Date(entry.timestamp).toLocaleString("pt-BR")}
-                                        </p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <CategoryTab category="hardware" label="Hardware (Notebooks / Tablets / Periféricos)" />
         </TabsContent>
-
-        {/* Passwords Tab */}
         <TabsContent value="passwords">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-semibold">Cofre de Senhas</CardTitle>
-              <Button size="sm"><Plus className="mr-2 h-4 w-4" />Nova Senha</Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome da Conta</TableHead>
-                    <TableHead>Login</TableHead>
-                    <TableHead>Senha</TableHead>
-                    <TableHead>Notas</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {passwords.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.accountName}</TableCell>
-                      <TableCell className="font-mono text-sm">{item.login}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">
-                            {visiblePasswords.has(item.id) ? item.password : "••••••••••"}
-                          </span>
-                          <Button variant="ghost" size="sm" onClick={() => togglePasswordVisibility(item.id)}>
-                            {visiblePasswords.has(item.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{item.notes || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <CategoryTab category="passwords" label="Cofre de Senhas" />
         </TabsContent>
-
-        {/* Telecom Tab */}
         <TabsContent value="telecom">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-semibold">Gestão de Telecom (Linhas Telefônicas)</CardTitle>
-              <Button size="sm"><Plus className="mr-2 h-4 w-4" />Nova Linha</Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Gestor</TableHead>
-                    <TableHead>Operadora</TableHead>
-                    <TableHead>Contrato</TableHead>
-                    <TableHead>Centro de Custo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {telecom.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono font-medium">{item.number}</TableCell>
-                      <TableCell>{item.collaborator}</TableCell>
-                      <TableCell><span className="rounded-full bg-secondary px-2 py-1 text-xs">{item.type}</span></TableCell>
-                      <TableCell>{item.manager}</TableCell>
-                      <TableCell>{item.operator}</TableCell>
-                      <TableCell className="text-sm">{item.contract}</TableCell>
-                      <TableCell>{item.costCenter}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <CategoryTab category="telecom" label="Gestão de Telecom (Linhas Telefônicas)" />
         </TabsContent>
-
-        {/* Licenses Tab */}
         <TabsContent value="licenses">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-semibold">Licenças Microsoft</CardTitle>
-              <Button size="sm"><Plus className="mr-2 h-4 w-4" />Nova Licença</Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Tipo Licença</TableHead>
-                    <TableHead>Gestor</TableHead>
-                    <TableHead>Centro de Custo</TableHead>
-                    <TableHead>Data Criação</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {licenses.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <StatusBadge variant={item.status}>{item.status === "active" ? "Ativo" : "Inativo"}</StatusBadge>
-                      </TableCell>
-                      <TableCell className="font-medium">{item.collaborator}</TableCell>
-                      <TableCell className="text-sm">{item.email}</TableCell>
-                      <TableCell><span className="rounded-full bg-secondary px-2 py-1 text-xs">{item.licenseType}</span></TableCell>
-                      <TableCell>{item.manager}</TableCell>
-                      <TableCell>{item.costCenter}</TableCell>
-                      <TableCell>{new Date(item.createdDate).toLocaleDateString("pt-BR")}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <CategoryTab category="licenses" label="Licenças Microsoft" />
         </TabsContent>
       </Tabs>
     </AppLayout>
