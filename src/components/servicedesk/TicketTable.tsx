@@ -58,6 +58,7 @@ export function TicketTable({
   getAsset,
   onLinkAsset,
   onTicketClick,
+  onDelete,
 }: TicketTableProps) {
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
