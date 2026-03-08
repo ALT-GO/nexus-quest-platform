@@ -154,6 +154,51 @@ export function NewTicketDialog() {
     return () => clearTimeout(timer);
   }, [desligamento.colaborador, isDesligamento, searchCollaboratorAssets]);
 
+  // Stock check for Contratação when celular/notebook toggles change
+  useEffect(() => {
+    if (!isContratacao) {
+      setStockNotebooks([]);
+      setStockCelulares([]);
+      return;
+    }
+
+    const checkStock = async () => {
+      setCheckingStock(true);
+      const promises: Promise<any>[] = [];
+
+      if (contratacao.notebook) {
+        promises.push(
+          supabase
+            .from("inventory")
+            .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+            .eq("status", "Disponível")
+            .ilike("asset_type", "%notebook%")
+            .then(({ data }) => setStockNotebooks((data as InventoryAsset[]) || []))
+        );
+      } else {
+        setStockNotebooks([]);
+      }
+
+      if (contratacao.celular) {
+        promises.push(
+          supabase
+            .from("inventory")
+            .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+            .eq("status", "Disponível")
+            .ilike("asset_type", "%celular%")
+            .then(({ data }) => setStockCelulares((data as InventoryAsset[]) || []))
+        );
+      } else {
+        setStockCelulares([]);
+      }
+
+      await Promise.all(promises);
+      setCheckingStock(false);
+    };
+
+    checkStock();
+  }, [isContratacao, contratacao.notebook, contratacao.celular]);
+
   const toggleAssetSelection = (assetId: string) => {
     setSelectedAssetIds((prev) => {
       const next = new Set(prev);
