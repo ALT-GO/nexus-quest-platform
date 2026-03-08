@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 export default function Configuracoes() {
+  const { isAdmin } = useAuth();
   return (
     <AppLayout>
       <PageHeader
