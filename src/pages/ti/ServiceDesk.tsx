@@ -179,24 +179,37 @@ export default function ServiceDesk() {
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
 
-  // Quick complete - toggles completed_at WITHOUT changing status/column
+  // Quick complete - sets status to Done + completed_at, stays in same visual position until realtime updates
   const handleQuickComplete = useCallback(
     async (ticketIdOrNumber: string) => {
       const ticket = tickets.find((t) => t.ticket_number === ticketIdOrNumber || t.id === ticketIdOrNumber);
       if (!ticket) return;
 
       const isAlreadyCompleted = !!ticket.completed_at;
-      const completedAt = isAlreadyCompleted ? null : new Date().toISOString();
-
-      await updateTicket(ticket.id, { completed_at: completedAt });
 
       if (isAlreadyCompleted) {
-        toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+        // Un-complete: clear completed_at, revert status to first "todo" status
+        const todoStatus = statuses.find((s) => s.statusType === "todo" && s.ativo);
+        const success = await updateTicket(ticket.id, {
+          completed_at: null,
+          status_id: todoStatus?.id || "pending",
+        });
+        if (success) {
+          toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+        }
       } else {
-        toast.success(`${ticket.ticket_number}: marcado como concluído`);
+        // Complete: set completed_at + move status to done
+        const doneStatusId = getDoneStatusId();
+        const success = await updateTicket(ticket.id, {
+          completed_at: new Date().toISOString(),
+          status_id: doneStatusId,
+        });
+        if (success) {
+          toast.success(`${ticket.ticket_number}: marcado como concluído`);
+        }
       }
     },
-    [tickets, updateTicket]
+    [tickets, updateTicket, getDoneStatusId, statuses]
   );
 
   // Open detail sheet
