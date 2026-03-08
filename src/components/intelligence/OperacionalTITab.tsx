@@ -17,8 +17,11 @@ import {
 import { useTickets } from "@/hooks/use-tickets";
 import { format } from "date-fns";
 
+import type { CostCenterFilter } from "@/pages/CentralInteligencia";
+
 interface OperacionalTITabProps {
   dateRange: { start: Date; end: Date };
+  costCenter: CostCenterFilter;
 }
 
 const chartColors = [
