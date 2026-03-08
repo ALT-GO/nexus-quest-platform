@@ -45,6 +45,8 @@ const categories = [
   "Solicitação de novo Celular",
   "Solicitação de Tablet",
   "Gerais/Outros",
+  "Contratação",
+  "Desligamento",
 ];
 
 type ViewMode = "list" | "kanban";
