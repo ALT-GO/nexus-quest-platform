@@ -116,6 +116,13 @@ export function TicketDetailSheet({
       commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [comments]);
+  // Parse asset IDs from desligamento description
+  const parseDesligamentoAssetIds = useCallback((): string[] => {
+    if (!ticket || ticket.category !== "Desligamento") return [];
+    const match = ticket.description.match(/\[ASSET_IDS_DEVOLUCAO:([^\]]+)\]/);
+    if (!match) return [];
+    return match[1].split(",").filter(Boolean);
+  }, [ticket]);
 
   if (!ticket) return null;
 
@@ -124,14 +131,6 @@ export function TicketDetailSheet({
   const currentStatus = statuses.find((s) => s.id === ticket.status_id);
   const linkedAsset = ticket.asset_id ? getAsset(ticket.asset_id) : undefined;
   const availableAssets = getAvailableForCategory(ticket.category);
-
-  // Parse asset IDs from desligamento description
-  const parseDesligamentoAssetIds = useCallback((): string[] => {
-    if (!ticket || ticket.category !== "Desligamento") return [];
-    const match = ticket.description.match(/\[ASSET_IDS_DEVOLUCAO:([^\]]+)\]/);
-    if (!match) return [];
-    return match[1].split(",").filter(Boolean);
-  }, [ticket]);
 
   const handleComplete = async () => {
     const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
