@@ -100,7 +100,26 @@ export function useTickets() {
     []
   );
 
-  return { tickets, loading, fetchTickets, updateTicket };
+  const deleteTicket = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("tickets")
+        .delete()
+        .eq("id", id as any);
+
+      if (error) {
+        console.error("Error deleting ticket:", error);
+        toast.error("Erro ao excluir chamado");
+        return false;
+      }
+      setTickets((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Chamado excluído permanentemente");
+      return true;
+    },
+    []
+  );
+
+  return { tickets, loading, fetchTickets, updateTicket, deleteTicket };
 }
 
 export async function createTicket(data: {
