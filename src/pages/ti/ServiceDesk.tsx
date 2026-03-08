@@ -55,7 +55,7 @@ const categories = [
 type ViewMode = "list" | "kanban";
 
 export default function ServiceDesk() {
-  const { tickets, loading, fetchTickets, updateTicket } = useTickets();
+  const { tickets, loading, fetchTickets, updateTicket, deleteTicket } = useTickets();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -410,6 +410,10 @@ export default function ServiceDesk() {
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
           onTicketClick={handleTicketClick}
+          onDelete={(ticketIdOrNumber) => {
+            const t = tickets.find((tk) => tk.ticket_number === ticketIdOrNumber || tk.id === ticketIdOrNumber);
+            if (t) deleteTicket(t.id);
+          }}
         />
       ) : (
         <TicketTable
@@ -436,6 +440,10 @@ export default function ServiceDesk() {
           getAsset={getAsset}
           onLinkAsset={handleLinkAsset}
           onTicketClick={handleTicketClick}
+          onDelete={(ticketIdOrNumber) => {
+            const t = tickets.find((tk) => tk.ticket_number === ticketIdOrNumber || tk.id === ticketIdOrNumber);
+            if (t) deleteTicket(t.id);
+          }}
         />
       )}
 

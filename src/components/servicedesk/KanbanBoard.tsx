@@ -3,6 +3,7 @@ import { StatusCustom } from "@/hooks/use-custom-status";
 import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinkerCompact } from "@/components/servicedesk/AssetLinker";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SlaInfo } from "@/hooks/use-sla";
 import { User, GripVertical, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ interface KanbanBoardProps {
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
   onTicketClick?: (ticketId: string) => void;
+  onDelete?: (ticketId: string) => void;
 }
 
 const priorityConfig: Record<string, { label: string; dot: string }> = {
@@ -51,6 +53,7 @@ export function KanbanBoard({
   getAsset,
   onLinkAsset,
   onTicketClick,
+  onDelete,
 }: KanbanBoardProps) {
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -190,7 +193,12 @@ export function KanbanBoard({
                         <p className="text-xs font-mono text-muted-foreground mb-1">{ticket.id}</p>
                         <p className={cn("font-medium text-sm leading-tight", isCompleted && "line-through")}>{ticket.title}</p>
                       </div>
-                      <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground/40" />
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {onDelete && (
+                          <ConfirmDeleteDialog onConfirm={() => onDelete(ticket.id)} />
+                        )}
+                        <GripVertical className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
                     </div>
 
                     {/* Category */}

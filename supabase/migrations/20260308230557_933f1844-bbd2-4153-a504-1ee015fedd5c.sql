@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can delete tickets" ON public.tickets FOR DELETE USING (true);

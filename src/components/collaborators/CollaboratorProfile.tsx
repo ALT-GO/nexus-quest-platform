@@ -6,7 +6,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
-import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, Plus } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { generateResponsibilityPDF } from "@/lib/pdf-responsibility";
 import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
 import { cn } from "@/lib/utils";
@@ -220,9 +221,7 @@ function AssetSection({
                     );
                   })}
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => onDelete(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
                   </TableCell>
                 </TableRow>
               ))}

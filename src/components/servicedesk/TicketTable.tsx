@@ -2,6 +2,7 @@ import { StatusCustom } from "@/hooks/use-custom-status";
 import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SlaInfo } from "@/hooks/use-sla";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ interface TicketTableProps {
   getAsset: (id: string) => HardwareAsset | undefined;
   onLinkAsset: (ticketId: string, assetId: string) => void;
   onTicketClick?: (ticketId: string) => void;
+  onDelete?: (ticketId: string) => void;
 }
 
 export function TicketTable({
@@ -56,6 +58,7 @@ export function TicketTable({
   getAsset,
   onLinkAsset,
   onTicketClick,
+  onDelete,
 }: TicketTableProps) {
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
@@ -180,9 +183,14 @@ export function TicketTable({
                     </TableCell>
                     <TableCell>{ticket.assignee || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => onTicketClick?.(ticket.id)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {onDelete && (
+                          <ConfirmDeleteDialog onConfirm={() => onDelete(ticket.id)} />
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                   {isExpanded && hasAssetInfo && (

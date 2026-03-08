@@ -9,6 +9,9 @@ import { useCollaborators } from "@/hooks/use-collaborators";
 import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProfile";
 import { StockTab } from "@/components/collaborators/StockTab";
 import { Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const catIcons: Record<string, React.ElementType> = {
   notebooks: Laptop,
@@ -102,15 +105,30 @@ export default function Colaboradores() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary flex-shrink-0">
                             {c.name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-medium leading-tight">{c.name}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium leading-tight truncate">{c.name}</p>
                             <p className="text-xs text-muted-foreground">{c.assetCount} ativo(s)</p>
                           </div>
                         </div>
+                        <ConfirmDeleteDialog
+                          description={`Tem certeza que deseja excluir permanentemente o colaborador "${c.name}" e todos os seus ${c.assetCount} ativo(s)?`}
+                          onConfirm={async () => {
+                            const { error } = await supabase
+                              .from("inventory")
+                              .delete()
+                              .eq("collaborator", c.name);
+                            if (error) {
+                              toast.error("Erro ao excluir colaborador");
+                            } else {
+                              toast.success(`Colaborador "${c.name}" e seus ativos excluídos`);
+                              refetch();
+                            }
+                          }}
+                        />
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {c.categories.map((cat) => {
