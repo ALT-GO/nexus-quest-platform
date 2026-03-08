@@ -244,14 +244,10 @@ function AssetSection({
 export function CollaboratorProfile({ name, onBack }: Props) {
   const { assets, loading, refetch, updateAsset, deleteAsset } = useCollaboratorDetail(name);
 
-  const notebooks = assets.filter((a) => a.category === "notebooks");
+  const notebooks = assets.filter((a) => a.category === "notebooks" || a.category === "hardware");
   const celulares = assets.filter((a) => a.category === "celulares");
-  const linhas = assets.filter((a) => a.category === "linhas");
-  const licencas = assets.filter((a) => a.category === "licencas");
-  // Legacy fallbacks
-  const hardware = assets.filter((a) => a.category === "hardware");
-  const telecom = assets.filter((a) => a.category === "telecom");
-  const licenses = assets.filter((a) => a.category === "licenses");
+  const linhas = assets.filter((a) => a.category === "linhas" || a.category === "telecom");
+  const licencas = assets.filter((a) => a.category === "licencas" || a.category === "licenses");
 
   const handleGeneratePDF = () => {
     generateResponsibilityPDF(name, assets, []);
@@ -298,10 +294,10 @@ export function CollaboratorProfile({ name, onBack }: Props) {
       ) : null}
 
       <div className="space-y-6">
-        <AssetSection category="notebooks" assets={[...notebooks, ...hardware]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
         <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="linhas" assets={[...linhas, ...telecom]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="licencas" assets={[...licencas, ...licenses]} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
       </div>
     </div>
   );
