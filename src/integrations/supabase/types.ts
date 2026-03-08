@@ -333,6 +333,41 @@ export type Database = {
         }
         Relationships: []
       }
+      timesheet_logs: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          end_time: string | null
+          id: string
+          start_time: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          start_time?: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          end_time?: string | null
+          id?: string
+          start_time?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_logs_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
