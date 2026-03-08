@@ -27,6 +27,7 @@ interface TicketForTable {
   requester: string;
   email: string;
   createdAt: string;
+  completedAt?: string;
   slaVencido: boolean;
   assignee?: string;
   ativoId?: string;
