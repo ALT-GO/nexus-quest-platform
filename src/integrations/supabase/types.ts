@@ -14,6 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_field_values: {
+        Row: {
+          asset_id: string
+          field_id: string
+          id: string
+          value: string | null
+        }
+        Insert: {
+          asset_id: string
+          field_id: string
+          id?: string
+          value?: string | null
+        }
+        Update: {
+          asset_id?: string
+          field_id?: string
+          id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_field_values_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_fields: {
+        Row: {
+          category: string
+          created_at: string
+          field_type: string
+          id: string
+          name: string
+          options: string[] | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          field_type?: string
+          id?: string
+          name: string
+          options?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          field_type?: string
+          id?: string
+          name?: string
+          options?: string[] | null
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          asset_code: string
+          asset_type: string | null
+          category: string
+          collaborator: string | null
+          cost_center: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          model: string | null
+          notes: string | null
+          reserved_by_ticket_id: string | null
+          sector: string | null
+          service_tag: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          asset_code: string
+          asset_type?: string | null
+          category?: string
+          collaborator?: string | null
+          cost_center?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          model?: string | null
+          notes?: string | null
+          reserved_by_ticket_id?: string | null
+          sector?: string | null
+          service_tag?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_code?: string
+          asset_type?: string | null
+          category?: string
+          collaborator?: string | null
+          cost_center?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          model?: string | null
+          notes?: string | null
+          reserved_by_ticket_id?: string | null
+          sector?: string | null
+          service_tag?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_comments: {
         Row: {
           author: string
