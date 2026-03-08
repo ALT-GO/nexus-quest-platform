@@ -171,24 +171,73 @@ export function TicketDetailSheet({
 
     // Handle Desligamento asset release
     const assetIds = parseDesligamentoAssetIds();
-    if (assetIds.length > 0) {
-      for (const assetId of assetIds) {
-        await supabase
-          .from("inventory")
-          .update({
-            status: "Disponível",
-            collaborator: "",
-            reserved_by_ticket_id: null,
-            updated_at: new Date().toISOString(),
-          } as any)
-          .eq("id", assetId as any);
+    if (ticket.category === "Desligamento") {
+      // Release specific marked assets
+      if (assetIds.length > 0) {
+        for (const assetId of assetIds) {
+          // Check if it's a licença
+          const { data: assetRow } = await supabase
+            .from("inventory")
+            .select("category")
+            .eq("id", assetId as any)
+            .single();
+
+          if (assetRow && assetRow.category === "licencas") {
+            // Licenças: just change status to Desligado, keep collaborator
+            await supabase.from("inventory").update({
+              status: "Desligado",
+              updated_at: new Date().toISOString(),
+            } as any).eq("id", assetId as any);
+          } else {
+            // Others: clear collaborator and set to Disponível
+            await supabase.from("inventory").update({
+              status: "Disponível",
+              collaborator: "",
+              reserved_by_ticket_id: null,
+              updated_at: new Date().toISOString(),
+            } as any).eq("id", assetId as any);
+          }
+        }
+        await logHistory(
+          "asset_release",
+          `${assetIds.length} ativo(s) processado(s) no desligamento`,
+          "Admin"
+        );
+        toast.success(`${assetIds.length} ativo(s) processado(s)`);
       }
-      await logHistory(
-        "asset_release",
-        `${assetIds.length} ativo(s) liberado(s) e marcado(s) como Disponível`,
-        "Admin"
-      );
-      toast.success(`${assetIds.length} ativo(s) liberado(s) para o estoque`);
+
+      // Also process all assets of the requester not in the explicit list
+      const { data: allRequesterAssets } = await supabase
+        .from("inventory")
+        .select("id, category")
+        .eq("collaborator", ticket.requester);
+
+      if (allRequesterAssets) {
+        const explicitIds = new Set(assetIds);
+        const remaining = allRequesterAssets.filter((a: any) => !explicitIds.has(a.id));
+        for (const asset of remaining) {
+          if (asset.category === "licencas") {
+            await supabase.from("inventory").update({
+              status: "Desligado",
+              updated_at: new Date().toISOString(),
+            } as any).eq("id", asset.id);
+          } else {
+            await supabase.from("inventory").update({
+              status: "Disponível",
+              collaborator: "",
+              reserved_by_ticket_id: null,
+              updated_at: new Date().toISOString(),
+            } as any).eq("id", asset.id);
+          }
+        }
+        if (remaining.length > 0) {
+          await logHistory(
+            "asset_release",
+            `${remaining.length} ativo(s) adicional(is) do colaborador processado(s)`,
+            "Admin"
+          );
+        }
+      }
     }
 
     // Handle Contratação: deliver subtask-linked assets
