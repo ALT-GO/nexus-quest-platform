@@ -56,10 +56,13 @@ export default function Colaboradores() {
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Colaboradores"
-        description="Gestão de inventário e ativos por colaborador"
-      />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader
+          title="Colaboradores"
+          description="Gestão de inventário e ativos por colaborador"
+        />
+        <NewCollaboratorDialog onCreated={refetch} />
+      </div>
 
       <Tabs defaultValue="colaboradores" className="space-y-6">
         <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
