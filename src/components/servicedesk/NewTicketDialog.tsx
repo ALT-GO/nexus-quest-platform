@@ -166,14 +166,12 @@ export function NewTicketDialog() {
       setCheckingStock(true);
 
       if (contratacao.notebook) {
-        promises.push(
-          supabase
-            .from("inventory")
-            .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
-            .eq("status", "Disponível")
-            .ilike("asset_type", "%notebook%")
-            .then(({ data }) => setStockNotebooks((data as InventoryAsset[]) || []))
-        );
+        const { data } = await supabase
+          .from("inventory")
+          .select("id, asset_code, model, asset_type, category, status, service_tag, collaborator")
+          .eq("status", "Disponível")
+          .ilike("asset_type", "%notebook%");
+        setStockNotebooks((data as InventoryAsset[]) || []);
       } else {
         setStockNotebooks([]);
       }
