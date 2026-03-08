@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Megaphone,
   Monitor,
-  Ticket,
   HardDrive,
   ChevronDown,
   ChevronRight,
@@ -13,6 +13,12 @@ import {
   LogOut,
   Menu,
   X,
+  Brain,
+  BarChart3,
+  Wallet,
+  Ticket,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,52 +26,76 @@ interface NavItem {
   title: string;
   href?: string;
   icon: React.ElementType;
-  children?: { title: string; href: string }[];
+  adminOnly?: boolean;
+  children?: { title: string; href: string; adminOnly?: boolean }[];
 }
-
-const navigation: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Marketing",
-    icon: Megaphone,
-    children: [
-      { title: "Projetos", href: "/marketing/projetos" },
-      { title: "Solicitações", href: "/marketing/solicitacoes" },
-      { title: "KPIs & Métricas", href: "/marketing/kpis" },
-    ],
-  },
-  {
-    title: "TI",
-    icon: Monitor,
-    children: [
-      { title: "Dashboard TI", href: "/ti/dashboard" },
-      { title: "Service Desk", href: "/ti/service-desk" },
-      { title: "Gestão de Ativos", href: "/ti/ativos" },
-      { title: "Dashboard Financeiro", href: "/ti/financeiro" },
-    ],
-  },
-];
 
 export function AppSidebar() {
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI"]);
+  const navigate = useNavigate();
+  const { user, isAdmin, roles, signOut } = useAuth();
+
+  const navigation: NavItem[] = [
+    {
+      title: "Dashboard",
+      href: "/",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Marketing",
+      icon: Megaphone,
+      children: [
+        { title: "Projetos", href: "/marketing/projetos" },
+        { title: "Solicitações", href: "/marketing/solicitacoes" },
+      ],
+    },
+    {
+      title: "TI",
+      icon: Monitor,
+      children: [
+        { title: "Service Desk", href: "/ti/service-desk" },
+        { title: "Gestão de Ativos", href: "/ti/ativos" },
+        { title: "Dashboard Financeiro", href: "/ti/financeiro" },
+      ],
+    },
+    {
+      title: "Central de Inteligência",
+      icon: Brain,
+      adminOnly: true,
+      children: [
+        { title: "Dashboard TI", href: "/ti/dashboard", adminOnly: true },
+        { title: "KPIs & Métricas", href: "/marketing/kpis", adminOnly: true },
+      ],
+    },
+  ];
+
+  const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI", "Central de Inteligência"]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
-      prev.includes(title)
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
+      prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]
     );
   };
 
   const isActive = (href: string) => location.pathname === href;
   const isParentActive = (children?: { href: string }[]) =>
     children?.some((child) => location.pathname === child.href);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  // Filter nav items by role
+  const visibleNav = navigation.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    return true;
+  });
+
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
+  const userInitial = userName.charAt(0).toUpperCase();
+  const roleLabel = isAdmin ? "Admin" : roles.includes("ti") ? "TI" : roles.includes("marketing") ? "Marketing" : "Colaborador";
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col bg-sidebar">
@@ -82,7 +112,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-4 scrollbar-thin">
-        {navigation.map((item) => (
+        {visibleNav.map((item) => (
           <div key={item.title}>
             {item.href ? (
               <Link
@@ -111,6 +141,11 @@ export function AppSidebar() {
                 >
                   <item.icon className="h-5 w-5" />
                   {item.title}
+                  {item.adminOnly && (
+                    <span className="ml-1 rounded bg-sidebar-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary">
+                      ADMIN
+                    </span>
+                  )}
                   <span className="ml-auto">
                     {expandedItems.includes(item.title) ? (
                       <ChevronDown className="h-4 w-4" />
@@ -121,21 +156,23 @@ export function AppSidebar() {
                 </button>
                 {expandedItems.includes(item.title) && item.children && (
                   <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-4">
-                    {item.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        to={child.href}
-                        onClick={() => setIsMobileOpen(false)}
-                        className={cn(
-                          "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
-                          isActive(child.href)
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                        )}
-                      >
-                        {child.title}
-                      </Link>
-                    ))}
+                    {item.children
+                      .filter((child) => !child.adminOnly || isAdmin)
+                      .map((child) => (
+                        <Link
+                          key={child.href}
+                          to={child.href}
+                          onClick={() => setIsMobileOpen(false)}
+                          className={cn(
+                            "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
+                            isActive(child.href)
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                          )}
+                        >
+                          {child.title}
+                        </Link>
+                      ))}
                   </div>
                 )}
               </>
@@ -148,11 +185,11 @@ export function AppSidebar() {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-foreground">
-            A
+            {userInitial}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-sidebar-foreground">Admin</p>
-            <p className="text-xs text-sidebar-muted">Gerente</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+            <p className="text-xs text-sidebar-muted">{roleLabel}</p>
           </div>
         </div>
         <div className="mt-2 flex gap-2">
@@ -163,7 +200,10 @@ export function AppSidebar() {
             <Settings className="h-4 w-4" />
             Config
           </Link>
-          <button className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
+          <button
+            onClick={handleSignOut}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
             <LogOut className="h-4 w-4" />
             Sair
           </button>
