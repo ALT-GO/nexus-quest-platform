@@ -79,7 +79,7 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
     const channel = supabase
       .channel("operacional-inventory-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
-        supabase.from("inventory").select("id, category, status").then(({ data }) => {
+        supabase.from("inventory").select("id, category, status, cost_center_eng, cost_center_man").then(({ data }) => {
           if (data) setInventoryItems(data as InventoryItem[]);
         });
       })
