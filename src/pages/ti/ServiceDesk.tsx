@@ -179,13 +179,24 @@ export default function ServiceDesk() {
     [tickets, logStatusChange, isFinalStatus, statuses, deliverAsset, updateTicket]
   );
 
-  // Quick complete - moves ticket to the first "done" status
+  // Quick complete - toggles completed_at WITHOUT changing status/column
   const handleQuickComplete = useCallback(
-    (ticketIdOrNumber: string) => {
-      const doneStatusId = getDoneStatusId();
-      handleStatusChange(ticketIdOrNumber, doneStatusId);
+    async (ticketIdOrNumber: string) => {
+      const ticket = tickets.find((t) => t.ticket_number === ticketIdOrNumber || t.id === ticketIdOrNumber);
+      if (!ticket) return;
+
+      const isAlreadyCompleted = !!ticket.completed_at;
+      const completedAt = isAlreadyCompleted ? null : new Date().toISOString();
+
+      await updateTicket(ticket.id, { completed_at: completedAt });
+
+      if (isAlreadyCompleted) {
+        toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+      } else {
+        toast.success(`${ticket.ticket_number}: marcado como concluído`);
+      }
     },
-    [getDoneStatusId, handleStatusChange]
+    [tickets, updateTicket]
   );
 
   // Open detail sheet
@@ -349,6 +360,7 @@ export default function ServiceDesk() {
             requester: t.requester,
             assignee: t.assignee ?? undefined,
             createdAt: t.created_at,
+            completedAt: t.completed_at ?? undefined,
             ativoId: t.asset_id ?? undefined,
             subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
           }))}
@@ -373,6 +385,7 @@ export default function ServiceDesk() {
             requester: t.requester,
             email: t.email,
             createdAt: t.created_at,
+            completedAt: t.completed_at ?? undefined,
             slaVencido: t.sla_expired,
             assignee: t.assignee ?? undefined,
             ativoId: t.asset_id ?? undefined,

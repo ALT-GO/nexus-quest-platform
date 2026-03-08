@@ -16,6 +16,7 @@ interface KanbanTicket {
   requester: string;
   assignee?: string;
   createdAt: string;
+  completedAt?: string;
   ativoId?: string;
   subtaskAssetIds?: string[];
 }
@@ -134,7 +135,7 @@ export function KanbanBoard({
             {/* Cards */}
             <div className="space-y-2.5">
               {columnTickets.map((ticket) => {
-                const isCompleted = isFinalStatus(ticket.statusId);
+                const isCompleted = !!ticket.completedAt;
                 const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
                 const priority = priorityConfig[ticket.priority];
                 const linkedAsset = ticket.ativoId ? getAsset(ticket.ativoId) : undefined;
@@ -214,9 +215,11 @@ export function KanbanBoard({
                         </div>
                       )}
 
-                      <div className="mb-2.5">
-                        <SlaIndicator sla={sla} />
-                      </div>
+                      {!isCompleted && (
+                        <div className="mb-2.5">
+                          <SlaIndicator sla={sla} />
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">

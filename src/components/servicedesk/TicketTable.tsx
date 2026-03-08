@@ -27,6 +27,7 @@ interface TicketForTable {
   requester: string;
   email: string;
   createdAt: string;
+  completedAt?: string;
   slaVencido: boolean;
   assignee?: string;
   ativoId?: string;
@@ -85,7 +86,7 @@ export function TicketTable({
           </TableHeader>
           <TableBody>
             {tickets.map((ticket) => {
-              const isCompleted = isFinalStatus(ticket.statusId);
+              const isCompleted = !!ticket.completedAt;
               const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
               const statusDisplay = getStatusDisplay(ticket.statusId);
               const isExpanded = expandedTicket === ticket.id;
@@ -155,7 +156,7 @@ export function TicketTable({
                         <p className="text-xs text-muted-foreground">{ticket.email}</p>
                       </div>
                     </TableCell>
-                    <TableCell><SlaIndicator sla={sla} /></TableCell>
+                    <TableCell>{!isCompleted ? <SlaIndicator sla={sla} /> : <span className="text-xs text-success font-medium">Concluído</span>}</TableCell>
                     <TableCell>
                       <span
                         className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"

@@ -134,7 +134,7 @@ export function TicketDetailSheet({
 
   if (!ticket) return null;
 
-  const isCompleted = isFinalStatus(ticket.status_id);
+  const isCompleted = !!ticket.completed_at;
   const sla = getSlaInfo(ticket.created_at, ticket.category, isCompleted);
   const currentStatus = statuses.find((s) => s.id === ticket.status_id);
   const linkedAsset = ticket.asset_id ? getAsset(ticket.asset_id) : undefined;
@@ -163,8 +163,15 @@ export function TicketDetailSheet({
   };
 
   const handleComplete = async () => {
-    const finalStatus = statuses.find((s) => s.isFinal && s.id !== "cancelled");
-    if (!finalStatus) return;
+    // If already completed, toggle it off
+    if (isCompleted) {
+      await supabase
+        .from("tickets")
+        .update({ completed_at: null, updated_at: new Date().toISOString() } as any)
+        .eq("id", ticket.id as any);
+      toast.info(`${ticket.ticket_number}: marcado como não concluído`);
+      return;
+    }
 
     // Stop timer automatically
     await stopTimer();
@@ -256,11 +263,11 @@ export function TicketDetailSheet({
             .eq("id", sub.asset_id as any);
           deliveredCount++;
         }
-        // Also complete the subtask
-        if (!isFinalStatus(sub.status_id)) {
+        // Also complete the subtask (set completed_at, keep status)
+        if (!sub.completed_at) {
           await supabase
             .from("tickets")
-            .update({ status_id: finalStatus.id, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+            .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
             .eq("id", sub.id as any);
         }
       }
@@ -270,8 +277,13 @@ export function TicketDetailSheet({
       }
     }
 
-    onStatusChange(ticket.ticket_number, finalStatus.id);
-    await logHistory("status_change", `Status alterado para ${finalStatus.nome}`, "Admin");
+    // Mark as completed without changing status/column
+    await supabase
+      .from("tickets")
+      .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any)
+      .eq("id", ticket.id as any);
+
+    await logHistory("completed", "Chamado marcado como concluído", "Admin");
     await logHistory("timesheet", `Cronômetro finalizado. Tempo total: ${formatDuration(totalSeconds)}`, "Admin");
     toast.success(`Chamado ${ticket.ticket_number} concluído!`);
     onOpenChange(false);
@@ -329,7 +341,6 @@ export function TicketDetailSheet({
         <div className="flex items-center gap-3 border-b px-5 py-4">
           <button
             onClick={handleComplete}
-            disabled={isCompleted}
             className={cn(
               "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all",
               isCompleted
@@ -424,10 +435,12 @@ export function TicketDetailSheet({
               </div>
             )}
 
-            {/* SLA */}
-            <div>
-              <SlaIndicator sla={sla} />
-            </div>
+            {/* SLA - hide when completed */}
+            {!isCompleted && (
+              <div>
+                <SlaIndicator sla={sla} />
+              </div>
+            )}
 
             {/* Fields grid */}
             <div className="grid grid-cols-2 gap-4">
