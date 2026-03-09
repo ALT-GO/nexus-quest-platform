@@ -308,8 +308,6 @@ export default function Colaboradores() {
                           ["name", "Nome"],
                           ["cargo", "Cargo"],
                           ["sector", "Departamento"],
-                          ["cost_center", "Centro de Custo"],
-                          ["email_address", "E-mail"],
                           ["assetCount", "Ativos"],
                         ] as [SortKey, string][]).map(([key, label]) => (
                           <TableHead
