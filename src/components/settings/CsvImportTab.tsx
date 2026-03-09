@@ -390,23 +390,23 @@ export function CsvImportTab() {
           const { error } = await supabase.from("inventory").update(updatePayload).eq("id", existingId);
           if (error) {
             console.error(`Erro ao atualizar linha ${i + 2}:`, error.message, record);
-            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
             res.errors++;
+            res.errorDetails.push({ line: i + 2, message: `Atualização: ${error.message}`, data: record });
           } else { res.updated++; }
         } else {
           payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) {
             console.error(`Erro ao inserir linha ${i + 2}:`, error.message, record);
-            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
             res.errors++;
+            res.errorDetails.push({ line: i + 2, message: `Inserção: ${error.message}`, data: record });
           } else { res.inserted++; }
           if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
         }
       } catch (err: any) {
         console.error(`Exceção na linha ${i + 2}:`, err?.message || err, record);
-        toast.error(`Exceção na linha ${i + 2}: ${err?.message || "Erro desconhecido"}`);
         res.errors++;
+        res.errorDetails.push({ line: i + 2, message: `Exceção: ${err?.message || "Erro desconhecido"}`, data: record });
       }
 
       setProgress(Math.round(((i + 1) / total) * 100));
