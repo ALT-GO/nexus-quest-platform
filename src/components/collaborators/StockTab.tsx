@@ -240,6 +240,8 @@ function CategoryStockTable({
   onAssigned,
   onCellSave,
   advancedFilters,
+  stockSortKey,
+  stockSortDir,
 }: {
   items: CollaboratorAsset[];
   category: string;
@@ -247,24 +249,28 @@ function CategoryStockTable({
   onAssigned: () => void;
   onCellSave: (id: string, field: string, value: string) => Promise<void>;
   advancedFilters: Record<string, string>;
+  stockSortKey: string;
+  stockSortDir: "asc" | "desc";
 }) {
   const [columns, reorderColumns] = useColumnOrder(category, defaultColsByCat[category]);
   const dragIdx = useRef<number | null>(null);
 
-  const filtered = items.filter((i) => {
-    // Global search
-    if (search) {
-      const q = search.toLowerCase();
-      if (!columns.some((col) => col.accessor(i).toLowerCase().includes(q))) return false;
-    }
-    // Advanced filters (cumulative)
-    for (const [field, val] of Object.entries(advancedFilters)) {
-      if (!val) continue;
-      const itemVal = ((i as any)[field] ?? "").toString().toLowerCase();
-      if (!itemVal.includes(val.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtered = applySorting(
+    items.filter((i) => {
+      if (search) {
+        const q = search.toLowerCase();
+        if (!columns.some((col) => col.accessor(i).toLowerCase().includes(q))) return false;
+      }
+      for (const [field, val] of Object.entries(advancedFilters)) {
+        if (!val) continue;
+        const itemVal = ((i as any)[field] ?? "").toString().toLowerCase();
+        if (!itemVal.includes(val.toLowerCase())) return false;
+      }
+      return true;
+    }),
+    stockSortKey,
+    stockSortDir,
+  );
 
   const handleDragStart = (idx: number) => { dragIdx.current = idx; };
   const handleDragOver = (e: React.DragEvent, _idx: number) => { e.preventDefault(); };
