@@ -326,7 +326,7 @@ export function IntegrityAuditorTab() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Escaneia o inventário buscando identificadores duplicados (Service Tag, IMEI, Número) e
-            nomes de colaboradores similares (≥ 85%).
+            nomes de colaboradores similares (≥ 50%).
           </p>
           <Button onClick={runScan} disabled={scanning} className="shrink-0">
             {scanning ? (
