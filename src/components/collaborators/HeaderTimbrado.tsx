@@ -5,9 +5,10 @@ interface Props {
   docCode?: string;
   revision?: string;
   pageInfo?: string;
+  prefix?: string;
 }
 
-export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02", pageInfo }: Props) {
+export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02", pageInfo, prefix }: Props) {
   return (
     <table className="w-full border-collapse border border-[#999] mb-6 print:mb-4" style={{ borderColor: "#999" }}>
       <tbody>
