@@ -49,9 +49,10 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
   const cargo = assets.find((a: any) => a.cargo)?.cargo || "______________________";
   const isDevolucao = type === "devolucao";
 
-  const headerTitle = isDevolucao ? "TERMO DE DEVOLUÇÃO" : "TERMO DE RESPONSABILIDADE";
+  const headerTitle = isDevolucao ? "DEVOLUÇÃO DE MATERIAIS TECNOLÓGICOS" : "TERMO DE RESPONSABILIDADE";
   const dialogTitle = isDevolucao ? "Termo de Devolução" : "Termo de Responsabilidade";
-  const docCode = isDevolucao ? "FF.165" : "FF.164";
+  const docCode = isDevolucao ? "FF.117" : "FF.164";
+  const headerPrefix = isDevolucao ? "TERMO DE RESPONSABILIDADE DE" : "";
 
   const handlePrint = () => window.print();
 
@@ -74,7 +75,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
         {/* ===== PAGE 1 ===== */}
         <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
-          <HeaderTimbrado title={headerTitle} docCode={docCode} pageInfo="Página 1 de 2" />
+          <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
 
           <p className="mb-4 text-right" style={{ fontSize: "11px" }}>{todayShort}</p>
 
@@ -91,24 +92,29 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
         {/* ===== PAGE 2 ===== */}
         <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col break-before-page" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
-          <HeaderTimbrado title={headerTitle} docCode={docCode} revision="Rev. 02" pageInfo="Página 2 de 2" />
+          <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
+
+          {isDevolucao && (
+            <p className="font-bold text-xs mb-3 uppercase" style={{ color: "#444" }}>DADOS DO ITENS</p>
+          )}
 
           {/* Asset Table */}
           <table className="w-full border-collapse mb-8" style={{ fontSize: "10px" }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th className="p-2 border border-[#bbb] text-left font-bold">ITEM</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">ITEM(S)</th>
+                {isDevolucao && <th className="p-2 border border-[#bbb] text-left font-bold">DETALHE</th>}
                 <th className="p-2 border border-[#bbb] text-left font-bold">VALOR PAGO</th>
                 <th className="p-2 border border-[#bbb] text-left font-bold">VALOR CONTÁBIL ATUAL</th>
                 <th className="p-2 border border-[#bbb] text-left font-bold">ID</th>
-                <th className="p-2 border border-[#bbb] text-left font-bold">ESTADO</th>
-                <th className="p-2 border border-[#bbb] text-left font-bold">OBSERVAÇÃO</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">{isDevolucao ? "ACESSÓRIOS" : "ESTADO"}</th>
+                {!isDevolucao && <th className="p-2 border border-[#bbb] text-left font-bold">OBSERVAÇÃO</th>}
               </tr>
             </thead>
             <tbody>
               {assets.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-3 border border-[#bbb] text-center" style={{ color: "#999" }}>
+                  <td colSpan={isDevolucao ? 6 : 6} className="p-3 border border-[#bbb] text-center" style={{ color: "#999" }}>
                     Nenhum ativo vinculado
                   </td>
                 </tr>
@@ -116,21 +122,25 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 assets.map((asset: any) => (
                   <tr key={asset.id}>
                     <td className="p-1.5 border border-[#bbb]">{getAssetDescription(asset)}</td>
+                    {isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
                     <td className="p-1.5 border border-[#bbb]"></td>
                     <td className="p-1.5 border border-[#bbb]"></td>
                     <td className="p-1.5 border border-[#bbb] font-mono">{getAssetIdentifier(asset)}</td>
-                    <td className="p-1.5 border border-[#bbb]">{asset.status || "—"}</td>
-                    <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>
+                    <td className="p-1.5 border border-[#bbb]">{isDevolucao ? "" : (asset.status || "—")}</td>
+                    {!isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
                   </tr>
                 ))
               )}
               <tr>
-                <td colSpan={6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
+                <td colSpan={isDevolucao ? 6 : 6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
                   OBS:
                 </td>
               </tr>
             </tbody>
           </table>
+
+          {/* Date + Signatures */}
+          <p className="mb-8" style={{ fontSize: "11px" }}>{todayShort}.</p>
 
           {/* Signatures */}
           <div className="mt-auto space-y-12 mb-8">
@@ -211,22 +221,20 @@ function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
   return (
     <div className="text-justify space-y-3 flex-1" style={{ fontSize: "11px" }}>
       <p>
-        Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
-        declaro que estou devolvendo à empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
-        o(s) equipamento(s) descrito(s) na página seguinte.
+        Eu, <strong>{name}</strong>, CPF ______________________ RG ______________________,
+        declaro, para todos os fins de direito, que o(s) seguinte(s) equipamento(s) tecnológico(s) está(ão) sendo
+        devolvido(s) em perfeitas condições de uso.
       </p>
-      <p>
-        Declaro que os equipamentos estão sendo devolvidos nas condições descritas na tabela da página 2,
-        ressalvado o desgaste natural decorrente do uso normal durante o período em que estiveram sob minha responsabilidade.
-      </p>
-      <p>
-        Estou ciente de que, a partir desta data, encerra-se a minha responsabilidade sobre a guarda, zelo e conservação
-        dos equipamentos acima mencionados, desde que a devolução seja aceita pela área de Tecnologia da Informação da empresa.
-      </p>
-      <p>
-        Caso sejam identificados danos além do desgaste natural no momento da conferência, comprometo-me a ressarcir a
-        empresa conforme os termos estabelecidos no Termo de Responsabilidade original assinado no ato do recebimento.
-      </p>
+
+      <p className="font-bold mt-4">A depreciação foi calculada conforme as seguintes regras:</p>
+
+      <ol className="list-decimal pl-6 space-y-1">
+        <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
+        <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto em Notebook, celulares ou tablets.</li>
+        <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
+        <li><strong>Depreciação Anual fixa:</strong> (valor de aquisição - valor mínimo) / 5 anos</li>
+        <li>O valor de depreciação anual fixa será multiplicado pela quantia de cada ano completo desde a data de assinatura do termo de responsabilidade.</li>
+      </ol>
     </div>
   );
 }
