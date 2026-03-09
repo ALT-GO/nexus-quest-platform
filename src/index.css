@@ -180,21 +180,34 @@
   }
 
   .print-page {
-    padding: 0 !important;
+    padding: 10mm 12mm !important;
     margin: 0 !important;
     max-width: none !important;
     min-height: auto !important;
+    width: 100% !important;
     color: #333 !important;
     background: white !important;
+    page-break-after: always;
+    break-after: page;
   }
 
-  /* Hide the overlay backdrop */
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .break-before-page {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Hide overlay */
   [data-radix-portal] > [data-state] {
     background: transparent !important;
   }
 
   @page {
     size: A4;
-    margin: 12mm 15mm;
+    margin: 10mm;
   }
 }
