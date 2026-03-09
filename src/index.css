@@ -224,28 +224,37 @@
 
   /* 4. Page styling - A4 dimensions */
   .print-page {
-    width: 170mm !important; /* 210mm - 40mm margins */
-    min-height: auto !important;
+    width: 170mm !important;
+    height: 257mm !important; /* 297mm - 40mm margins */
+    min-height: 257mm !important;
     max-width: none !important;
     padding: 0 !important;
     margin: 0 auto !important;
     background: white !important;
     color: #000 !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
     
-    /* Professional fonts */
     font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 12pt !important;
-    line-height: 1.5 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
     
-    /* Page breaks */
     page-break-after: always;
     break-after: page;
-    page-break-inside: avoid;
+    overflow: hidden !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   .print-page:last-child {
     page-break-after: auto;
     break-after: auto;
+  }
+
+  /* Content area grows to fill space */
+  .print-content-area {
+    flex: 1 !important;
   }
 
   /* 5. Force page break before second page */
