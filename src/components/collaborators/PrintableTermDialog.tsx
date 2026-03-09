@@ -97,12 +97,12 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         </div>
 
         {/* ===== PAGE 1 ===== */}
-        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#333", fontSize: "12pt", lineHeight: "1.6" }}>
-          <div className="print-header-table">
+        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.45" }}>
+          <div className="print-header-table mb-2">
             <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
           </div>
 
-          <p className="mb-4 text-right" style={{ fontSize: "11pt" }}>{todayShort}</p>
+          <p className="mb-2 text-right" style={{ fontSize: "10pt" }}>{todayShort}</p>
 
           {isDevolucao ? (
             <DevolucaoContent name={collaboratorName} cargo={cargo} />
@@ -110,33 +110,32 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
             <ResponsabilidadeContent name={collaboratorName} cargo={cargo} />
           )}
 
-          <div className="print-footer mt-auto">
+          <div className="print-footer mt-auto pt-2">
             <FooterTimbrado />
           </div>
         </div>
 
         {/* ===== PAGE 2 ===== */}
-        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col break-before-page" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#333", fontSize: "12pt", lineHeight: "1.6" }}>
-          <div className="print-header-table">
+        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col break-before-page" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.45" }}>
+          <div className="print-header-table mb-2">
             <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
           </div>
 
           {isDevolucao && (
-            <p className="font-bold mb-3 uppercase" style={{ fontSize: "10pt", color: "#444" }}>DADOS DOS ITENS</p>
+            <p className="font-bold mb-2 uppercase" style={{ fontSize: "9pt", color: "#444" }}>DADOS DOS ITENS</p>
           )}
 
-          {/* Asset Table - page-break-inside: avoid applied via CSS */}
-          <table className="w-full border-collapse mb-8" style={{ fontSize: "10pt" }}>
+          <table className="w-full border-collapse mb-4" style={{ fontSize: "9pt" }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>ITEM</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>DETALHE</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>VALOR PAGO</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>VALOR CONTÁBIL ATUAL</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>ITEM</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>DETALHE</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>VALOR PAGO</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>VALOR CONTÁBIL ATUAL</th>
                 {!isDevolucao && (
                   <>
-                    <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>ESTADO</th>
-                    <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>OBSERVAÇÃO</th>
+                    <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>ESTADO</th>
+                    <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>OBSERVAÇÃO</th>
                   </>
                 )}
               </tr>
@@ -144,7 +143,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
             <tbody>
               {assets.length === 0 ? (
                 <tr>
-                  <td colSpan={isDevolucao ? 4 : 6} className="p-3 border border-[#999] text-center" style={{ color: "#999" }}>
+                  <td colSpan={isDevolucao ? 4 : 6} className="p-2 border border-[#999] text-center" style={{ color: "#999" }}>
                     Nenhum ativo vinculado
                   </td>
                 </tr>
@@ -160,14 +159,14 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                     : "N/A";
                   return (
                     <tr key={asset.id}>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{getItemType(asset)}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{getAssetDetail(asset)}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{valorPagoDisplay}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{valorContabilDisplay}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{getItemType(asset)}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{getAssetDetail(asset)}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{valorPagoDisplay}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{valorContabilDisplay}</td>
                       {!isDevolucao && (
                         <>
-                          <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{asset.status || "—"}</td>
-                          <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{asset.notes || ""}</td>
+                          <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{asset.status || "—"}</td>
+                          <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{asset.notes || ""}</td>
                         </>
                       )}
                     </tr>
@@ -175,29 +174,27 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 })
               )}
               <tr>
-                <td colSpan={isDevolucao ? 4 : 6} className="p-2 border border-[#999] font-bold" style={{ color: "#666", fontSize: "10pt" }}>
+                <td colSpan={isDevolucao ? 4 : 6} className="p-1.5 border border-[#999] font-bold" style={{ color: "#666", fontSize: "9pt" }}>
                   OBS:
                 </td>
               </tr>
             </tbody>
           </table>
 
-          {/* Date + Signatures */}
-          <p className="mb-8" style={{ fontSize: "11pt" }}>{todayShort}.</p>
+          <p className="mb-4" style={{ fontSize: "10pt" }}>{todayShort}.</p>
 
-          {/* Signatures - kept together */}
-          <div className="print-signatures mt-auto space-y-10 mb-8">
+          <div className="print-signatures mt-auto space-y-6 mb-4">
             <div>
-              <p className="mb-1 font-bold" style={{ fontSize: "11pt" }}>Assinatura do Empregado:</p>
-              <div className="border-b border-[#666] w-64 mt-6"></div>
+              <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura do Empregado:</p>
+              <div className="border-b border-[#666] w-64 mt-4"></div>
             </div>
             <div>
-              <p className="mb-1 font-bold" style={{ fontSize: "11pt" }}>Assinatura da Testemunha:</p>
-              <div className="border-b border-[#666] w-80 mt-6"></div>
+              <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura da Testemunha:</p>
+              <div className="border-b border-[#666] w-80 mt-4"></div>
             </div>
           </div>
 
-          <div className="print-footer">
+          <div className="print-footer pt-2">
             <FooterTimbrado />
           </div>
         </div>
@@ -209,7 +206,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 /* ── Responsibility term body text (page 1) ── */
 function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string }) {
   return (
-    <div className="text-justify space-y-3 flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.6" }}>
+    <div className="text-justify space-y-2 flex-1" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.45" }}>
       <p>
         Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
         declaro que recebi da empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
@@ -250,7 +247,7 @@ function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string 
         depreciado anualmente, visando estabelecer o Valor Contábil Atual para fins de devolução, indenização ou
         ressarcimento. A depreciação será calculada conforme as seguintes regras:
       </p>
-      <ol className="list-decimal pl-6 space-y-1" style={{ fontSize: "10pt" }}>
+      <ol className="list-decimal pl-6 space-y-0.5" style={{ fontSize: "9pt" }}>
         <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
         <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto para Notebooks, celulares ou tablets.</li>
         <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
@@ -264,7 +261,7 @@ function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string 
 /* ── Return term body text (page 1) ── */
 function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
   return (
-    <div className="text-justify space-y-3 flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.6" }}>
+    <div className="text-justify space-y-2 flex-1" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.45" }}>
       <p>
         Eu, <strong>{name}</strong>, CPF ______________________ RG ______________________,
         declaro, para todos os fins de direito, que o(s) seguinte(s) equipamento(s) tecnológico(s) está(ão) sendo
@@ -273,7 +270,7 @@ function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
 
       <p className="font-bold mt-4">A depreciação foi calculada conforme as seguintes regras:</p>
 
-      <ol className="list-decimal pl-6 space-y-1" style={{ fontSize: "10pt" }}>
+      <ol className="list-decimal pl-6 space-y-0.5" style={{ fontSize: "9pt" }}>
         <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
         <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto em Notebook, celulares ou tablets.</li>
         <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
