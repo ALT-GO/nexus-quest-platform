@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
+import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
 import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
@@ -163,6 +164,16 @@ function AssetSection({
                         : (item as any)[col.key] || "—";
                       return <TableCell key={col.key} className="text-sm">{val}</TableCell>;
                     }
+                    if (col.type === "status" && category === "licencas") {
+                      return (
+                        <TableCell key={col.key}>
+                          <StatusSelectCell
+                            value={(item as any)[col.key] || ""}
+                            onSave={async (v) => onUpdate(item.id, { [col.key]: v } as any)}
+                          />
+                        </TableCell>
+                      );
+                    }
                     if (col.type === "status") {
                       return (
                         <TableCell key={col.key}>
@@ -170,7 +181,7 @@ function AssetSection({
                             value={(item as any)[col.key] || ""}
                             onSave={(v) => onUpdate(item.id, { [col.key]: v } as any)}
                             type="select"
-                            options={category === "licencas" ? statusOptionsLicenca : statusOptionsDefault}
+                            options={statusOptionsDefault}
                             displayRender={(v) => <StatusBadge status={v} />}
                           />
                         </TableCell>
