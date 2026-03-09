@@ -646,6 +646,15 @@ export function CsvImportTab() {
           </div>
         )}
 
+        {/* Step 3.5: Duplicate resolution */}
+        {step === "resolving" && duplicateMatches.length > 0 && (
+          <DuplicateResolverDialog
+            matches={duplicateMatches}
+            onComplete={handleDuplicateResolved}
+            onCancel={handleDuplicateCancelled}
+          />
+        )}
+
         {/* Step 4: Progress */}
         {step === "importing" && (
           <div className="space-y-4 py-8">
