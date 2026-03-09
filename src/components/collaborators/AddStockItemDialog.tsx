@@ -197,13 +197,13 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     const val = (values[uniqueRule.field] || "").trim();
     if (!val) return true;
 
-    const { data } = await supabase
+    const { data: existing } = await supabase
       .from("inventory")
       .select("id")
-      .eq(uniqueRule.dbColumn, val)
+      .eq(uniqueRule.dbColumn as any, val)
       .limit(1);
 
-    if (data && data.length > 0) {
+    if (existing && existing.length > 0) {
       setDupError(`Já existe um item com ${uniqueRule.label} "${val}"`);
       return false;
     }
