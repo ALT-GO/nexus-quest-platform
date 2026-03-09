@@ -525,6 +525,8 @@ export function CsvImportTab() {
     setMapping([]);
     setProgress(0);
     setResult(null);
+    setDuplicateMatches([]);
+    setDuplicateResolutions([]);
   };
 
   const columnOptions = category === "colaborador" ? collaboratorColumns : inventoryColumns;
