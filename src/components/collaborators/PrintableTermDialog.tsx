@@ -75,7 +75,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
         {/* ===== PAGE 1 ===== */}
         <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
-          <HeaderTimbrado title={headerTitle} docCode={docCode} pageInfo="Página 1 de 2" />
+          <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
 
           <p className="mb-4 text-right" style={{ fontSize: "11px" }}>{todayShort}</p>
 
