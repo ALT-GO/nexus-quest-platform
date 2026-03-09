@@ -10,6 +10,8 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, ArrowRight, Ch
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { findDuplicates, type SimilarMatch } from "@/lib/name-similarity";
+import { DuplicateResolverDialog, type DuplicateResolution } from "./DuplicateResolverDialog";
 
 type ImportCategory = "notebooks" | "celulares" | "linhas" | "licencas" | "colaborador";
 
