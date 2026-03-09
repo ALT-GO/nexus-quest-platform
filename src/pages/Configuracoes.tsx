@@ -229,6 +229,9 @@ export default function Configuracoes() {
         <TabsContent value="import">
           <CsvImportTab />
         </TabsContent>
+        <TabsContent value="integrity">
+          <IntegrityAuditorTab />
+        </TabsContent>
         {isAdmin && (
           <TabsContent value="users">
             <UserManagementTab />
