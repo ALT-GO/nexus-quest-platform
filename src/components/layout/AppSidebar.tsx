@@ -58,6 +58,7 @@ export function AppSidebar() {
       children: [
         { title: "Service Desk", href: "/ti/service-desk" },
         { title: "Colaboradores", href: "/ti/colaboradores" },
+        { title: "Gestão de Faturas", href: "/ti/faturas" },
       ],
     } as NavItem] : []),
     ...(isAdmin ? [{
