@@ -583,6 +583,26 @@ export function CsvImportTab() {
               )}
             </div>
 
+            {/* Error Details Panel */}
+            {result.errorDetails.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-left hover:bg-destructive/10 transition-colors group">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                  <span className="font-medium text-destructive flex-1">
+                    {result.errorDetails.length} erro(s) encontrado(s) — clique para ver detalhes
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-destructive transition-transform group-data-[state=closed]:rotate-[-90deg]" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 max-h-[350px] overflow-y-auto rounded-lg border divide-y">
+                    {result.errorDetails.map((err, idx) => (
+                      <ErrorDetailRow key={idx} error={err} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <div className="flex justify-center pt-4">
               <Button onClick={reset} variant="outline">
                 <Upload className="mr-2 h-4 w-4" />
