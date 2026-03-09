@@ -40,7 +40,7 @@ function StatusBadge({ status }: { status: string }) {
 interface ColDef {
   key: string;
   label: string;
-  type?: "text" | "select" | "date" | "status" | "currency" | "readonly";
+  type?: "text" | "select" | "date" | "status" | "currency" | "readonly" | "computed";
   options?: string[];
   mono?: boolean;
 }
