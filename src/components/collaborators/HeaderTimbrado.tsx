@@ -10,7 +10,7 @@ interface Props {
 
 export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02", pageInfo, prefix }: Props) {
   return (
-    <table className="w-full border-collapse border border-[#999] mb-6 print:mb-4" style={{ borderColor: "#999" }}>
+    <table className="w-full border-collapse border border-[#999] mb-3 print:mb-2" style={{ borderColor: "#999" }}>
       <tbody>
         <tr>
           <td
