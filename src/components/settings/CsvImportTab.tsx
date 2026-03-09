@@ -287,7 +287,11 @@ export function CsvImportTab() {
       });
 
       const name = record.name;
-      if (!name) { res.errors++; continue; }
+      if (!name) {
+        res.errors++;
+        res.errorDetails.push({ line: i + 2, message: "Campo 'nome' está vazio ou não mapeado", data: record });
+        continue;
+      }
 
       // Check if collaborator already exists (has any inventory entry)
       if (existingCollabs.has(name.toLowerCase().trim())) {
