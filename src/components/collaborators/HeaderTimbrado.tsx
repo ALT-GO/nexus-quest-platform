@@ -25,7 +25,7 @@ export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02"
             style={{ width: "45%", borderColor: "#999" }}
             rowSpan={2}
           >
-            <p className="text-xs uppercase tracking-wide text-[#666]">FORMULÁRIO</p>
+            {prefix && <p className="text-[10px] uppercase tracking-wide text-[#666]">{prefix}</p>}
             <p className="font-bold text-sm uppercase tracking-wide text-[#444]">{title}</p>
           </td>
           <td
