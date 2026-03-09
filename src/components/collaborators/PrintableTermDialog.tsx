@@ -148,12 +148,18 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 assets.map((asset: any) => {
                   const canDepreciate = asset.category === "notebooks" || asset.category === "celulares";
                   const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.data_aquisicao) : null;
+                  const valorPagoDisplay = canDepreciate
+                    ? (dep ? formatBRL(dep.valorAquisicao) : asset.valor_pago ? formatBRL(asset.valor_pago) : "—")
+                    : "N/A";
+                  const valorContabilDisplay = canDepreciate
+                    ? (dep ? formatBRL(dep.valorContabil) : "—")
+                    : "N/A";
                   return (
                     <tr key={asset.id}>
                       <td className="p-1.5 border border-[#bbb]">{getItemType(asset)}</td>
                       <td className="p-1.5 border border-[#bbb]">{getAssetDetail(asset)}</td>
-                      <td className="p-1.5 border border-[#bbb]">{canDepreciate ? (dep ? formatBRL(dep.valorAquisicao) : "") : "N/A"}</td>
-                      <td className="p-1.5 border border-[#bbb]">{canDepreciate ? (dep ? formatBRL(dep.valorContabil) : "") : "N/A"}</td>
+                      <td className="p-1.5 border border-[#bbb]">{valorPagoDisplay}</td>
+                      <td className="p-1.5 border border-[#bbb]">{valorContabilDisplay}</td>
                       {!isDevolucao && (
                         <>
                           <td className="p-1.5 border border-[#bbb]">{asset.status || "—"}</td>
