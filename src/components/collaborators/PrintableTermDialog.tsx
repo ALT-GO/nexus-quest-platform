@@ -206,7 +206,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 /* ── Responsibility term body text (page 1) ── */
 function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string }) {
   return (
-    <div className="text-justify space-y-3 flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.6" }}>
+    <div className="text-justify space-y-2 flex-1" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.45" }}>
       <p>
         Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
         declaro que recebi da empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
