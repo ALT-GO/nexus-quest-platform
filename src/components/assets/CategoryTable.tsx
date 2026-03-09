@@ -303,26 +303,32 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    if (col.key === "created_at" || (col.key === "delivered_at" && col.type === "date")) {
-                      if (col.key === "delivered_at") {
-                        const dateVal = (item as any).delivered_at;
-                        const formatted = dateVal ? new Date(dateVal).toLocaleDateString("pt-BR") : "";
+                    // Editable date columns (delivered_at, data_aquisicao, created_at readonly)
+                    if (col.type === "date" && (col.key === "delivered_at" || col.key === "data_aquisicao" || col.key === "created_at")) {
+                      if (col.key === "created_at") {
                         return (
-                          <TableCell key={col.key}>
-                            <InlineCellEditor
-                              value={dateVal ? new Date(dateVal).toISOString().split("T")[0] : ""}
-                              onSave={(v) => updateItem(item.id, { delivered_at: v ? new Date(v).toISOString() : null } as any)}
-                              type="date"
-                              displayRender={(v) => (
-                                <span className="text-sm">{v ? new Date(v).toLocaleDateString("pt-BR") : <span className="text-muted-foreground italic">—</span>}</span>
-                              )}
-                            />
+                          <TableCell key={col.key} className="text-sm">
+                            {getCellValue(item, "created_at")}
                           </TableCell>
                         );
                       }
+                      const dateVal = (item as any)[col.key];
                       return (
-                        <TableCell key={col.key} className="text-sm">
-                          {getCellValue(item, "created_at")}
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={dateVal ? (col.key === "data_aquisicao" ? dateVal : new Date(dateVal).toISOString().split("T")[0]) : ""}
+                            onSave={(v) => {
+                              if (col.key === "data_aquisicao") {
+                                handleDataAquisicaoSave(item, v);
+                              } else {
+                                updateItem(item.id, { [col.key]: v ? new Date(v).toISOString() : null } as any);
+                              }
+                            }}
+                            type="date"
+                            displayRender={(v) => (
+                              <span className="text-sm">{v ? new Date(v).toLocaleDateString("pt-BR") : <span className="text-muted-foreground italic">—</span>}</span>
+                            )}
+                          />
                         </TableCell>
                       );
                     }
