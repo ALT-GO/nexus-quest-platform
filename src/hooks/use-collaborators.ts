@@ -5,6 +5,10 @@ export interface Collaborator {
   name: string;
   assetCount: number;
   categories: string[];
+  cargo: string;
+  sector: string;
+  cost_center: string;
+  email_address: string;
 }
 
 export interface CollaboratorAsset {
