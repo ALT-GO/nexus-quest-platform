@@ -51,13 +51,10 @@ function getItemType(asset: any): string {
 /** Returns technical detail depending on category */
 function getAssetDetail(asset: any): string {
   if (asset.category === "notebooks" || asset.category === "celulares") {
-    const parts: string[] = [];
-    if (asset.marca) parts.push(asset.marca);
-    if (asset.model) parts.push(asset.model);
-    return parts.join(" ") || "—";
+    return asset.model || "—";
   }
   if (asset.category === "linhas") return asset.numero || "—";
-  if (asset.category === "licencas") return asset.email_address || "—";
+  if (asset.category === "licencas" || asset.category === "licenses") return asset.email_address || "—";
   return "—";
 }
 
