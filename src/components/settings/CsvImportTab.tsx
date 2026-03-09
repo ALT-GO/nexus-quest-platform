@@ -263,7 +263,7 @@ export function CsvImportTab() {
     setStep("importing");
     setProgress(0);
 
-    const result: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0 };
+    const result: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0, errorDetails: [] };
     const total = csvData.rows.length;
 
     if (category === "colaborador") {
