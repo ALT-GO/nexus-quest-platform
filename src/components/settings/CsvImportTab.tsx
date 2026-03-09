@@ -12,7 +12,7 @@ import autoTable from "jspdf-autotable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { findDuplicates, type SimilarMatch } from "@/lib/name-similarity";
+import { diceSimilarity } from "@/lib/name-similarity";
 import { DuplicateResolverDialog, type DuplicateResolution } from "./DuplicateResolverDialog";
 
 type ImportCategory = "notebooks" | "celulares" | "linhas" | "licencas" | "colaborador";
@@ -27,7 +27,6 @@ const categoryOptions: { value: ImportCategory; label: string }[] = [
 
 // Maps CSV header variants → inventory DB columns
 const headerMappings: Record<string, string> = {
-  // common
   "colaborador": "collaborator",
   "nome": "collaborator",
   "nome completo": "collaborator",
@@ -59,33 +58,28 @@ const headerMappings: Record<string, string> = {
   "email": "email_address",
   "e-mail": "email_address",
   "contrato": "contrato",
-  // notebook
   "service tag": "service_tag",
   "servicetag": "service_tag",
   "service_tag": "service_tag",
   "service tag 2": "service_tag_2",
   "service_tag_2": "service_tag_2",
-  // celular
   "imei": "imei1",
   "imei 1": "imei1",
   "imei1": "imei1",
   "imei 2": "imei2",
   "imei2": "imei2",
-  // linha
   "numero": "numero",
   "número": "numero",
   "numero da linha": "numero",
   "número da linha": "numero",
   "telefone": "numero",
   "operadora": "operadora",
-  // licença
   "licença": "licenca",
   "licenca": "licenca",
   "license": "licenca",
   "chave": "licenca",
 };
 
-// Collaborator-specific mappings → we create inventory entries for assets linked to them
 const collaboratorMappings: Record<string, string> = {
   "nome": "name",
   "nome completo": "name",
@@ -119,6 +113,48 @@ interface ImportResult {
   errorDetails: ErrorDetail[];
 }
 
+/* ------------------------------------------------------------------ */
+/*  Normalização padrão: trim + uppercase                              */
+/* ------------------------------------------------------------------ */
+function norm(val: string | null | undefined): string {
+  return (val ?? "").trim().toUpperCase();
+}
+
+function isBlank(val: string | null | undefined): boolean {
+  const v = norm(val);
+  return v === "" || v === "-" || v === "NULO" || v === "NULL";
+}
+
+/* ------------------------------------------------------------------ */
+/*  Comparação inteligente de nomes (primeiro + último ou fuzzy)       */
+/* ------------------------------------------------------------------ */
+interface FuzzyResult {
+  exact: boolean;
+  firstLastMatch: boolean;
+  score: number;
+}
+
+function compareName(csvName: string, dbName: string): FuzzyResult {
+  const a = norm(csvName);
+  const b = norm(dbName);
+  if (a === b) return { exact: true, firstLastMatch: true, score: 1 };
+
+  // Check first + last name match
+  const partsA = a.split(/\s+/).filter(Boolean);
+  const partsB = b.split(/\s+/).filter(Boolean);
+  const firstLastMatch =
+    partsA.length >= 2 &&
+    partsB.length >= 2 &&
+    partsA[0] === partsB[0] &&
+    partsA[partsA.length - 1] === partsB[partsB.length - 1];
+
+  const score = diceSimilarity(csvName, dbName);
+  return { exact: false, firstLastMatch, score };
+}
+
+/* ------------------------------------------------------------------ */
+/*  CSV Parsing                                                        */
+/* ------------------------------------------------------------------ */
 function detectDelimiter(text: string): string {
   const firstLine = text.split(/\r?\n/)[0] || "";
   const semicolons = (firstLine.match(/;/g) || []).length;
@@ -165,7 +201,6 @@ function autoMapHeaders(csvHeaders: string[], category: ImportCategory): Mapping
   });
 }
 
-// All possible inventory columns for the dropdown
 const inventoryColumns = [
   { value: "", label: "(Ignorar)" },
   { value: "collaborator", label: "Colaborador" },
@@ -226,6 +261,10 @@ function ErrorDetailRow({ error }: { error: ErrorDetail }) {
   );
 }
 
+/* ================================================================== */
+/*  Main Component                                                     */
+/* ================================================================== */
+
 export function CsvImportTab() {
   const [step, setStep] = useState<ImportStep>("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -235,8 +274,18 @@ export function CsvImportTab() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [duplicateMatches, setDuplicateMatches] = useState<SimilarMatch[]>([]);
-  const [duplicateResolutions, setDuplicateResolutions] = useState<DuplicateResolution[]>([]);
+
+  // Duplicate resolution state — now per-row interactive
+  const [pendingRow, setPendingRow] = useState<{
+    rowIndex: number;
+    csvName: string;
+    dbName: string;
+    score: number;
+  } | null>(null);
+  const [resolvedRows, setResolvedRows] = useState<Map<number, DuplicateResolution>>(new Map());
+  // We store the import continuation callback
+  const [importContinuation, setImportContinuation] = useState<(() => void) | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validCsvTypes = ["text/csv", "application/vnd.ms-excel", "text/plain"];
@@ -254,7 +303,6 @@ export function CsvImportTab() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        // If UTF-8 produced replacement characters, retry with ISO-8859-1
         if (fallbackEncoding && text.includes("\uFFFD")) {
           tryRead(fallbackEncoding);
           return;
@@ -294,96 +342,77 @@ export function CsvImportTab() {
     setMapping((prev) => prev.map((m, i) => (i === index ? { ...m, dbColumn } : m)));
   };
 
-  const getExistingCollaborators = async (): Promise<Set<string>> => {
-    const { data } = await supabase.from("inventory").select("collaborator").neq("collaborator", "");
-    const names = new Set<string>();
-    data?.forEach((r: any) => { if (r.collaborator) names.add(r.collaborator.toLowerCase().trim()); });
-    return names;
+  /* ---------------------------------------------------------------- */
+  /*  Fetch helpers                                                    */
+  /* ---------------------------------------------------------------- */
+
+  /** Returns Map<NORMALIZED_NAME, originalName> for all collaborators */
+  const getExistingCollaboratorsMap = async (): Promise<Map<string, string>> => {
+    const { data } = await supabase
+      .from("inventory")
+      .select("collaborator")
+      .neq("collaborator", "")
+      .not("collaborator", "is", null);
+    const map = new Map<string, string>();
+    data?.forEach((r: any) => {
+      if (r.collaborator) {
+        const key = norm(r.collaborator);
+        if (key && !map.has(key)) map.set(key, (r.collaborator as string).trim());
+      }
+    });
+    return map;
   };
+
+  /** Returns Map<NORMALIZED_identifier_value, row_id> for service_tag + imei1 */
+  const getExistingIdentifiers = async (
+    cat: string
+  ): Promise<{ byServiceTag: Map<string, string>; byImei1: Map<string, string> }> => {
+    const { data } = await supabase
+      .from("inventory")
+      .select("id, service_tag, imei1")
+      .eq("category", cat);
+
+    const byServiceTag = new Map<string, string>();
+    const byImei1 = new Map<string, string>();
+
+    data?.forEach((r: any) => {
+      const st = norm(r.service_tag);
+      if (!isBlank(r.service_tag)) byServiceTag.set(st, r.id);
+      const im = norm(r.imei1);
+      if (!isBlank(r.imei1)) byImei1.set(im, r.id);
+    });
+
+    return { byServiceTag, byImei1 };
+  };
+
+  /* ---------------------------------------------------------------- */
+  /*  Run import — pre-scan for fuzzy name conflicts, then execute    */
+  /* ---------------------------------------------------------------- */
 
   const runImport = async () => {
-    if (!category) return;
-
-    // --- Duplicate detection step ---
-    // Extract collaborator names from CSV rows
-    const collabColIndex = mapping.findIndex(
-      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
-    );
-    if (collabColIndex >= 0) {
-      const existingCollabs = await getExistingCollaborators();
-      const existingNames = Array.from(existingCollabs).map((n) => n); // lowercase
-      // We need original-case names from DB for display
-      const { data: rawCollabs } = await supabase
-        .from("inventory")
-        .select("collaborator")
-        .neq("collaborator", "")
-        .not("collaborator", "is", null);
-      const originalNames = Array.from(
-        new Set((rawCollabs || []).map((r: any) => (r.collaborator as string).trim()).filter(Boolean))
-      );
-
-      const csvNames = csvData.rows
-        .map((row, idx) => ({ name: (row[collabColIndex] || "").trim(), rowIndex: idx }))
-        .filter((r) => r.name !== "");
-
-      const matches = findDuplicates(csvNames, originalNames);
-
-      if (matches.length > 0 && duplicateResolutions.length === 0) {
-        // Pause and show resolver
-        setDuplicateMatches(matches);
-        setStep("resolving");
-        return;
-      }
-    }
-
-    await executeImport();
-  };
-
-  const executeImport = async () => {
     if (!category) return;
     setStep("importing");
     setProgress(0);
 
-    const result: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0, errorDetails: [] };
+    const res: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0, errorDetails: [] };
     const total = csvData.rows.length;
 
     if (category === "colaborador") {
-      await importCollaborators(result, total);
+      await importCollaborators(res, total);
     } else {
-      await importInventory(result, total);
+      await importInventory(res, total);
     }
 
-    setResult(result);
+    setResult(res);
     setStep("done");
   };
 
-  const handleDuplicateResolved = (resolutions: DuplicateResolution[]) => {
-    setDuplicateResolutions(resolutions);
-    setDuplicateMatches([]);
-    // Apply resolutions to CSV data: replace names that should be linked
-    const collabColIndex = mapping.findIndex(
-      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
-    );
-    if (collabColIndex >= 0) {
-      const updatedRows = [...csvData.rows.map((r) => [...r])];
-      for (const res of resolutions) {
-        if (res.action === "link") {
-          updatedRows[res.csvRowIndex][collabColIndex] = res.resolvedName;
-        }
-      }
-      setCsvData((prev) => ({ ...prev, rows: updatedRows }));
-    }
-    // Continue with import
-    setTimeout(() => executeImport(), 100);
-  };
-
-  const handleDuplicateCancelled = () => {
-    setDuplicateMatches([]);
-    setStep("mapping");
-  };
+  /* ---------------------------------------------------------------- */
+  /*  Import collaborators                                             */
+  /* ---------------------------------------------------------------- */
 
   const importCollaborators = async (res: ImportResult, total: number) => {
-    const existingCollabs = await getExistingCollaborators();
+    const existingMap = await getExistingCollaboratorsMap();
 
     for (let i = 0; i < csvData.rows.length; i++) {
       const row = csvData.rows[i];
@@ -399,9 +428,58 @@ export function CsvImportTab() {
         continue;
       }
 
-      // Check if collaborator already exists (has any inventory entry)
-      if (existingCollabs.has(name.toLowerCase().trim())) {
-        // Update existing items for this collaborator
+      const nameKey = norm(name);
+
+      // Check if already resolved by user
+      const resolved = resolvedRows.get(i);
+      let matchedKey: string | null = null;
+
+      if (resolved) {
+        if (resolved.action === "link") {
+          matchedKey = norm(resolved.resolvedName);
+        }
+        // action === "create" → matchedKey stays null → insert new
+      } else {
+        // Exact match (normalized)
+        if (existingMap.has(nameKey)) {
+          matchedKey = nameKey;
+        } else {
+          // Smart fuzzy check against all existing names
+          let bestScore = 0;
+          let bestKey = "";
+          for (const [ek, _original] of existingMap) {
+            const cmp = compareName(name, _original);
+            if (cmp.exact) { bestScore = 1; bestKey = ek; break; }
+            if (cmp.firstLastMatch && cmp.score > bestScore) {
+              bestScore = Math.max(cmp.score, 0.90);
+              bestKey = ek;
+            } else if (cmp.score > bestScore) {
+              bestScore = cmp.score;
+              bestKey = ek;
+            }
+          }
+
+          if (bestScore >= 0.80 && bestScore < 1) {
+            // PAUSE: ask user
+            const dbOriginal = existingMap.get(bestKey) || bestKey;
+            await new Promise<void>((resolve) => {
+              setPendingRow({ rowIndex: i, csvName: name, dbName: dbOriginal, score: bestScore });
+              setImportContinuation(() => resolve);
+            });
+            // After resolution, check what user decided
+            const userDecision = resolvedRows.get(i);
+            if (userDecision?.action === "link") {
+              matchedKey = norm(userDecision.resolvedName);
+            }
+            // else: create new
+          } else if (bestScore >= 1) {
+            matchedKey = bestKey;
+          }
+        }
+      }
+
+      if (matchedKey && existingMap.has(matchedKey)) {
+        const originalName = existingMap.get(matchedKey)!;
         const updates: Record<string, string> = {};
         if (record.cargo) updates.cargo = record.cargo;
         if (record.sector) updates.sector = record.sector;
@@ -409,11 +487,10 @@ export function CsvImportTab() {
         if (record.email) updates.email_address = record.email;
 
         if (Object.keys(updates).length > 0) {
-          await supabase.from("inventory").update(updates).eq("collaborator", name);
+          await supabase.from("inventory").update(updates).eq("collaborator", originalName);
         }
         res.updated++;
       } else {
-        // Create a placeholder inventory entry for the collaborator
         await supabase.from("inventory").insert({
           category: "notebooks",
           asset_code: "TEMP",
@@ -426,33 +503,34 @@ export function CsvImportTab() {
         });
         res.inserted++;
         res.collaboratorsCreated++;
-        existingCollabs.add(name.toLowerCase().trim());
+        existingMap.set(nameKey, name);
       }
 
       setProgress(Math.round(((i + 1) / total) * 100));
     }
   };
 
-  const importInventory = async (res: ImportResult, total: number) => {
-    // Determine unique key for upsert
-    const uniqueKeyCol = category === "linhas" ? "numero" : "service_tag";
-    const hasUniqueKey = mapping.some((m) => m.dbColumn === uniqueKeyCol);
+  /* ---------------------------------------------------------------- */
+  /*  Import inventory — with identifier blocking                      */
+  /* ---------------------------------------------------------------- */
 
-    // Pre-fetch existing unique keys for duplicate detection
-    const existingMap = new Map<string, string>(); // uniqueValue → id
-    if (hasUniqueKey) {
+  const importInventory = async (res: ImportResult, total: number) => {
+    const { byServiceTag, byImei1 } = await getExistingIdentifiers(category as string);
+
+    // Also fetch numero map for linhas
+    let byNumero = new Map<string, string>();
+    if (category === "linhas") {
       const { data } = await supabase
         .from("inventory")
-        .select(`id, ${uniqueKeyCol}`)
-        .eq("category", category as string);
+        .select("id, numero")
+        .eq("category", "linhas");
       data?.forEach((r: any) => {
-        const val = r[uniqueKeyCol];
-        if (val && val.trim() !== "") existingMap.set(val.trim().toLowerCase(), r.id);
+        const v = norm(r.numero);
+        if (!isBlank(r.numero)) byNumero.set(v, r.id);
       });
     }
 
-    // Also track existing collaborators for auto-creation
-    const existingCollabs = await getExistingCollaborators();
+    const existingCollabs = await getExistingCollaboratorsMap();
 
     for (let i = 0; i < csvData.rows.length; i++) {
       const row = csvData.rows[i];
@@ -461,22 +539,82 @@ export function CsvImportTab() {
         if (m.dbColumn && row[idx] !== undefined) record[m.dbColumn] = row[idx].trim();
       });
 
-      // Auto-create collaborator if doesn't exist
+      /* --- Smart collaborator name resolution --- */
       const collabName = record.collaborator;
-      if (collabName && !existingCollabs.has(collabName.toLowerCase().trim())) {
-        // We don't create a separate inventory entry for the collab — they'll get one from this import
-        existingCollabs.add(collabName.toLowerCase().trim());
-        res.collaboratorsCreated++;
+      if (collabName) {
+        const collabKey = norm(collabName);
+
+        // Check resolved cache first
+        const resolved = resolvedRows.get(i);
+        if (resolved) {
+          if (resolved.action === "link") {
+            record.collaborator = resolved.resolvedName;
+          }
+        } else if (!existingCollabs.has(collabKey)) {
+          // Fuzzy check
+          let bestScore = 0;
+          let bestOriginal = "";
+          for (const [ek, original] of existingCollabs) {
+            const cmp = compareName(collabName, original);
+            if (cmp.exact) { bestScore = 1; bestOriginal = original; break; }
+            if (cmp.firstLastMatch && cmp.score > bestScore) {
+              bestScore = Math.max(cmp.score, 0.90);
+              bestOriginal = original;
+            } else if (cmp.score > bestScore) {
+              bestScore = cmp.score;
+              bestOriginal = original;
+            }
+          }
+
+          if (bestScore >= 0.80 && bestScore < 1) {
+            // PAUSE: ask user
+            await new Promise<void>((resolve) => {
+              setPendingRow({ rowIndex: i, csvName: collabName, dbName: bestOriginal, score: bestScore });
+              setImportContinuation(() => resolve);
+            });
+            const userDecision = resolvedRows.get(i);
+            if (userDecision?.action === "link") {
+              record.collaborator = userDecision.resolvedName;
+            }
+          } else if (bestScore >= 1) {
+            record.collaborator = bestOriginal;
+          }
+
+          // Track new collab
+          if (!existingCollabs.has(norm(record.collaborator))) {
+            existingCollabs.set(norm(record.collaborator), record.collaborator);
+            res.collaboratorsCreated++;
+          }
+        }
       }
 
-      // Build the insert/update payload
+      /* --- Identifier blocking: find existing row by service_tag or imei1 --- */
+      let existingId: string | null = null;
+
+      const stVal = norm(record.service_tag);
+      if (!isBlank(record.service_tag) && byServiceTag.has(stVal)) {
+        existingId = byServiceTag.get(stVal)!;
+      }
+      if (!existingId) {
+        const imVal = norm(record.imei1);
+        if (!isBlank(record.imei1) && byImei1.has(imVal)) {
+          existingId = byImei1.get(imVal)!;
+        }
+      }
+      if (!existingId && category === "linhas") {
+        const numVal = norm(record.numero);
+        if (!isBlank(record.numero) && byNumero.has(numVal)) {
+          existingId = byNumero.get(numVal)!;
+        }
+      }
+
+      /* --- Build payload --- */
       const payload: Record<string, any> = {
         category: category as string,
         ...record,
       };
       delete payload.dbColumn;
 
-      // Auto-set status based on collaborator presence
       const collabValue = (payload.collaborator || "").trim();
       if (collabValue) {
         if (!payload.status) payload.status = "Em uso";
@@ -484,33 +622,35 @@ export function CsvImportTab() {
         if (!payload.status) payload.status = "Disponível";
       }
 
-      // Check for duplicate
-      const uniqueVal = record[uniqueKeyCol];
-      const existingId = uniqueVal ? existingMap.get(uniqueVal.trim().toLowerCase()) : null;
-
       try {
         if (existingId) {
+          // UPDATE existing — blocked from creating new
           const updatePayload = { ...payload };
           delete updatePayload.category;
           updatePayload.updated_at = new Date().toISOString();
           const { error } = await supabase.from("inventory").update(updatePayload).eq("id", existingId);
           if (error) {
-            console.error(`Erro ao atualizar linha ${i + 2}:`, error.message, record);
             res.errors++;
             res.errorDetails.push({ line: i + 2, message: `Atualização: ${error.message}`, data: record });
-          } else { res.updated++; }
+          } else {
+            res.updated++;
+          }
         } else {
+          // INSERT new
           payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) {
-            console.error(`Erro ao inserir linha ${i + 2}:`, error.message, record);
             res.errors++;
             res.errorDetails.push({ line: i + 2, message: `Inserção: ${error.message}`, data: record });
-          } else { res.inserted++; }
-          if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
+          } else {
+            res.inserted++;
+          }
+          // Track new identifiers
+          if (!isBlank(record.service_tag)) byServiceTag.set(stVal, "new");
+          if (!isBlank(record.imei1)) byImei1.set(norm(record.imei1), "new");
+          if (category === "linhas" && !isBlank(record.numero)) byNumero.set(norm(record.numero), "new");
         }
       } catch (err: any) {
-        console.error(`Exceção na linha ${i + 2}:`, err?.message || err, record);
         res.errors++;
         res.errorDetails.push({ line: i + 2, message: `Exceção: ${err?.message || "Erro desconhecido"}`, data: record });
       }
@@ -518,6 +658,41 @@ export function CsvImportTab() {
       setProgress(Math.round(((i + 1) / total) * 100));
     }
   };
+
+  /* ---------------------------------------------------------------- */
+  /*  Duplicate resolution handlers (interactive per-row)              */
+  /* ---------------------------------------------------------------- */
+
+  const handleRowResolution = (action: "link" | "create") => {
+    if (!pendingRow) return;
+    const resolution: DuplicateResolution = {
+      csvName: pendingRow.csvName,
+      csvRowIndex: pendingRow.rowIndex,
+      action,
+      resolvedName: action === "link" ? pendingRow.dbName : pendingRow.csvName,
+    };
+    setResolvedRows((prev) => {
+      const next = new Map(prev);
+      next.set(pendingRow.rowIndex, resolution);
+      return next;
+    });
+    setPendingRow(null);
+    // Resume import
+    if (importContinuation) {
+      const cont = importContinuation;
+      setImportContinuation(null);
+      cont();
+    }
+  };
+
+  const handleRowResolutionCancel = () => {
+    // Treat cancel as "create new"
+    handleRowResolution("create");
+  };
+
+  /* ---------------------------------------------------------------- */
+  /*  Reset                                                            */
+  /* ---------------------------------------------------------------- */
 
   const reset = () => {
     setStep("upload");
@@ -527,8 +702,9 @@ export function CsvImportTab() {
     setMapping([]);
     setProgress(0);
     setResult(null);
-    setDuplicateMatches([]);
-    setDuplicateResolutions([]);
+    setPendingRow(null);
+    setResolvedRows(new Map());
+    setImportContinuation(null);
   };
 
   const columnOptions = category === "colaborador" ? collaboratorColumns : inventoryColumns;
@@ -542,6 +718,28 @@ export function CsvImportTab() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Inline duplicate resolver dialog */}
+        {pendingRow && (
+          <DuplicateResolverDialog
+            matches={[
+              {
+                csvName: pendingRow.csvName,
+                existingName: pendingRow.dbName,
+                score: pendingRow.score,
+                csvRowIndex: pendingRow.rowIndex,
+              },
+            ]}
+            onComplete={(resolutions) => {
+              if (resolutions[0]?.action === "link") {
+                handleRowResolution("link");
+              } else {
+                handleRowResolution("create");
+              }
+            }}
+            onCancel={handleRowResolutionCancel}
+          />
+        )}
+
         {/* Step 1: Upload */}
         {step === "upload" && (
           <div
@@ -630,7 +828,7 @@ export function CsvImportTab() {
                     </SelectContent>
                   </Select>
                   {m.dbColumn && m.dbColumn !== "_ignore" && (
-                    <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                   )}
                 </div>
               ))}
@@ -648,20 +846,13 @@ export function CsvImportTab() {
           </div>
         )}
 
-        {/* Step 3.5: Duplicate resolution */}
-        {step === "resolving" && duplicateMatches.length > 0 && (
-          <DuplicateResolverDialog
-            matches={duplicateMatches}
-            onComplete={handleDuplicateResolved}
-            onCancel={handleDuplicateCancelled}
-          />
-        )}
-
         {/* Step 4: Progress */}
         {step === "importing" && (
           <div className="space-y-4 py-8">
             <div className="text-center">
-              <p className="font-medium mb-2">Importando dados...</p>
+              <p className="font-medium mb-2">
+                {pendingRow ? "Aguardando resolução de duplicado..." : "Importando dados..."}
+              </p>
               <p className="text-sm text-muted-foreground">{progress}% concluído</p>
             </div>
             <Progress value={progress} className="h-3" />
@@ -672,17 +863,17 @@ export function CsvImportTab() {
         {step === "done" && result && (
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-success" />
+              <CheckCircle2 className="h-10 w-10 text-primary" />
               <p className="text-xl font-bold">Importação concluída!</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold text-success">{result.inserted}</p>
+                <p className="text-2xl font-bold text-primary">{result.inserted}</p>
                 <p className="text-sm text-muted-foreground">Novos registros</p>
               </div>
               <div className="rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold text-info">{result.updated}</p>
+                <p className="text-2xl font-bold text-accent-foreground">{result.updated}</p>
                 <p className="text-sm text-muted-foreground">Atualizados</p>
               </div>
               {result.collaboratorsCreated > 0 && (
