@@ -92,7 +92,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
         {/* ===== PAGE 2 ===== */}
         <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col break-before-page" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
-          <HeaderTimbrado title={headerTitle} docCode={docCode} revision="Rev. 02" pageInfo="Página 2 de 2" />
+          <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
 
           {/* Asset Table */}
           <table className="w-full border-collapse mb-8" style={{ fontSize: "10px" }}>
