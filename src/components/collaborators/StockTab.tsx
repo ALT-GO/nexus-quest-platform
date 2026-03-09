@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
+import { StockFilters, getFiltersForCategory } from "./StockFilters";
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
