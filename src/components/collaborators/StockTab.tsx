@@ -138,6 +138,29 @@ const tabConfig = [
   { key: "licencas", label: "Licenças", icon: FileText },
 ];
 
+const commonSortOpts: SortOption[] = [
+  { value: "collaborator", label: "Colaborador" },
+  { value: "created_at", label: "Data criação" },
+  { value: "cost_center", label: "Centro de custo" },
+];
+
+const sortOptionsByCategory: Record<string, SortOption[]> = {
+  notebooks: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  celulares: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  linhas: [
+    { value: "collaborator", label: "Colaborador" },
+    { value: "created_at", label: "Data criação" },
+    { value: "operadora", label: "Operadora" },
+    { value: "gestor", label: "Gestor" },
+  ],
+  licencas: [
+    { value: "collaborator", label: "Colaborador" },
+    { value: "created_at", label: "Data criação" },
+    { value: "status", label: "Status" },
+    { value: "licenca", label: "Tipo de licença" },
+  ],
+};
+
 /* ── Helper: is item "unowned" ─────────────────────────────── */
 function isUnowned(collaborator: string | null | undefined): boolean {
   if (!collaborator) return true;
