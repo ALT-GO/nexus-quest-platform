@@ -180,7 +180,7 @@ export default function Configuracoes() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="system">
+        <TabsContent value="system" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Configurações do Sistema</CardTitle>
@@ -217,6 +217,7 @@ export default function Configuracoes() {
               </div>
             </CardContent>
           </Card>
+          <DangerZoneTab />
         </TabsContent>
         <TabsContent value="import">
           <CsvImportTab />
