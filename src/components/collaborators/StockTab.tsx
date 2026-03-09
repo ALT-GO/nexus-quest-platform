@@ -134,7 +134,6 @@ const tabConfig = [
 ];
 
 const commonSortOpts: SortOption[] = [
-  { value: "collaborator", label: "Colaborador" },
   { value: "created_at", label: "Data criação" },
   { value: "cost_center", label: "Centro de custo" },
 ];
@@ -143,7 +142,6 @@ const sortOptionsByCategory: Record<string, SortOption[]> = {
   notebooks: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
   celulares: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
   linhas: [
-    { value: "collaborator", label: "Colaborador" },
     { value: "created_at", label: "Data criação" },
     { value: "operadora", label: "Operadora" },
     { value: "gestor", label: "Gestor" },

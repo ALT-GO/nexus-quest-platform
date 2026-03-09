@@ -220,14 +220,14 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     if (category === "licencas") {
       status = values.status || (hasCollaborator ? "Ativo" : "Disponível");
     } else {
-      status = hasCollaborator ? "Em uso" : "Disponível";
+      status = "Disponível";
     }
 
     const payload: Record<string, any> = {
       category,
       asset_code: "TEMP",
       status,
-      collaborator,
+      collaborator: category === "licencas" ? collaborator : "",
     };
 
     for (const f of fields) {
