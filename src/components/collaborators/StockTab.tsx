@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAvailableStock, CollaboratorAsset } from "@/hooks/use-collaborators";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,26 +11,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NewAssetDialog } from "@/components/assets/NewAssetDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-const statusColors: Record<string, string> = {
-  "Disponível": "bg-emerald-500/15 text-emerald-600",
-  "Em uso": "bg-blue-500/15 text-blue-600",
-  "Ativo": "bg-emerald-500/15 text-emerald-600",
-  "Desligado": "bg-red-500/15 text-red-600",
-};
-
-const catConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  notebooks: { label: "Notebook", icon: Laptop, color: "bg-blue-500/15 text-blue-700 border-blue-300" },
-  celulares: { label: "Celular", icon: Smartphone, color: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
-  linhas: { label: "Linha Telefônica", icon: Phone, color: "bg-purple-500/15 text-purple-700 border-purple-300" },
-  licencas: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
-};
-
+/* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -55,14 +41,11 @@ function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssig
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1 h-7 text-xs">
-          <UserPlus className="h-3 w-3" />
-          Vincular
+          <UserPlus className="h-3 w-3" /> Vincular
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Vincular ativo a colaborador</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>Vincular ativo a colaborador</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{asset.asset_code} — {asset.model || asset.licenca || asset.numero || "Sem nome"}</p>
         <div className="space-y-3 pt-2">
           <Input placeholder="Nome do colaborador" value={name} onChange={(e) => setName(e.target.value)} />
@@ -78,6 +61,146 @@ function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssig
   );
 }
 
+/* ── Column definitions per category ───────────────────────── */
+interface ColDef {
+  header: string;
+  accessor: (item: CollaboratorAsset) => string;
+}
+
+const notebookCols: ColDef[] = [
+  { header: "Service tag", accessor: (i) => i.service_tag || "—" },
+  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
+  { header: "Cargo", accessor: (i) => i.cargo || "—" },
+  { header: "Marca", accessor: (i) => i.marca || "—" },
+  { header: "Modelo", accessor: (i) => i.model || "—" },
+  { header: "Centro de custo", accessor: (i) => i.cost_center || "—" },
+  { header: "Contrato", accessor: (i) => i.contrato || "—" },
+  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
+  { header: "Notas", accessor: (i) => i.notes || "—" },
+  { header: "Service tag 2", accessor: (i) => i.service_tag_2 || "—" },
+];
+
+const celularCols: ColDef[] = [
+  { header: "Service tag", accessor: (i) => i.service_tag || "—" },
+  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
+  { header: "Cargo", accessor: (i) => i.cargo || "—" },
+  { header: "Marca", accessor: (i) => i.marca || "—" },
+  { header: "Modelo", accessor: (i) => i.model || "—" },
+  { header: "Centro de custo", accessor: (i) => i.cost_center || "—" },
+  { header: "Contrato", accessor: (i) => i.contrato || "—" },
+  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
+  { header: "Notas", accessor: (i) => i.notes || "—" },
+  { header: "Imei 1", accessor: (i) => i.imei1 || "—" },
+  { header: "Imei 2", accessor: (i) => i.imei2 || "—" },
+];
+
+const linhaCols: ColDef[] = [
+  { header: "Número", accessor: (i) => i.numero || "—" },
+  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
+  { header: "Cargo", accessor: (i) => i.cargo || "—" },
+  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
+  { header: "Gestor", accessor: (i) => i.gestor || "—" },
+  { header: "Operadora", accessor: (i) => i.operadora || "—" },
+  { header: "Contrato", accessor: (i) => i.contrato || "—" },
+  { header: "Centro de custo - Eng", accessor: (i) => i.cost_center_eng || "—" },
+  { header: "Centro de custo - Man", accessor: (i) => i.cost_center_man || "—" },
+];
+
+const licencaCols: ColDef[] = [
+  { header: "Status", accessor: (i) => i.status || "—" },
+  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
+  { header: "Cargo", accessor: (i) => i.cargo || "—" },
+  { header: "E-mail", accessor: (i) => i.email_address || "—" },
+  { header: "Data criação", accessor: (i) => i.created_at ? format(new Date(i.created_at), "dd/MM/yyyy") : "—" },
+  { header: "Licença", accessor: (i) => i.licenca || "—" },
+  { header: "Gestor", accessor: (i) => i.gestor || "—" },
+  { header: "Contrato", accessor: (i) => i.contrato || "—" },
+  { header: "Centro de custo - Eng", accessor: (i) => i.cost_center_eng || "—" },
+  { header: "Centro de custo - Man", accessor: (i) => i.cost_center_man || "—" },
+];
+
+const colsByCat: Record<string, ColDef[]> = {
+  notebooks: notebookCols,
+  celulares: celularCols,
+  linhas: linhaCols,
+  licencas: licencaCols,
+};
+
+const tabConfig = [
+  { key: "notebooks", label: "Notebooks", icon: Laptop },
+  { key: "celulares", label: "Celulares", icon: Smartphone },
+  { key: "linhas", label: "Linhas", icon: Phone },
+  { key: "licencas", label: "Licenças", icon: FileText },
+];
+
+/* ── Helper: is item "unowned" ─────────────────────────────── */
+function isUnowned(collaborator: string | null | undefined): boolean {
+  if (!collaborator) return true;
+  const trimmed = collaborator.trim();
+  return trimmed === "" || trimmed === "-" || trimmed === "—";
+}
+
+/* ── Category Table ────────────────────────────────────────── */
+function CategoryStockTable({
+  items,
+  columns,
+  search,
+  onAssigned,
+}: {
+  items: CollaboratorAsset[];
+  columns: ColDef[];
+  search: string;
+  onAssigned: () => void;
+}) {
+  const filtered = items.filter((i) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return columns.some((col) => col.accessor(i).toLowerCase().includes(q));
+  });
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead key={col.header} className="whitespace-nowrap">{col.header}</TableHead>
+                ))}
+                <TableHead className="w-[100px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((item) => (
+                <TableRow key={item.id}>
+                  {columns.map((col) => (
+                    <TableCell key={col.header} className="whitespace-nowrap text-sm">
+                      {col.accessor(item)}
+                    </TableCell>
+                  ))}
+                  <TableCell>
+                    <AssignDialog asset={item} onAssigned={onAssigned} />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 1} className="text-center py-8 text-muted-foreground">
+                    <Package className="mx-auto mb-2 h-8 w-8" />
+                    Nenhum item disponível nesta categoria
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Main StockTab ─────────────────────────────────────────── */
 interface StockTabProps {
   onAssigned: () => void;
 }
@@ -85,41 +208,14 @@ interface StockTabProps {
 export function StockTab({ onAssigned }: StockTabProps) {
   const { items, loading, refetch } = useAvailableStock();
   const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState("all");
 
-  const filtered = items.filter((i) => {
-    const matchesSearch =
-      (i.model || "").toLowerCase().includes(search.toLowerCase()) ||
-      (i.asset_code || "").toLowerCase().includes(search.toLowerCase()) ||
-      (i.service_tag || "").toLowerCase().includes(search.toLowerCase()) ||
-      (i.licenca || "").toLowerCase().includes(search.toLowerCase()) ||
-      (i.numero || "").toLowerCase().includes(search.toLowerCase());
-    const matchesCat = catFilter === "all" || i.category === catFilter;
-    return matchesSearch && matchesCat;
-  });
-
-  const handleNewAsset = async (data: Record<string, string>, _fieldVals: Record<string, string>, category: string) => {
-    const payload: Record<string, any> = {
-      category,
-      asset_code: "TEMP",
-      status: category === "licencas" ? "Ativo" : "Disponível",
-      ...data,
-    };
-    const { error } = await supabase.from("inventory").insert(payload as any);
-    if (error) {
-      toast.error("Erro ao criar ativo");
-      return;
-    }
-    toast.success("Ativo criado no estoque");
-    refetch();
-  };
+  // Filter to unowned items only
+  const unowned = items.filter((i) => isUnowned(i.collaborator));
 
   const handleAssigned = () => {
     refetch();
     onAssigned();
   };
-
-  const categories = ["notebooks", "celulares", "linhas", "licencas"];
 
   if (loading) {
     return (
@@ -131,104 +227,40 @@ export function StockTab({ onAssigned }: StockTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar no estoque..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          <Badge
-            variant={catFilter === "all" ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setCatFilter("all")}
-          >
-            Todos ({items.length})
-          </Badge>
-          {categories.map((cat) => {
-            const count = items.filter((i) => i.category === cat).length;
-            const cfg = catConfig[cat];
-            if (!cfg) return null;
-            return (
-              <Badge
-                key={cat}
-                variant={catFilter === cat ? "default" : "outline"}
-                className="cursor-pointer gap-1"
-                onClick={() => setCatFilter(cat)}
-              >
-                <cfg.icon className="h-3 w-3" />
-                {cfg.label} ({count})
-              </Badge>
-            );
-          })}
-        </div>
-        <NewAssetDialog
-          category={catFilter !== "all" ? catFilter : "notebooks"}
-          fields={[]}
-          onSave={(data, fv) => handleNewAsset(data, fv, catFilter !== "all" ? catFilter : "notebooks")}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar no estoque..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
         />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Id</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Identificação</TableHead>
-                  <TableHead>Modelo / Licença</TableHead>
-                  <TableHead>Service tag</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((item) => {
-                  const cfg = catConfig[item.category];
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
-                      <TableCell>
-                        {cfg && (
-                          <Badge variant="outline" className={cn("gap-1 text-xs", cfg.color)}>
-                            <cfg.icon className="h-3 w-3" />
-                            {cfg.label}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColors[item.status] || "bg-secondary text-secondary-foreground")}>
-                          {item.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>{item.numero || item.service_tag || "—"}</TableCell>
-                      <TableCell>{item.model || item.licenca || "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.service_tag || "—"}</TableCell>
-                      <TableCell>
-                        <AssignDialog asset={item} onAssigned={handleAssigned} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      <Package className="mx-auto mb-2 h-8 w-8" />
-                      Nenhum item disponível no estoque
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="notebooks">
+        <TabsList>
+          {tabConfig.map((tab) => {
+            const count = unowned.filter((i) => i.category === tab.key).length;
+            return (
+              <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
+                <tab.icon className="h-4 w-4" />
+                {tab.label} ({count})
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {tabConfig.map((tab) => (
+          <TabsContent key={tab.key} value={tab.key}>
+            <CategoryStockTable
+              items={unowned.filter((i) => i.category === tab.key)}
+              columns={colsByCat[tab.key]}
+              search={search}
+              onAssigned={handleAssigned}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }
