@@ -100,11 +100,18 @@ interface MappingEntry {
   dbColumn: string;
 }
 
+interface ErrorDetail {
+  line: number;
+  message: string;
+  data: Record<string, string>;
+}
+
 interface ImportResult {
   inserted: number;
   updated: number;
   errors: number;
   collaboratorsCreated: number;
+  errorDetails: ErrorDetail[];
 }
 
 function detectDelimiter(text: string): string {
