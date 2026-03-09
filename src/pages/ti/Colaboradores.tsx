@@ -145,20 +145,14 @@ export default function Colaboradores() {
   const [search, setSearch] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useViewPreference();
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const { sortKey, sortDir, setSort } = usePersistentSort("collab-sort", "name");
 
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    setSort(key);
   };
 
-  const filtered = collaborators
-    .filter((c) => {
+  const filtered = applySorting(
+    collaborators.filter((c) => {
       const q = search.toLowerCase();
       return (
         c.name.toLowerCase().includes(q) ||
@@ -166,15 +160,10 @@ export default function Colaboradores() {
         c.sector?.toLowerCase().includes(q) ||
         c.email_address?.toLowerCase().includes(q)
       );
-    })
-    .sort((a, b) => {
-      const valA = a[sortKey] ?? "";
-      const valB = b[sortKey] ?? "";
-      const cmp = typeof valA === "number" && typeof valB === "number"
-        ? valA - valB
-        : String(valA).localeCompare(String(valB));
-      return sortDir === "asc" ? cmp : -cmp;
-    });
+    }),
+    sortKey,
+    sortDir as "asc" | "desc",
+  );
 
   if (selectedName) {
     return (
