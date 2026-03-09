@@ -402,10 +402,10 @@ export default function GestaoFaturas() {
         map.set(`man:${man}`, existing);
       }
       if (!eng && !man) {
-        const existing = map.get(`none:SEM_CC`) || { sum: 0, items: 0, type: "none" as const };
+        const existing = map.get(`none:9999`) || { sum: 0, items: 0, type: "none" as const };
         existing.sum += valor;
         existing.items += 1;
-        map.set(`none:SEM_CC`, existing);
+        map.set(`none:9999`, existing);
       }
     }
 
