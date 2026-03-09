@@ -125,31 +125,6 @@ function AssetSection({
   const Icon = config.icon;
   const columns = columnsByCategory[category] || [];
 
-  const handleNewAsset = async (data: Record<string, string>) => {
-    const payload: Record<string, any> = {
-      category,
-      asset_code: "TEMP",
-      collaborator: collaboratorName,
-      status: category === "licencas" ? "Ativo" : "Em uso",
-    };
-    for (const col of columns) {
-      if (col.key === "created_at") continue;
-      if (data[col.key] !== undefined) payload[col.key] = data[col.key];
-    }
-    // Copy extra fields from data
-    Object.keys(data).forEach((k) => {
-      if (!payload[k] && data[k]) payload[k] = data[k];
-    });
-
-    const { error } = await supabase.from("inventory").insert(payload as any);
-    if (error) {
-      toast.error("Erro ao criar ativo");
-      return;
-    }
-    toast.success("Ativo criado com sucesso");
-    onRefetch();
-  };
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -158,10 +133,10 @@ function AssetSection({
           {config.label}
           <Badge variant="secondary" className="ml-2">{assets.length}</Badge>
         </CardTitle>
-        <NewAssetDialog
+        <LinkExistingAssetDialog
+          collaboratorName={collaboratorName}
           category={category}
-          fields={[]}
-          onSave={async (data) => { await handleNewAsset(data); }}
+          onLinked={onRefetch}
         />
       </CardHeader>
       <CardContent className="p-0">
