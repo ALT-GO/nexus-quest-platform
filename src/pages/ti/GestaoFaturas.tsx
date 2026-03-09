@@ -704,7 +704,7 @@ export default function GestaoFaturas() {
                     <tr key={i} style={{ pageBreakInside: "avoid" }}>
                       <td className="border border-gray-400 px-3 py-1.5 font-mono">{row.code}</td>
                       <td className="border border-gray-400 px-3 py-1.5">
-                        {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                        {row.code === "9999" ? "⚠ Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
                       </td>
                       <td className="border border-gray-400 px-3 py-1.5 text-center">{row.items}</td>
                       <td className="border border-gray-400 px-3 py-1.5 text-right font-medium">{formatBRL(row.adjusted)}</td>
