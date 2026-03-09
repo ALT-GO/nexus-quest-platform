@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,24 +15,14 @@ import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaborato
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const catIcons: Record<string, React.ElementType> = {
-  notebooks: Laptop,
-  celulares: Smartphone,
-  linhas: Phone,
-  licencas: FileText,
-  hardware: Laptop,
-  telecom: Phone,
-  licenses: FileText,
-};
-
-const catLabels: Record<string, string> = {
-  notebooks: "NB",
-  celulares: "Cel",
-  linhas: "Lin",
-  licencas: "Lic",
-  hardware: "HW",
-  telecom: "Tel",
-  licenses: "Lic",
+const catConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  notebooks: { label: "Notebook", icon: Laptop, color: "bg-blue-500/15 text-blue-700 border-blue-300" },
+  celulares: { label: "Celular", icon: Smartphone, color: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
+  linhas: { label: "Linha Telefônica", icon: Phone, color: "bg-purple-500/15 text-purple-700 border-purple-300" },
+  licencas: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
+  hardware: { label: "Notebook", icon: Laptop, color: "bg-blue-500/15 text-blue-700 border-blue-300" },
+  telecom: { label: "Linha Telefônica", icon: Phone, color: "bg-purple-500/15 text-purple-700 border-purple-300" },
+  licenses: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
 };
 
 export default function Colaboradores() {
@@ -144,11 +135,11 @@ export default function Colaboradores() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {c.categories.map((cat) => {
-                          const Icon = catIcons[cat];
+                          const cfg = catConfig[cat];
                           return (
-                            <Badge key={cat} variant="secondary" className="gap-1 text-xs">
-                              {Icon && <Icon className="h-3 w-3" />}
-                              {catLabels[cat] || cat}
+                            <Badge key={cat} variant="outline" className={cn("gap-1 text-xs", cfg?.color)}>
+                              {cfg?.icon && <cfg.icon className="h-3 w-3" />}
+                              {cfg?.label || cat}
                             </Badge>
                           );
                         })}
