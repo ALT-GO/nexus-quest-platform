@@ -94,22 +94,27 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col break-before-page" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
           <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
 
+          {isDevolucao && (
+            <p className="font-bold text-xs mb-3 uppercase" style={{ color: "#444" }}>DADOS DO ITENS</p>
+          )}
+
           {/* Asset Table */}
           <table className="w-full border-collapse mb-8" style={{ fontSize: "10px" }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th className="p-2 border border-[#bbb] text-left font-bold">ITEM</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">ITEM(S)</th>
+                {isDevolucao && <th className="p-2 border border-[#bbb] text-left font-bold">DETALHE</th>}
                 <th className="p-2 border border-[#bbb] text-left font-bold">VALOR PAGO</th>
                 <th className="p-2 border border-[#bbb] text-left font-bold">VALOR CONTÁBIL ATUAL</th>
                 <th className="p-2 border border-[#bbb] text-left font-bold">ID</th>
-                <th className="p-2 border border-[#bbb] text-left font-bold">ESTADO</th>
-                <th className="p-2 border border-[#bbb] text-left font-bold">OBSERVAÇÃO</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">{isDevolucao ? "ACESSÓRIOS" : "ESTADO"}</th>
+                {!isDevolucao && <th className="p-2 border border-[#bbb] text-left font-bold">OBSERVAÇÃO</th>}
               </tr>
             </thead>
             <tbody>
               {assets.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-3 border border-[#bbb] text-center" style={{ color: "#999" }}>
+                  <td colSpan={isDevolucao ? 6 : 6} className="p-3 border border-[#bbb] text-center" style={{ color: "#999" }}>
                     Nenhum ativo vinculado
                   </td>
                 </tr>
@@ -117,21 +122,25 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 assets.map((asset: any) => (
                   <tr key={asset.id}>
                     <td className="p-1.5 border border-[#bbb]">{getAssetDescription(asset)}</td>
+                    {isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
                     <td className="p-1.5 border border-[#bbb]"></td>
                     <td className="p-1.5 border border-[#bbb]"></td>
                     <td className="p-1.5 border border-[#bbb] font-mono">{getAssetIdentifier(asset)}</td>
-                    <td className="p-1.5 border border-[#bbb]">{asset.status || "—"}</td>
-                    <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>
+                    <td className="p-1.5 border border-[#bbb]">{isDevolucao ? "" : (asset.status || "—")}</td>
+                    {!isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
                   </tr>
                 ))
               )}
               <tr>
-                <td colSpan={6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
+                <td colSpan={isDevolucao ? 6 : 6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
                   OBS:
                 </td>
               </tr>
             </tbody>
           </table>
+
+          {/* Date + Signatures */}
+          <p className="mb-8" style={{ fontSize: "11px" }}>{todayShort}.</p>
 
           {/* Signatures */}
           <div className="mt-auto space-y-12 mb-8">
