@@ -199,9 +199,13 @@ export function CsvImportTab() {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const validCsvTypes = ["text/csv", "application/vnd.ms-excel", "text/plain"];
+
   const handleFile = useCallback((f: File) => {
-    if (!f.name.endsWith(".csv")) {
-      toast.error("Apenas arquivos CSV são aceitos");
+    const nameOk = f.name.toLowerCase().endsWith(".csv");
+    const typeOk = validCsvTypes.includes(f.type);
+    if (!nameOk && !typeOk) {
+      toast.error("Apenas arquivos CSV são aceitos (.csv, text/csv, text/plain)");
       return;
     }
     setFile(f);
@@ -215,6 +219,9 @@ export function CsvImportTab() {
       }
       setCsvData(parsed);
       setStep("category");
+    };
+    reader.onerror = () => {
+      toast.error("Erro ao ler o arquivo. Tente salvar como UTF-8.");
     };
     reader.readAsText(f, "UTF-8");
   }, []);
