@@ -1,4 +1,4 @@
-import orionLogo from "@/assets/orion-header.png";
+import orionLogo from "@/assets/logo_orion.png";
 
 interface Props {
   title: string;
