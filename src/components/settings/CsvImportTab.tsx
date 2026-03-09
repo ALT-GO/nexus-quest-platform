@@ -107,9 +107,18 @@ interface ImportResult {
   collaboratorsCreated: number;
 }
 
+function detectDelimiter(text: string): string {
+  const firstLine = text.split(/\r?\n/)[0] || "";
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  return semicolons >= commas ? ";" : ",";
+}
+
 function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length === 0) return { headers: [], rows: [] };
+
+  const delimiter = detectDelimiter(text);
 
   const parseLine = (line: string): string[] => {
     const result: string[] = [];
@@ -119,7 +128,7 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
       const ch = line[i];
       if (ch === '"') {
         inQuotes = !inQuotes;
-      } else if ((ch === "," || ch === ";") && !inQuotes) {
+      } else if (ch === delimiter && !inQuotes) {
         result.push(current.trim());
         current = "";
       } else {
@@ -130,8 +139,8 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
     return result;
   };
 
-  const headers = parseLine(lines[0]);
-  const rows = lines.slice(1).map(parseLine).filter((r) => r.some((c) => c !== ""));
+  const headers = parseLine(lines[0]).map((h) => h.trim());
+  const rows = lines.slice(1).map(parseLine).filter((r) => r.some((c) => c.trim() !== ""));
   return { headers, rows };
 }
 
@@ -190,9 +199,13 @@ export function CsvImportTab() {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const validCsvTypes = ["text/csv", "application/vnd.ms-excel", "text/plain"];
+
   const handleFile = useCallback((f: File) => {
-    if (!f.name.endsWith(".csv")) {
-      toast.error("Apenas arquivos CSV são aceitos");
+    const nameOk = f.name.toLowerCase().endsWith(".csv");
+    const typeOk = validCsvTypes.includes(f.type);
+    if (!nameOk && !typeOk) {
+      toast.error("Apenas arquivos CSV são aceitos (.csv, text/csv, text/plain)");
       return;
     }
     setFile(f);
@@ -206,6 +219,9 @@ export function CsvImportTab() {
       }
       setCsvData(parsed);
       setStep("category");
+    };
+    reader.onerror = () => {
+      toast.error("Erro ao ler o arquivo. Tente salvar como UTF-8.");
     };
     reader.readAsText(f, "UTF-8");
   }, []);
@@ -357,21 +373,28 @@ export function CsvImportTab() {
 
       try {
         if (existingId) {
-          // Update existing
           const updatePayload = { ...payload };
           delete updatePayload.category;
           updatePayload.updated_at = new Date().toISOString();
-          await supabase.from("inventory").update(updatePayload).eq("id", existingId);
-          res.updated++;
+          const { error } = await supabase.from("inventory").update(updatePayload).eq("id", existingId);
+          if (error) {
+            console.error(`Erro ao atualizar linha ${i + 2}:`, error.message, record);
+            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
+            res.errors++;
+          } else { res.updated++; }
         } else {
-          // Insert new
-          payload.asset_code = "TEMP"; // trigger generates real code
+          payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
-          if (error) { res.errors++; } else { res.inserted++; }
-          // Track unique key to avoid dupes within same file
+          if (error) {
+            console.error(`Erro ao inserir linha ${i + 2}:`, error.message, record);
+            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
+            res.errors++;
+          } else { res.inserted++; }
           if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
         }
-      } catch {
+      } catch (err: any) {
+        console.error(`Exceção na linha ${i + 2}:`, err?.message || err, record);
+        toast.error(`Exceção na linha ${i + 2}: ${err?.message || "Erro desconhecido"}`);
         res.errors++;
       }
 
