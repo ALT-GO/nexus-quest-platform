@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useAvailableStock, CollaboratorAsset } from "@/hooks/use-collaborators";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -318,11 +318,38 @@ export function StockTab({ onAssigned }: StockTabProps) {
   const [filtersByTab, setFiltersByTab] = useState<Record<string, Record<string, string>>>({
     notebooks: {}, celulares: {}, linhas: {}, licencas: {},
   });
+  const [licenseStatusFilter, setLicenseStatusFilter] = useState<"all" | "Ativo" | "Inativo">("all");
 
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
+  // For licenses, fetch ALL items (not just unowned)
+  const [allLicenses, setAllLicenses] = useState<CollaboratorAsset[]>([]);
+  const [licensesLoading, setLicensesLoading] = useState(true);
+
+  const fetchAllLicenses = useCallback(async () => {
+    setLicensesLoading(true);
+    const { data } = await supabase
+      .from("inventory")
+      .select("*")
+      .in("category", ["licencas", "licenses"])
+      .order("created_at", { ascending: false });
+    setAllLicenses((data as unknown as CollaboratorAsset[]) || []);
+    setLicensesLoading(false);
+  }, []);
+
+  // Fetch licenses on mount and subscribe to realtime
+  useEffect(() => {
+    fetchAllLicenses();
+    const channel = supabase
+      .channel("licenses-stock-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchAllLicenses())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAllLicenses]);
+
   const handleAssigned = () => {
     refetch();
+    fetchAllLicenses();
     onAssigned();
   };
 
@@ -333,16 +360,24 @@ export function StockTab({ onAssigned }: StockTabProps) {
       .eq("id", id);
     if (error) {
       toast.error("Erro ao salvar alteração");
+    } else {
+      fetchAllLicenses();
     }
   };
 
-  if (loading) {
+  if (loading || licensesLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  // License items with status quick filter
+  const filteredLicenses = allLicenses.filter((i) => {
+    if (licenseStatusFilter === "all") return true;
+    return (i.status || "").toLowerCase() === licenseStatusFilter.toLowerCase();
+  });
 
   return (
     <div className="space-y-4">
@@ -359,7 +394,9 @@ export function StockTab({ onAssigned }: StockTabProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {tabConfig.map((tab) => {
-            const count = unowned.filter((i) => i.category === tab.key).length;
+            const count = tab.key === "licencas"
+              ? allLicenses.length
+              : unowned.filter((i) => i.category === tab.key).length;
             return (
               <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
                 <tab.icon className="h-4 w-4" />
@@ -371,13 +408,31 @@ export function StockTab({ onAssigned }: StockTabProps) {
 
         {tabConfig.map((tab) => (
           <TabsContent key={tab.key} value={tab.key} className="space-y-3">
+            {tab.key === "licencas" && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
+                {(["all", "Ativo", "Inativo"] as const).map((opt) => (
+                  <Button
+                    key={opt}
+                    variant={licenseStatusFilter === opt ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setLicenseStatusFilter(opt)}
+                  >
+                    {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
+                  </Button>
+                ))}
+              </div>
+            )}
             <StockFilters
               category={tab.key}
               values={filtersByTab[tab.key] || {}}
               onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
             />
             <CategoryStockTable
-              items={unowned.filter((i) => i.category === tab.key)}
+              items={tab.key === "licencas"
+                ? filteredLicenses
+                : unowned.filter((i) => i.category === tab.key)}
               category={tab.key}
               search={search}
               onAssigned={handleAssigned}

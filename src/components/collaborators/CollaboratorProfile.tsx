@@ -25,6 +25,7 @@ const statusColors: Record<string, string> = {
   "Em uso": "bg-blue-500/15 text-blue-600",
   "Manutenção": "bg-amber-500/15 text-amber-600",
   "Baixado": "bg-muted text-muted-foreground",
+  "Inativo": "bg-orange-500/15 text-orange-600",
   "Reservado": "bg-muted text-muted-foreground",
   "Ativo": "bg-emerald-500/15 text-emerald-600",
   "Desligado": "bg-red-500/15 text-red-600",
@@ -48,7 +49,7 @@ interface ColDef {
 }
 
 const statusOptionsDefault = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
-const statusOptionsLicenca = ["Ativo", "Desligado"];
+const statusOptionsLicenca = ["Ativo", "Inativo", "Desligado"];
 const tipoNotebook = ["Administrativo", "Campo"];
 
 const columnsByCategory: Record<string, ColDef[]> = {
