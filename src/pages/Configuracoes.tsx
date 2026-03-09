@@ -60,6 +60,10 @@ export default function Configuracoes() {
             <FileSpreadsheet className="h-4 w-4" />
             Importação
           </TabsTrigger>
+          <TabsTrigger value="integrity" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Auditório
+          </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
