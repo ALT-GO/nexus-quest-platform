@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useCollaborators, Collaborator } from "@/hooks/use-collaborators";
 import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProfile";
 import { StockTab } from "@/components/collaborators/StockTab";
+import { SortDropdown, usePersistentSort, applySorting } from "@/components/ui/sort-dropdown";
 import {
   Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package,
   LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown,
@@ -32,6 +33,15 @@ const catConfig: Record<string, { label: string; icon: React.ElementType; color:
 
 type SortKey = "name" | "cargo" | "sector" | "cost_center" | "email_address" | "assetCount";
 type SortDir = "asc" | "desc";
+
+const collabSortOptions = [
+  { value: "name", label: "Nome" },
+  { value: "cargo", label: "Cargo" },
+  { value: "sector", label: "Departamento" },
+  { value: "cost_center", label: "Centro de custo" },
+  { value: "email_address", label: "E-mail" },
+  { value: "assetCount", label: "Qtd. ativos" },
+];
 
 function useViewPreference() {
   const [view, setView] = useState<"cards" | "list">(() => {
@@ -135,20 +145,14 @@ export default function Colaboradores() {
   const [search, setSearch] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useViewPreference();
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const { sortKey, sortDir, setSort } = usePersistentSort("collab-sort", "name");
 
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    setSort(key);
   };
 
-  const filtered = collaborators
-    .filter((c) => {
+  const filtered = applySorting(
+    collaborators.filter((c) => {
       const q = search.toLowerCase();
       return (
         c.name.toLowerCase().includes(q) ||
@@ -156,15 +160,10 @@ export default function Colaboradores() {
         c.sector?.toLowerCase().includes(q) ||
         c.email_address?.toLowerCase().includes(q)
       );
-    })
-    .sort((a, b) => {
-      const valA = a[sortKey] ?? "";
-      const valB = b[sortKey] ?? "";
-      const cmp = typeof valA === "number" && typeof valB === "number"
-        ? valA - valB
-        : String(valA).localeCompare(String(valB));
-      return sortDir === "asc" ? cmp : -cmp;
-    });
+    }),
+    sortKey,
+    sortDir as "asc" | "desc",
+  );
 
   if (selectedName) {
     return (
@@ -219,20 +218,28 @@ export default function Colaboradores() {
                   className="pl-10"
                 />
               </div>
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(v) => { if (v) setViewMode(v as "cards" | "list"); }}
-                variant="outline"
-                size="sm"
-              >
-                <ToggleGroupItem value="cards" aria-label="Visualização em cards">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Visualização em lista">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+              <div className="flex items-center gap-2">
+                <SortDropdown
+                  options={collabSortOptions}
+                  sortKey={sortKey}
+                  sortDir={sortDir as "asc" | "desc"}
+                  onSort={(k, d) => setSort(k, d)}
+                />
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(v) => { if (v) setViewMode(v as "cards" | "list"); }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="list" aria-label="Visualização em lista">
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
 
             {loading ? (

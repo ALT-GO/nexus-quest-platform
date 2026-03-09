@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
 import { StockFilters, getFiltersForCategory } from "./StockFilters";
 import { AddStockItemDialog } from "./AddStockItemDialog";
+import { SortDropdown, usePersistentSort, applySorting, SortOption } from "@/components/ui/sort-dropdown";
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
@@ -137,6 +138,29 @@ const tabConfig = [
   { key: "licencas", label: "Licenças", icon: FileText },
 ];
 
+const commonSortOpts: SortOption[] = [
+  { value: "collaborator", label: "Colaborador" },
+  { value: "created_at", label: "Data criação" },
+  { value: "cost_center", label: "Centro de custo" },
+];
+
+const sortOptionsByCategory: Record<string, SortOption[]> = {
+  notebooks: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  celulares: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  linhas: [
+    { value: "collaborator", label: "Colaborador" },
+    { value: "created_at", label: "Data criação" },
+    { value: "operadora", label: "Operadora" },
+    { value: "gestor", label: "Gestor" },
+  ],
+  licencas: [
+    { value: "collaborator", label: "Colaborador" },
+    { value: "created_at", label: "Data criação" },
+    { value: "status", label: "Status" },
+    { value: "licenca", label: "Tipo de licença" },
+  ],
+};
+
 /* ── Helper: is item "unowned" ─────────────────────────────── */
 function isUnowned(collaborator: string | null | undefined): boolean {
   if (!collaborator) return true;
@@ -216,6 +240,8 @@ function CategoryStockTable({
   onAssigned,
   onCellSave,
   advancedFilters,
+  stockSortKey,
+  stockSortDir,
 }: {
   items: CollaboratorAsset[];
   category: string;
@@ -223,24 +249,28 @@ function CategoryStockTable({
   onAssigned: () => void;
   onCellSave: (id: string, field: string, value: string) => Promise<void>;
   advancedFilters: Record<string, string>;
+  stockSortKey: string;
+  stockSortDir: "asc" | "desc";
 }) {
   const [columns, reorderColumns] = useColumnOrder(category, defaultColsByCat[category]);
   const dragIdx = useRef<number | null>(null);
 
-  const filtered = items.filter((i) => {
-    // Global search
-    if (search) {
-      const q = search.toLowerCase();
-      if (!columns.some((col) => col.accessor(i).toLowerCase().includes(q))) return false;
-    }
-    // Advanced filters (cumulative)
-    for (const [field, val] of Object.entries(advancedFilters)) {
-      if (!val) continue;
-      const itemVal = ((i as any)[field] ?? "").toString().toLowerCase();
-      if (!itemVal.includes(val.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtered = applySorting(
+    items.filter((i) => {
+      if (search) {
+        const q = search.toLowerCase();
+        if (!columns.some((col) => col.accessor(i).toLowerCase().includes(q))) return false;
+      }
+      for (const [field, val] of Object.entries(advancedFilters)) {
+        if (!val) continue;
+        const itemVal = ((i as any)[field] ?? "").toString().toLowerCase();
+        if (!itemVal.includes(val.toLowerCase())) return false;
+      }
+      return true;
+    }),
+    stockSortKey,
+    stockSortDir,
+  );
 
   const handleDragStart = (idx: number) => { dragIdx.current = idx; };
   const handleDragOver = (e: React.DragEvent, _idx: number) => { e.preventDefault(); };
@@ -320,6 +350,15 @@ export function StockTab({ onAssigned }: StockTabProps) {
     notebooks: {}, celulares: {}, linhas: {}, licencas: {},
   });
   const [licenseStatusFilter, setLicenseStatusFilter] = useState<"all" | "Ativo" | "Inativo">("all");
+
+  // Per-tab sorting with persistence
+  const nbSort = usePersistentSort("stock-sort-notebooks", "created_at", "desc");
+  const celSort = usePersistentSort("stock-sort-celulares", "created_at", "desc");
+  const linSort = usePersistentSort("stock-sort-linhas", "created_at", "desc");
+  const licSort = usePersistentSort("stock-sort-licencas", "created_at", "desc");
+  const sortByTab: Record<string, typeof nbSort> = {
+    notebooks: nbSort, celulares: celSort, linhas: linSort, licencas: licSort,
+  };
 
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
@@ -407,46 +446,58 @@ export function StockTab({ onAssigned }: StockTabProps) {
           })}
         </TabsList>
 
-        {tabConfig.map((tab) => (
-          <TabsContent key={tab.key} value={tab.key} className="space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {tab.key === "licencas" && (
-                  <>
-                    <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
-                    {(["all", "Ativo", "Inativo"] as const).map((opt) => (
-                      <Button
-                        key={opt}
-                        variant={licenseStatusFilter === opt ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => setLicenseStatusFilter(opt)}
-                      >
-                        {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
-                      </Button>
-                    ))}
-                  </>
-                )}
+        {tabConfig.map((tab) => {
+          const tabSort = sortByTab[tab.key];
+          const tabSortOptions = sortOptionsByCategory[tab.key] || commonSortOpts;
+          return (
+            <TabsContent key={tab.key} value={tab.key} className="space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tab.key === "licencas" && (
+                    <>
+                      <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
+                      {(["all", "Ativo", "Inativo"] as const).map((opt) => (
+                        <Button
+                          key={opt}
+                          variant={licenseStatusFilter === opt ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setLicenseStatusFilter(opt)}
+                        >
+                          {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
+                        </Button>
+                      ))}
+                    </>
+                  )}
+                  <SortDropdown
+                    options={tabSortOptions}
+                    sortKey={tabSort.sortKey}
+                    sortDir={tabSort.sortDir as "asc" | "desc"}
+                    onSort={(k, d) => tabSort.setSort(k, d)}
+                  />
+                </div>
+                <AddStockItemDialog category={tab.key} onCreated={handleAssigned} />
               </div>
-              <AddStockItemDialog category={tab.key} onCreated={handleAssigned} />
-            </div>
-            <StockFilters
-              category={tab.key}
-              values={filtersByTab[tab.key] || {}}
-              onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
-            />
-            <CategoryStockTable
-              items={tab.key === "licencas"
-                ? filteredLicenses
-                : unowned.filter((i) => i.category === tab.key)}
-              category={tab.key}
-              search={search}
-              onAssigned={handleAssigned}
-              onCellSave={handleCellSave}
-              advancedFilters={filtersByTab[tab.key] || {}}
-            />
-          </TabsContent>
-        ))}
+              <StockFilters
+                category={tab.key}
+                values={filtersByTab[tab.key] || {}}
+                onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
+              />
+              <CategoryStockTable
+                items={tab.key === "licencas"
+                  ? filteredLicenses
+                  : unowned.filter((i) => i.category === tab.key)}
+                category={tab.key}
+                search={search}
+                onAssigned={handleAssigned}
+                onCellSave={handleCellSave}
+                advancedFilters={filtersByTab[tab.key] || {}}
+                stockSortKey={tabSort.sortKey}
+                stockSortDir={tabSort.sortDir as "asc" | "desc"}
+              />
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );
