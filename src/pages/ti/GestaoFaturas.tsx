@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, FileDown, Calculator, DollarSign, Printer, Phone, FileText } from "lucide-react";
+import { Loader2, FileDown, Calculator, DollarSign, Printer, Phone, FileText, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderTimbrado } from "@/components/collaborators/HeaderTimbrado";
 import { FooterTimbrado } from "@/components/collaborators/FooterTimbrado";
@@ -32,9 +32,14 @@ const operadoraCategories: Record<Operadora, string> = {
   Microsoft: "licencas",
 };
 
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
 interface CostCenterRow {
   code: string;
-  type: "eng" | "man";
+  type: "eng" | "man" | "none";
   sum: number;
   adjusted: number;
   items: number;
@@ -43,7 +48,7 @@ interface CostCenterRow {
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// ─── Inline mensalidade tab ───
+// ─── Mensalidade Tab (Linhas / Licenças) ───
 function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
   const queryClient = useQueryClient();
 
@@ -77,18 +82,15 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
   };
 
   const totalMensal = items.reduce((acc, item) => acc + ((item as any).valor_mensal ?? 0), 0);
+  const isLinhas = category === "linhas";
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <Card><CardContent className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </CardContent></Card>
     );
   }
-
-  const isLinhas = category === "linhas";
 
   return (
     <Card>
@@ -175,43 +177,57 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
   );
 }
 
-// ─── Main page ───
+// ─── Main Page ───
 export default function GestaoFaturas() {
-  const [selectedOp, setSelectedOp] = useState<Operadora | "">("");
+  // Report generator modal
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportOp, setReportOp] = useState<Operadora | "">("");
+  const [reportMes, setReportMes] = useState(String(new Date().getMonth())); // 0-indexed
+  const [reportAno, setReportAno] = useState(String(new Date().getFullYear()));
   const [ajusteGlobal, setAjusteGlobal] = useState("");
+
+  // Report data state (generated after clicking "Gerar")
+  const [generated, setGenerated] = useState(false);
+  const [generatedOp, setGeneratedOp] = useState<Operadora>("Claro");
+  const [generatedMesAno, setGeneratedMesAno] = useState("");
+  const [reportItems, setReportItems] = useState<any[]>([]);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  // PDF dialog
   const [pdfOpen, setPdfOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const category = selectedOp ? operadoraCategories[selectedOp] : null;
+  const currentYear = new Date().getFullYear();
+  const anos = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ["faturas-inventory", category, selectedOp],
-    queryFn: async () => {
-      if (!category || !selectedOp) return [];
-      let query = supabase
-        .from("inventory")
-        .select("*")
-        .eq("category", category);
+  const handleGenerateReport = async () => {
+    if (!reportOp) { toast.error("Selecione uma operadora"); return; }
+    setReportLoading(true);
 
-      if (category === "linhas") {
-        query = query.eq("operadora", selectedOp);
-      }
-      if (category === "licencas") {
-        query = query.eq("status", "Ativo");
-      }
+    const category = operadoraCategories[reportOp];
+    let query = supabase.from("inventory").select("*").eq("category", category);
+    if (category === "linhas") query = query.eq("operadora", reportOp);
+    if (category === "licencas") query = query.eq("status", "Ativo");
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!category && !!selectedOp,
-  });
+    const { data, error } = await query;
+    setReportLoading(false);
 
+    if (error) { toast.error("Erro ao buscar dados"); return; }
+
+    setReportItems(data || []);
+    setGeneratedOp(reportOp);
+    setGeneratedMesAno(`${MESES[parseInt(reportMes)]} de ${reportAno}`);
+    setGenerated(true);
+    setAjusteGlobal("");
+    setReportModalOpen(false);
+  };
+
+  // Compute cost center rows from reportItems
   const rows = useMemo<CostCenterRow[]>(() => {
-    if (!items.length) return [];
-    const map = new Map<string, { sum: number; items: number; type: "eng" | "man" }>();
+    if (!reportItems.length) return [];
+    const map = new Map<string, { sum: number; items: number; type: "eng" | "man" | "none" }>();
 
-    for (const item of items) {
+    for (const item of reportItems) {
       const valor = (item as any).valor_mensal ?? 0;
       if (valor <= 0) continue;
 
@@ -231,7 +247,7 @@ export default function GestaoFaturas() {
         map.set(`man:${man}`, existing);
       }
       if (!eng && !man) {
-        const existing = map.get(`none:SEM_CC`) || { sum: 0, items: 0, type: "eng" as const };
+        const existing = map.get(`none:SEM_CC`) || { sum: 0, items: 0, type: "none" as const };
         existing.sum += valor;
         existing.items += 1;
         map.set(`none:SEM_CC`, existing);
@@ -245,7 +261,7 @@ export default function GestaoFaturas() {
       adjusted: val.sum,
       items: val.items,
     }));
-  }, [items]);
+  }, [reportItems]);
 
   const totalBase = rows.reduce((acc, r) => acc + r.sum, 0);
   const ajusteNum = parseFloat((ajusteGlobal || "0").replace(/[^\d.,-]/g, "").replace(",", ".")) || 0;
@@ -262,18 +278,17 @@ export default function GestaoFaturas() {
 
   const handleExportCSV = () => {
     if (!adjustedRows.length) return;
-    const header = "Centro de Custo;Tipo;Qtd Itens;Valor Base;Ajuste;Valor Final";
+    const header = "Centro de Custo;Descrição;Qtd Itens;Valor Total do Rateio";
     const lines = adjustedRows.map(
-      (r) =>
-        `${r.code};${r.type === "eng" ? "Engenharia" : r.type === "man" ? "Manutenção" : "—"};${r.items};${r.sum.toFixed(2)};${(r.adjusted - r.sum).toFixed(2)};${r.adjusted.toFixed(2)}`
+      (r) => `${r.code};${r.code === "SEM_CC" ? "Sem CC" : r.type === "eng" ? "Engenharia" : "Manutenção"};${r.items};${r.adjusted.toFixed(2)}`
     );
-    const totalLine = `TOTAL;;;${totalBase.toFixed(2)};${ajusteNum.toFixed(2)};${totalAdjusted.toFixed(2)}`;
+    const totalLine = `TOTAL;;${adjustedRows.reduce((a, r) => a + r.items, 0)};${totalAdjusted.toFixed(2)}`;
     const csv = [header, ...lines, totalLine].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `rateio_${selectedOp}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `rateio_${generatedOp}_${generatedMesAno.replace(/ /g, "_")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV exportado com sucesso");
@@ -285,13 +300,12 @@ export default function GestaoFaturas() {
   };
 
   const today = new Date().toLocaleDateString("pt-BR");
-  const mesRef = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   return (
     <AppLayout>
       <PageHeader
-        title="Gestão de Faturas"
-        description="Rateio de custos e lançamento de mensalidades"
+        title="Gestão de Custos"
+        description="Lançamento de mensalidades e fechamento de faturas"
       />
 
       <Tabs defaultValue="rateio" className="space-y-6">
@@ -313,68 +327,53 @@ export default function GestaoFaturas() {
         {/* ─── Tab: Rateio & PDF ─── */}
         <TabsContent value="rateio">
           <div className="space-y-6">
+            {/* Action card */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Selecionar Operadora
+                  <ClipboardList className="h-4 w-4" />
+                  Fechamento de Fatura
                 </CardTitle>
+                <Button onClick={() => setReportModalOpen(true)}>
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Gerar Relatório de Rateio
+                </Button>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="w-64">
-                    <Label>Operadora</Label>
-                    <Select value={selectedOp} onValueChange={(v) => { setSelectedOp(v as Operadora); setAjusteGlobal(""); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Claro">Claro</SelectItem>
-                        <SelectItem value="Vivo">Vivo</SelectItem>
-                        <SelectItem value="Salvy">Salvy</SelectItem>
-                        <SelectItem value="Microsoft">Microsoft</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedOp && (
-                    <div className="w-64">
-                      <Label className="flex items-center gap-1">
-                        <Calculator className="h-3.5 w-3.5" />
-                        Ajuste Global (R$)
-                      </Label>
-                      <Input
-                        placeholder="Ex: 50.00 (taxas extras)"
-                        value={ajusteGlobal}
-                        onChange={(e) => setAjusteGlobal(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Valor distribuído proporcionalmente entre os centros de custo
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
+              {!generated && (
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Clique em "Gerar Relatório de Rateio" para selecionar o mês, ano e operadora, e gerar o relatório de rateio por centro de custo.
+                  </p>
+                </CardContent>
+              )}
             </Card>
 
-            {isLoading && (
-              <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </CardContent>
-              </Card>
-            )}
-
-            {selectedOp && !isLoading && (
+            {/* Generated report results */}
+            {generated && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base font-semibold">
-                    Rateio — {selectedOp}
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      ({items.length} itens encontrados)
-                    </span>
-                  </CardTitle>
-                  <div className="flex gap-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      Rateio — {generatedOp}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Competência: {generatedMesAno} • {reportItems.length} itens encontrados
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex items-end gap-2">
+                      <div>
+                        <Label className="text-xs flex items-center gap-1">
+                          <Calculator className="h-3 w-3" /> Ajuste Global (R$)
+                        </Label>
+                        <Input
+                          className="h-8 w-40 text-sm"
+                          placeholder="Ex: 50.00"
+                          value={ajusteGlobal}
+                          onChange={(e) => setAjusteGlobal(e.target.value)}
+                        />
+                      </div>
+                    </div>
                     <Button variant="outline" size="sm" onClick={handlePrint} disabled={!adjustedRows.length}>
                       <Printer className="h-4 w-4 mr-1" />
                       Gerar PDF
@@ -451,11 +450,65 @@ export default function GestaoFaturas() {
         </TabsContent>
       </Tabs>
 
-      {/* ===== Printable PDF Document ===== */}
+      {/* ===== Modal: Selecionar Mês/Ano e Operadora ===== */}
+      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Relatório de Rateio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Mês</Label>
+                <Select value={reportMes} onValueChange={setReportMes}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MESES.map((m, i) => (
+                      <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Ano</Label>
+                <Select value={reportAno} onValueChange={setReportAno}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {anos.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Operadora / Serviço</Label>
+              <Select value={reportOp} onValueChange={(v) => setReportOp(v as Operadora)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Claro">Claro</SelectItem>
+                  <SelectItem value="Vivo">Vivo</SelectItem>
+                  <SelectItem value="Salvy">Salvy</SelectItem>
+                  <SelectItem value="Microsoft">Microsoft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setReportModalOpen(false)}>Cancelar</Button>
+              <Button onClick={handleGenerateReport} disabled={reportLoading || !reportOp}>
+                {reportLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ClipboardList className="h-4 w-4 mr-1" />}
+                Gerar Relatório
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== PDF Document ===== */}
       <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
         <DialogContent className="max-w-[900px] max-h-[95vh] overflow-y-auto print:!block">
           <DialogHeader className="print:hidden">
-            <DialogTitle>Relatório de Rateio — {selectedOp}</DialogTitle>
+            <DialogTitle>Relatório de Rateio — {generatedOp}</DialogTitle>
           </DialogHeader>
 
           <div
@@ -466,7 +519,7 @@ export default function GestaoFaturas() {
             <div className="print-header-table">
               <HeaderTimbrado
                 title="Relatório de Rateio de Custos"
-                prefix={`Operadora: ${selectedOp}`}
+                prefix={`Operadora: ${generatedOp}`}
                 docCode="FF.RTC"
                 revision="Rev. 01"
               />
@@ -474,8 +527,8 @@ export default function GestaoFaturas() {
 
             <div className="flex-1 space-y-4 mt-2">
               <div className="text-sm">
-                <p><strong>Operadora:</strong> {selectedOp}</p>
-                <p><strong>Competência:</strong> {mesRef}</p>
+                <p><strong>Operadora:</strong> {generatedOp}</p>
+                <p><strong>Competência:</strong> {generatedMesAno}</p>
                 <p><strong>Data de emissão:</strong> {today}</p>
                 {ajusteNum !== 0 && (
                   <p><strong>Ajuste global aplicado:</strong> {formatBRL(ajusteNum)}</p>
@@ -487,13 +540,7 @@ export default function GestaoFaturas() {
                   <tr style={{ backgroundColor: "#f3f4f6" }}>
                     <th className="border border-gray-400 px-3 py-2 text-left font-semibold">Centro de Custo</th>
                     <th className="border border-gray-400 px-3 py-2 text-left font-semibold">Descrição</th>
-                    <th className="border border-gray-400 px-3 py-2 text-center font-semibold">Itens Inclusos</th>
-                    {ajusteNum !== 0 && (
-                      <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Valor Base</th>
-                    )}
-                    {ajusteNum !== 0 && (
-                      <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Ajuste</th>
-                    )}
+                    <th className="border border-gray-400 px-3 py-2 text-center font-semibold">Qtd Itens</th>
                     <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Valor Total do Rateio</th>
                   </tr>
                 </thead>
@@ -505,12 +552,6 @@ export default function GestaoFaturas() {
                         {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
                       </td>
                       <td className="border border-gray-400 px-3 py-1.5 text-center">{row.items}</td>
-                      {ajusteNum !== 0 && (
-                        <td className="border border-gray-400 px-3 py-1.5 text-right">{formatBRL(row.sum)}</td>
-                      )}
-                      {ajusteNum !== 0 && (
-                        <td className="border border-gray-400 px-3 py-1.5 text-right">{formatBRL(row.adjusted - row.sum)}</td>
-                      )}
                       <td className="border border-gray-400 px-3 py-1.5 text-right font-medium">{formatBRL(row.adjusted)}</td>
                     </tr>
                   ))}
@@ -519,12 +560,6 @@ export default function GestaoFaturas() {
                     <td className="border border-gray-400 px-3 py-2 text-center">
                       {adjustedRows.reduce((a, r) => a + r.items, 0)}
                     </td>
-                    {ajusteNum !== 0 && (
-                      <td className="border border-gray-400 px-3 py-2 text-right">{formatBRL(totalBase)}</td>
-                    )}
-                    {ajusteNum !== 0 && (
-                      <td className="border border-gray-400 px-3 py-2 text-right">{formatBRL(ajusteNum)}</td>
-                    )}
                     <td className="border border-gray-400 px-3 py-2 text-right text-base">{formatBRL(totalAdjusted)}</td>
                   </tr>
                 </tbody>
