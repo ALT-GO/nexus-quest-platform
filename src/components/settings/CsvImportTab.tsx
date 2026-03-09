@@ -196,6 +196,32 @@ const collaboratorColumns = [
   { value: "email", label: "Email" },
 ];
 
+function ErrorDetailRow({ error }: { error: ErrorDetail }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="text-sm">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full p-3 text-left hover:bg-muted/50 transition-colors"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        <span className="font-mono text-destructive shrink-0">Linha {error.line}</span>
+        <span className="text-muted-foreground truncate">{error.message}</span>
+      </button>
+      {open && (
+        <div className="px-9 pb-3 grid grid-cols-2 gap-x-4 gap-y-1">
+          {Object.entries(error.data).map(([key, val]) => (
+            <div key={key} className="contents">
+              <span className="text-muted-foreground font-mono text-xs">{key}</span>
+              <span className="text-xs truncate">{val || <span className="italic text-muted-foreground/50">(vazio)</span>}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CsvImportTab() {
   const [step, setStep] = useState<ImportStep>("upload");
   const [file, setFile] = useState<File | null>(null);
