@@ -96,7 +96,7 @@ const collaboratorMappings: Record<string, string> = {
   "e-mail": "email",
 };
 
-type ImportStep = "upload" | "category" | "mapping" | "importing" | "done";
+type ImportStep = "upload" | "category" | "mapping" | "resolving" | "importing" | "done";
 
 interface MappingEntry {
   csvHeader: string;
