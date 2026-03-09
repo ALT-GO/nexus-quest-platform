@@ -51,6 +51,14 @@ const formatBRL = (v: number) =>
 // ─── Mensalidade Tab (Linhas / Licenças) ───
 function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
   const queryClient = useQueryClient();
+  const isLinhas = category === "linhas";
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState("todas");
+  const [filterOperadora, setFilterOperadora] = useState("todas");
+  const [filterCC, setFilterCC] = useState("");
+  const [filterLicenca, setFilterLicenca] = useState("todas");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["mensalidade", category],
@@ -64,6 +72,62 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
       return data || [];
     },
   });
+
+  // Derive unique values for filter dropdowns
+  const uniqueOperadoras = useMemo(() => {
+    const set = new Set(items.map((i) => (i.operadora || "").trim()).filter(Boolean));
+    return Array.from(set).sort();
+  }, [items]);
+
+  const uniqueLicencas = useMemo(() => {
+    const set = new Set(items.map((i) => (i.licenca || "").trim()).filter(Boolean));
+    return Array.from(set).sort();
+  }, [items]);
+
+  // Apply filters
+  const filteredItems = useMemo(() => {
+    let result = items;
+
+    if (isLinhas) {
+      if (filterOperadora !== "todas") {
+        result = result.filter((i) => (i.operadora || "").trim() === filterOperadora);
+      }
+      if (filterStatus !== "todas") {
+        result = result.filter((i) => i.status === filterStatus);
+      }
+    } else {
+      if (filterStatus !== "todas") {
+        result = result.filter((i) => i.status === filterStatus);
+      }
+      if (filterLicenca !== "todas") {
+        result = result.filter((i) => (i.licenca || "").trim() === filterLicenca);
+      }
+    }
+
+    if (filterCC.trim()) {
+      const cc = filterCC.trim().toLowerCase();
+      result = result.filter(
+        (i) =>
+          (i.cost_center_eng || "").toLowerCase().includes(cc) ||
+          (i.cost_center_man || "").toLowerCase().includes(cc)
+      );
+    }
+
+    return result;
+  }, [items, filterStatus, filterOperadora, filterCC, filterLicenca, isLinhas]);
+
+  const activeFilterCount = [
+    filterStatus !== "todas",
+    isLinhas ? filterOperadora !== "todas" : filterLicenca !== "todas",
+    filterCC.trim() !== "",
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setFilterStatus("todas");
+    setFilterOperadora("todas");
+    setFilterCC("");
+    setFilterLicenca("todas");
+  };
 
   const handleSaveValorMensal = async (id: string, rawValue: string) => {
     const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
@@ -81,8 +145,7 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
     }
   };
 
-  const totalMensal = items.reduce((acc, item) => acc + ((item as any).valor_mensal ?? 0), 0);
-  const isLinhas = category === "linhas";
+  const totalMensal = filteredItems.reduce((acc, item) => acc + ((item as any).valor_mensal ?? 0), 0);
 
   if (isLoading) {
     return (
@@ -92,15 +155,92 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
     );
   }
 
+  const statusLinhas = ["Em uso", "Disponível"];
+  const statusLicencas = ["Ativo", "Desligado"];
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-semibold">
           {isLinhas ? "Mensalidade de Linhas" : "Mensalidade de Licenças"}
           <span className="ml-2 text-sm font-normal text-muted-foreground">
-            ({items.length} itens • Total: {formatBRL(totalMensal)}/mês)
+            ({filteredItems.length} de {items.length} itens • Total: {formatBRL(totalMensal)}/mês)
           </span>
         </CardTitle>
+        <div className="flex items-center gap-2">
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs gap-1">
+              <X className="h-3 w-3" /> Limpar filtros
+            </Button>
+          )}
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                <Filter className="h-3.5 w-3.5" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 space-y-3" align="end">
+              <p className="text-sm font-semibold">Filtros</p>
+
+              <div>
+                <Label className="text-xs">Status</Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todos</SelectItem>
+                    {(isLinhas ? statusLinhas : statusLicencas).map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isLinhas ? (
+                <div>
+                  <Label className="text-xs">Operadora</Label>
+                  <Select value={filterOperadora} onValueChange={setFilterOperadora}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      {uniqueOperadoras.map((o) => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-xs">Tipo de Licença</Label>
+                  <Select value={filterLicenca} onValueChange={setFilterLicenca}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      {uniqueLicencas.map((l) => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs">Centro de Custo</Label>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="Ex: 9018"
+                  value={filterCC}
+                  onChange={(e) => setFilterCC(e.target.value)}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -108,6 +248,7 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
             <TableHeader>
               <TableRow>
                 <TableHead className="whitespace-nowrap">ID</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
                 {isLinhas ? (
                   <>
                     <TableHead className="whitespace-nowrap">Número</TableHead>
@@ -127,11 +268,21 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => {
+              {filteredItems.map((item) => {
                 const valorMensal = (item as any).valor_mensal;
+                const statusColor = item.status === "Ativo" || item.status === "Em uso"
+                  ? "bg-emerald-500/15 text-emerald-700"
+                  : item.status === "Desligado" || item.status === "Baixado"
+                    ? "bg-red-500/15 text-red-700"
+                    : "bg-muted text-muted-foreground";
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColor}`}>
+                        {item.status}
+                      </span>
+                    </TableCell>
                     {isLinhas ? (
                       <>
                         <TableCell className="text-sm">{item.numero || <span className="text-muted-foreground italic">—</span>}</TableCell>
@@ -162,9 +313,9 @@ function MensalidadeTab({ category }: { category: "linhas" | "licencas" }) {
                   </TableRow>
                 );
               })}
-              {items.length === 0 && (
+              {filteredItems.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
