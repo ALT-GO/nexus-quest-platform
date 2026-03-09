@@ -26,6 +26,13 @@ const categoryLabels: Record<string, string> = {
   licenses: "Licenças",
 };
 
+const categorySingular: Record<string, string> = {
+  notebooks: "Notebook",
+  celulares: "Celular",
+  linhas: "Linha",
+  licencas: "Licença",
+};
+
 function getAssetDescription(asset: any): string {
   const parts: string[] = [];
   if (asset.marca) parts.push(asset.marca);
@@ -34,6 +41,24 @@ function getAssetDescription(asset: any): string {
   if (!parts.length && asset.asset_type) parts.push(asset.asset_type);
   const catLabel = categoryLabels[asset.category] || asset.category;
   return parts.length ? `${catLabel} – ${parts.join(" ")}` : catLabel;
+}
+
+/** Returns the item type label (singular) */
+function getItemType(asset: any): string {
+  return categorySingular[asset.category] || asset.category;
+}
+
+/** Returns technical detail depending on category */
+function getAssetDetail(asset: any): string {
+  if (asset.category === "notebooks" || asset.category === "celulares") {
+    const parts: string[] = [];
+    if (asset.marca) parts.push(asset.marca);
+    if (asset.model) parts.push(asset.model);
+    return parts.join(" ") || "—";
+  }
+  if (asset.category === "linhas") return asset.numero || "—";
+  if (asset.category === "licencas") return asset.email_address || "—";
+  return "—";
 }
 
 function getAssetIdentifier(asset: any): string {
