@@ -175,7 +175,7 @@ export function IntegrityAuditorTab() {
           if (nameA.toLowerCase() === nameB.toLowerCase()) continue; // exact = not a "similar" duplicate
 
           const score = diceSimilarity(nameA, nameB);
-          if (score >= 0.85) {
+          if (score >= 0.50) {
             const pk = `collaborator_name:${pairKey(a.id, b.id)}`;
             if (ignoredSet.has(pk)) continue;
             pairs.push({
