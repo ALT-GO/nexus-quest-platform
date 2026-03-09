@@ -24,11 +24,11 @@ const statusColors: Record<string, string> = {
   "Desligado": "bg-red-500/15 text-red-600",
 };
 
-const catConfig: Record<string, { label: string; icon: React.ElementType }> = {
-  notebooks: { label: "Notebooks", icon: Laptop },
-  celulares: { label: "Celulares", icon: Smartphone },
-  linhas: { label: "Linhas", icon: Phone },
-  licencas: { label: "Licenças", icon: FileText },
+const catConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  notebooks: { label: "Notebook", icon: Laptop, color: "bg-blue-500/15 text-blue-700 border-blue-300" },
+  celulares: { label: "Celular", icon: Smartphone, color: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
+  linhas: { label: "Linha Telefônica", icon: Phone, color: "bg-purple-500/15 text-purple-700 border-purple-300" },
+  licencas: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
 };
 
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
@@ -196,7 +196,7 @@ export function StockTab({ onAssigned }: StockTabProps) {
                       <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
                       <TableCell>
                         {cfg && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
+                          <Badge variant="outline" className={cn("gap-1 text-xs", cfg.color)}>
                             <cfg.icon className="h-3 w-3" />
                             {cfg.label}
                           </Badge>
