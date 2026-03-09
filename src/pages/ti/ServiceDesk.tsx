@@ -225,14 +225,6 @@ export default function ServiceDesk() {
 
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
 
-  // Stats
-  const pendingCount = tickets.filter((t) => t.status_id === "pending").length;
-  const inProgressCount = tickets.filter((t) => t.status_id === "inProgress").length;
-  const completedCount = tickets.filter((t) => !!t.completed_at).length;
-  const slaExpiredCount = tickets.filter(
-    (t) => t.sla_expired && !isFinalStatus(t.status_id)
-  ).length;
-
   // Get subtasks for a parent ticket
   const getSubtasks = useCallback(
     (parentId: string) => tickets.filter((t) => t.parent_ticket_id === parentId),
