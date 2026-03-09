@@ -293,9 +293,9 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
   };
 
   const update = (id: string, val: string) => {
-    // Apply sanitization
     const fieldDef = fields.find((f) => f.id === id);
-    const sanitized = fieldDef?.sanitize === "digits" ? sanitizeDigits(val) : val;
+    // valor_pago allows decimals, don't strip digits-only
+    const sanitized = id === "valor_pago" ? val : (fieldDef?.sanitize === "digits" ? sanitizeDigits(val) : val);
     setValues((prev) => ({ ...prev, [id]: sanitized }));
     if (dupErrors[id]) setDupErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
   };
