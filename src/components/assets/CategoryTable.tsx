@@ -166,12 +166,14 @@ export function CategoryTable({ category, label }: Props) {
     }
   };
 
-  const handleValorPagoSave = async (item: any, rawValue: string) => {
+  const handleCurrencySave = async (item: any, field: string, rawValue: string) => {
     const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
     const num = parseFloat(cleaned);
     if (isNaN(num)) return;
-    await updateItem(item.id, { valor_pago: num } as any);
-    checkBulkOffer(item, "valor_pago", formatCurrency(num));
+    await updateItem(item.id, { [field]: num } as any);
+    if (field === "valor_pago") {
+      checkBulkOffer(item, "valor_pago", formatCurrency(num));
+    }
   };
 
   const handleDataAquisicaoSave = async (item: any, dateValue: string) => {
