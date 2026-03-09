@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
+import { calcDepreciation, formatBRL } from "@/lib/depreciation";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -39,7 +40,7 @@ function StatusBadge({ status }: { status: string }) {
 interface ColDef {
   key: string;
   label: string;
-  type?: "text" | "select" | "date" | "status" | "currency" | "readonly";
+  type?: "text" | "select" | "date" | "status" | "currency" | "readonly" | "computed";
   options?: string[];
   mono?: boolean;
 }
@@ -60,6 +61,8 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
     { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
+    { key: "delivered_at", label: "Data Assinatura", type: "date" },
+    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" as any },
     { key: "notes", label: "Notas" },
     { key: "service_tag_2", label: "Service tag 2" },
   ],
@@ -74,6 +77,8 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo" },
     { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
+    { key: "delivered_at", label: "Data Assinatura", type: "date" },
+    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" as any },
     { key: "notes", label: "Notas" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
@@ -280,10 +285,47 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    if (col.key === "created_at") {
+                    if (col.key === "created_at" || (col.key === "delivered_at" && col.type === "date")) {
+                      if (col.key === "delivered_at") {
+                        const dateVal = (item as any).delivered_at;
+                        const formatted = dateVal ? new Date(dateVal).toLocaleDateString("pt-BR") : "";
+                        return (
+                          <TableCell key={col.key}>
+                            <InlineCellEditor
+                              value={dateVal ? new Date(dateVal).toISOString().split("T")[0] : ""}
+                              onSave={(v) => updateItem(item.id, { delivered_at: v ? new Date(v).toISOString() : null } as any)}
+                              type="date"
+                              displayRender={(v) => (
+                                <span className="text-sm">{v ? new Date(v).toLocaleDateString("pt-BR") : <span className="text-muted-foreground italic">—</span>}</span>
+                              )}
+                            />
+                          </TableCell>
+                        );
+                      }
                       return (
                         <TableCell key={col.key} className="text-sm">
                           {getCellValue(item, "created_at")}
+                        </TableCell>
+                      );
+                    }
+                    // Computed depreciation column
+                    if (col.type === "computed" && col.key === "_valor_contabil") {
+                      const dep = calcDepreciation(
+                        (item as any).valor_pago,
+                        (item as any).delivered_at
+                      );
+                      return (
+                        <TableCell key={col.key}>
+                          {dep ? (
+                            <span
+                              className="text-sm font-medium cursor-help"
+                              title={`Aquisição: ${formatBRL(dep.valorAquisicao)} | Residual (50%): ${formatBRL(dep.valorResidual)} | Dep. anual: ${formatBRL(dep.depreciacaoAnual)} | Anos: ${dep.anosCompletos}`}
+                            >
+                              {formatBRL(dep.valorContabil)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic text-sm">—</span>
+                          )}
                         </TableCell>
                       );
                     }

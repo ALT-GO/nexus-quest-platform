@@ -6,6 +6,7 @@ import { Printer, X } from "lucide-react";
 import type { CollaboratorAsset } from "@/hooks/use-collaborators";
 import { HeaderTimbrado } from "./HeaderTimbrado";
 import { FooterTimbrado } from "./FooterTimbrado";
+import { calcDepreciation, formatBRL } from "@/lib/depreciation";
 
 interface Props {
   open: boolean;
@@ -119,17 +120,21 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                   </td>
                 </tr>
               ) : (
-                assets.map((asset: any) => (
-                  <tr key={asset.id}>
-                    <td className="p-1.5 border border-[#bbb]">{getAssetDescription(asset)}</td>
-                    {isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
-                    <td className="p-1.5 border border-[#bbb]"></td>
-                    <td className="p-1.5 border border-[#bbb]"></td>
-                    <td className="p-1.5 border border-[#bbb] font-mono">{getAssetIdentifier(asset)}</td>
-                    <td className="p-1.5 border border-[#bbb]">{isDevolucao ? "" : (asset.status || "—")}</td>
-                    {!isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
-                  </tr>
-                ))
+                assets.map((asset: any) => {
+                  const canDepreciate = asset.category === "notebooks" || asset.category === "celulares";
+                  const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.delivered_at) : null;
+                  return (
+                    <tr key={asset.id}>
+                      <td className="p-1.5 border border-[#bbb]">{getAssetDescription(asset)}</td>
+                      {isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
+                      <td className="p-1.5 border border-[#bbb]">{dep ? formatBRL(dep.valorAquisicao) : (canDepreciate ? "" : "N/A")}</td>
+                      <td className="p-1.5 border border-[#bbb]">{dep ? formatBRL(dep.valorContabil) : (canDepreciate ? "" : "N/A")}</td>
+                      <td className="p-1.5 border border-[#bbb] font-mono">{getAssetIdentifier(asset)}</td>
+                      <td className="p-1.5 border border-[#bbb]">{isDevolucao ? "" : (asset.status || "—")}</td>
+                      {!isDevolucao && <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>}
+                    </tr>
+                  );
+                })
               )}
               <tr>
                 <td colSpan={isDevolucao ? 6 : 6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
