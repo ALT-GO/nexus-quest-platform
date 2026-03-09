@@ -221,22 +221,20 @@ function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
   return (
     <div className="text-justify space-y-3 flex-1" style={{ fontSize: "11px" }}>
       <p>
-        Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
-        declaro que estou devolvendo à empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
-        o(s) equipamento(s) descrito(s) na página seguinte.
+        Eu, <strong>{name}</strong>, CPF ______________________ RG ______________________,
+        declaro, para todos os fins de direito, que o(s) seguinte(s) equipamento(s) tecnológico(s) está(ão) sendo
+        devolvido(s) em perfeitas condições de uso.
       </p>
-      <p>
-        Declaro que os equipamentos estão sendo devolvidos nas condições descritas na tabela da página 2,
-        ressalvado o desgaste natural decorrente do uso normal durante o período em que estiveram sob minha responsabilidade.
-      </p>
-      <p>
-        Estou ciente de que, a partir desta data, encerra-se a minha responsabilidade sobre a guarda, zelo e conservação
-        dos equipamentos acima mencionados, desde que a devolução seja aceita pela área de Tecnologia da Informação da empresa.
-      </p>
-      <p>
-        Caso sejam identificados danos além do desgaste natural no momento da conferência, comprometo-me a ressarcir a
-        empresa conforme os termos estabelecidos no Termo de Responsabilidade original assinado no ato do recebimento.
-      </p>
+
+      <p className="font-bold mt-4">A depreciação foi calculada conforme as seguintes regras:</p>
+
+      <ol className="list-decimal pl-6 space-y-1">
+        <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
+        <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto em Notebook, celulares ou tablets.</li>
+        <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
+        <li><strong>Depreciação Anual fixa:</strong> (valor de aquisição - valor mínimo) / 5 anos</li>
+        <li>O valor de depreciação anual fixa será multiplicado pela quantia de cada ano completo desde a data de assinatura do termo de responsabilidade.</li>
+      </ol>
     </div>
   );
 }
