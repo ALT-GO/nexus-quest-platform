@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
+import { StockFilters, getFiltersForCategory } from "./StockFilters";
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
@@ -213,20 +214,31 @@ function CategoryStockTable({
   search,
   onAssigned,
   onCellSave,
+  advancedFilters,
 }: {
   items: CollaboratorAsset[];
   category: string;
   search: string;
   onAssigned: () => void;
   onCellSave: (id: string, field: string, value: string) => Promise<void>;
+  advancedFilters: Record<string, string>;
 }) {
   const [columns, reorderColumns] = useColumnOrder(category, defaultColsByCat[category]);
   const dragIdx = useRef<number | null>(null);
 
   const filtered = items.filter((i) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return columns.some((col) => col.accessor(i).toLowerCase().includes(q));
+    // Global search
+    if (search) {
+      const q = search.toLowerCase();
+      if (!columns.some((col) => col.accessor(i).toLowerCase().includes(q))) return false;
+    }
+    // Advanced filters (cumulative)
+    for (const [field, val] of Object.entries(advancedFilters)) {
+      if (!val) continue;
+      const itemVal = ((i as any)[field] ?? "").toString().toLowerCase();
+      if (!itemVal.includes(val.toLowerCase())) return false;
+    }
+    return true;
   });
 
   const handleDragStart = (idx: number) => { dragIdx.current = idx; };
@@ -302,6 +314,10 @@ interface StockTabProps {
 export function StockTab({ onAssigned }: StockTabProps) {
   const { items, loading, refetch } = useAvailableStock();
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("notebooks");
+  const [filtersByTab, setFiltersByTab] = useState<Record<string, Record<string, string>>>({
+    notebooks: {}, celulares: {}, linhas: {}, licencas: {},
+  });
 
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
@@ -318,7 +334,6 @@ export function StockTab({ onAssigned }: StockTabProps) {
     if (error) {
       toast.error("Erro ao salvar alteração");
     }
-    // Realtime subscription will refresh data automatically
   };
 
   if (loading) {
@@ -341,7 +356,7 @@ export function StockTab({ onAssigned }: StockTabProps) {
         />
       </div>
 
-      <Tabs defaultValue="notebooks">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {tabConfig.map((tab) => {
             const count = unowned.filter((i) => i.category === tab.key).length;
@@ -355,13 +370,19 @@ export function StockTab({ onAssigned }: StockTabProps) {
         </TabsList>
 
         {tabConfig.map((tab) => (
-          <TabsContent key={tab.key} value={tab.key}>
+          <TabsContent key={tab.key} value={tab.key} className="space-y-3">
+            <StockFilters
+              category={tab.key}
+              values={filtersByTab[tab.key] || {}}
+              onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
+            />
             <CategoryStockTable
               items={unowned.filter((i) => i.category === tab.key)}
               category={tab.key}
               search={search}
               onAssigned={handleAssigned}
               onCellSave={handleCellSave}
+              advancedFilters={filtersByTab[tab.key] || {}}
             />
           </TabsContent>
         ))}
