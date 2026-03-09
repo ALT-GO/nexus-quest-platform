@@ -351,6 +351,15 @@ export function StockTab({ onAssigned }: StockTabProps) {
   });
   const [licenseStatusFilter, setLicenseStatusFilter] = useState<"all" | "Ativo" | "Inativo">("all");
 
+  // Per-tab sorting with persistence
+  const nbSort = usePersistentSort("stock-sort-notebooks", "created_at", "desc");
+  const celSort = usePersistentSort("stock-sort-celulares", "created_at", "desc");
+  const linSort = usePersistentSort("stock-sort-linhas", "created_at", "desc");
+  const licSort = usePersistentSort("stock-sort-licencas", "created_at", "desc");
+  const sortByTab: Record<string, typeof nbSort> = {
+    notebooks: nbSort, celulares: celSort, linhas: linSort, licencas: licSort,
+  };
+
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
   // For licenses, fetch ALL items (not just unowned)
