@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAvailableStock, CollaboratorAsset } from "@/hooks/use-collaborators";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -13,8 +12,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText } from "lucide-react";
+import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
 import { format } from "date-fns";
+import { InlineStockCell } from "./InlineStockCell";
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
@@ -63,63 +63,65 @@ function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssig
 
 /* ── Column definitions per category ───────────────────────── */
 interface ColDef {
+  id: string;
   header: string;
+  field: keyof CollaboratorAsset | null; // null = computed
   accessor: (item: CollaboratorAsset) => string;
 }
 
 const notebookCols: ColDef[] = [
-  { header: "Service tag", accessor: (i) => i.service_tag || "—" },
-  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
-  { header: "Cargo", accessor: (i) => i.cargo || "—" },
-  { header: "Marca", accessor: (i) => i.marca || "—" },
-  { header: "Modelo", accessor: (i) => i.model || "—" },
-  { header: "Centro de custo", accessor: (i) => i.cost_center || "—" },
-  { header: "Contrato", accessor: (i) => i.contrato || "—" },
-  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
-  { header: "Notas", accessor: (i) => i.notes || "—" },
-  { header: "Service tag 2", accessor: (i) => i.service_tag_2 || "—" },
+  { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
+  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
+  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
+  { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
+  { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
+  { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "asset_type", header: "Tipo", field: "asset_type", accessor: (i) => i.asset_type || "" },
+  { id: "notes", header: "Notas", field: "notes", accessor: (i) => i.notes || "" },
+  { id: "service_tag_2", header: "Service tag 2", field: "service_tag_2", accessor: (i) => i.service_tag_2 || "" },
 ];
 
 const celularCols: ColDef[] = [
-  { header: "Service tag", accessor: (i) => i.service_tag || "—" },
-  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
-  { header: "Cargo", accessor: (i) => i.cargo || "—" },
-  { header: "Marca", accessor: (i) => i.marca || "—" },
-  { header: "Modelo", accessor: (i) => i.model || "—" },
-  { header: "Centro de custo", accessor: (i) => i.cost_center || "—" },
-  { header: "Contrato", accessor: (i) => i.contrato || "—" },
-  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
-  { header: "Notas", accessor: (i) => i.notes || "—" },
-  { header: "Imei 1", accessor: (i) => i.imei1 || "—" },
-  { header: "Imei 2", accessor: (i) => i.imei2 || "—" },
+  { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
+  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
+  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
+  { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
+  { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
+  { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "asset_type", header: "Tipo", field: "asset_type", accessor: (i) => i.asset_type || "" },
+  { id: "notes", header: "Notas", field: "notes", accessor: (i) => i.notes || "" },
+  { id: "imei1", header: "Imei 1", field: "imei1", accessor: (i) => i.imei1 || "" },
+  { id: "imei2", header: "Imei 2", field: "imei2", accessor: (i) => i.imei2 || "" },
 ];
 
 const linhaCols: ColDef[] = [
-  { header: "Número", accessor: (i) => i.numero || "—" },
-  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
-  { header: "Cargo", accessor: (i) => i.cargo || "—" },
-  { header: "Tipo", accessor: (i) => i.asset_type || "—" },
-  { header: "Gestor", accessor: (i) => i.gestor || "—" },
-  { header: "Operadora", accessor: (i) => i.operadora || "—" },
-  { header: "Contrato", accessor: (i) => i.contrato || "—" },
-  { header: "Centro de custo - Eng", accessor: (i) => i.cost_center_eng || "—" },
-  { header: "Centro de custo - Man", accessor: (i) => i.cost_center_man || "—" },
+  { id: "numero", header: "Número", field: "numero", accessor: (i) => i.numero || "" },
+  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
+  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
+  { id: "asset_type", header: "Tipo", field: "asset_type", accessor: (i) => i.asset_type || "" },
+  { id: "gestor", header: "Gestor", field: "gestor", accessor: (i) => i.gestor || "" },
+  { id: "operadora", header: "Operadora", field: "operadora", accessor: (i) => i.operadora || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "cost_center_eng", header: "Centro de custo - Eng", field: "cost_center_eng", accessor: (i) => i.cost_center_eng || "" },
+  { id: "cost_center_man", header: "Centro de custo - Man", field: "cost_center_man", accessor: (i) => i.cost_center_man || "" },
 ];
 
 const licencaCols: ColDef[] = [
-  { header: "Status", accessor: (i) => i.status || "—" },
-  { header: "Colaborador", accessor: (i) => i.collaborator || "—" },
-  { header: "Cargo", accessor: (i) => i.cargo || "—" },
-  { header: "E-mail", accessor: (i) => i.email_address || "—" },
-  { header: "Data criação", accessor: (i) => i.created_at ? format(new Date(i.created_at), "dd/MM/yyyy") : "—" },
-  { header: "Licença", accessor: (i) => i.licenca || "—" },
-  { header: "Gestor", accessor: (i) => i.gestor || "—" },
-  { header: "Contrato", accessor: (i) => i.contrato || "—" },
-  { header: "Centro de custo - Eng", accessor: (i) => i.cost_center_eng || "—" },
-  { header: "Centro de custo - Man", accessor: (i) => i.cost_center_man || "—" },
+  { id: "status", header: "Status", field: "status", accessor: (i) => i.status || "" },
+  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
+  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
+  { id: "email_address", header: "E-mail", field: "email_address", accessor: (i) => i.email_address || "" },
+  { id: "created_at", header: "Data criação", field: null, accessor: (i) => i.created_at ? format(new Date(i.created_at), "dd/MM/yyyy") : "" },
+  { id: "licenca", header: "Licença", field: "licenca", accessor: (i) => i.licenca || "" },
+  { id: "gestor", header: "Gestor", field: "gestor", accessor: (i) => i.gestor || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "cost_center_eng", header: "Centro de custo - Eng", field: "cost_center_eng", accessor: (i) => i.cost_center_eng || "" },
+  { id: "cost_center_man", header: "Centro de custo - Man", field: "cost_center_man", accessor: (i) => i.cost_center_man || "" },
 ];
 
-const colsByCat: Record<string, ColDef[]> = {
+const defaultColsByCat: Record<string, ColDef[]> = {
   notebooks: notebookCols,
   celulares: celularCols,
   linhas: linhaCols,
@@ -140,23 +142,101 @@ function isUnowned(collaborator: string | null | undefined): boolean {
   return trimmed === "" || trimmed === "-" || trimmed === "—";
 }
 
+/* ── Column order hook with localStorage ───────────────────── */
+function useColumnOrder(category: string, defaultCols: ColDef[]): [ColDef[], (fromIdx: number, toIdx: number) => void] {
+  const storageKey = `stock-col-order-${category}`;
+  const [orderedIds, setOrderedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return defaultCols.map((c) => c.id);
+  });
+
+  const reorder = useCallback((fromIdx: number, toIdx: number) => {
+    setOrderedIds((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [storageKey]);
+
+  // Map ordered IDs to actual ColDef objects
+  const colMap = new Map(defaultCols.map((c) => [c.id, c]));
+  const ordered = orderedIds
+    .map((id) => colMap.get(id))
+    .filter(Boolean) as ColDef[];
+  // Append any new cols not in saved order
+  for (const col of defaultCols) {
+    if (!ordered.find((c) => c.id === col.id)) ordered.push(col);
+  }
+
+  return [ordered, reorder];
+}
+
+/* ── Draggable Header ──────────────────────────────────────── */
+function DraggableHeader({
+  col,
+  index,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: {
+  col: ColDef;
+  index: number;
+  onDragStart: (idx: number) => void;
+  onDragOver: (e: React.DragEvent, idx: number) => void;
+  onDrop: (idx: number) => void;
+}) {
+  return (
+    <TableHead
+      className="whitespace-nowrap select-none cursor-grab active:cursor-grabbing"
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDrop={() => onDrop(index)}
+    >
+      <span className="inline-flex items-center gap-1">
+        <GripVertical className="h-3 w-3 opacity-30" />
+        {col.header}
+      </span>
+    </TableHead>
+  );
+}
+
 /* ── Category Table ────────────────────────────────────────── */
 function CategoryStockTable({
   items,
-  columns,
+  category,
   search,
   onAssigned,
+  onCellSave,
 }: {
   items: CollaboratorAsset[];
-  columns: ColDef[];
+  category: string;
   search: string;
   onAssigned: () => void;
+  onCellSave: (id: string, field: string, value: string) => Promise<void>;
 }) {
+  const [columns, reorderColumns] = useColumnOrder(category, defaultColsByCat[category]);
+  const dragIdx = useRef<number | null>(null);
+
   const filtered = items.filter((i) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return columns.some((col) => col.accessor(i).toLowerCase().includes(q));
   });
+
+  const handleDragStart = (idx: number) => { dragIdx.current = idx; };
+  const handleDragOver = (e: React.DragEvent, _idx: number) => { e.preventDefault(); };
+  const handleDrop = (toIdx: number) => {
+    if (dragIdx.current !== null && dragIdx.current !== toIdx) {
+      reorderColumns(dragIdx.current, toIdx);
+    }
+    dragIdx.current = null;
+  };
 
   return (
     <Card>
@@ -165,8 +245,15 @@ function CategoryStockTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.header} className="whitespace-nowrap">{col.header}</TableHead>
+                {columns.map((col, idx) => (
+                  <DraggableHeader
+                    key={col.id}
+                    col={col}
+                    index={idx}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  />
                 ))}
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
@@ -175,8 +262,15 @@ function CategoryStockTable({
               {filtered.map((item) => (
                 <TableRow key={item.id}>
                   {columns.map((col) => (
-                    <TableCell key={col.header} className="whitespace-nowrap text-sm">
-                      {col.accessor(item)}
+                    <TableCell key={col.id} className="whitespace-nowrap p-1.5">
+                      {col.field ? (
+                        <InlineStockCell
+                          value={col.accessor(item)}
+                          onSave={(v) => onCellSave(item.id, col.field!, v)}
+                        />
+                      ) : (
+                        <span className="text-sm px-1">{col.accessor(item) || <span className="text-muted-foreground italic">—</span>}</span>
+                      )}
                     </TableCell>
                   ))}
                   <TableCell>
@@ -209,12 +303,22 @@ export function StockTab({ onAssigned }: StockTabProps) {
   const { items, loading, refetch } = useAvailableStock();
   const [search, setSearch] = useState("");
 
-  // Filter to unowned items only
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
   const handleAssigned = () => {
     refetch();
     onAssigned();
+  };
+
+  const handleCellSave = async (id: string, field: string, value: string) => {
+    const { error } = await supabase
+      .from("inventory")
+      .update({ [field]: value, updated_at: new Date().toISOString() } as any)
+      .eq("id", id);
+    if (error) {
+      toast.error("Erro ao salvar alteração");
+    }
+    // Realtime subscription will refresh data automatically
   };
 
   if (loading) {
@@ -254,9 +358,10 @@ export function StockTab({ onAssigned }: StockTabProps) {
           <TabsContent key={tab.key} value={tab.key}>
             <CategoryStockTable
               items={unowned.filter((i) => i.category === tab.key)}
-              columns={colsByCat[tab.key]}
+              category={tab.key}
               search={search}
               onAssigned={handleAssigned}
+              onCellSave={handleCellSave}
             />
           </TabsContent>
         ))}
