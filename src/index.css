@@ -354,6 +354,8 @@
   .print-page img {
     max-width: 100% !important;
     page-break-inside: avoid !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* 12. Hide dialog overlay completely */

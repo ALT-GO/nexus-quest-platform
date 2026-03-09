@@ -183,20 +183,18 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
           <p className="mb-4" style={{ fontSize: "10pt" }}>{todayShort}.</p>
 
-          <div className="print-signatures mt-auto space-y-6 mb-4">
+          <div className="print-signatures space-y-4 mb-2">
             <div>
               <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura do Empregado:</p>
-              <div className="border-b border-[#666] w-64 mt-4"></div>
+              <div className="border-b border-[#666] w-64 mt-3"></div>
             </div>
             <div>
               <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura da Testemunha:</p>
-              <div className="border-b border-[#666] w-80 mt-4"></div>
+              <div className="border-b border-[#666] w-80 mt-3"></div>
             </div>
           </div>
 
-          <div className="print-footer pt-2">
-            <FooterTimbrado />
-          </div>
+          <FooterTimbrado />
         </div>
       </DialogContent>
     </Dialog>
