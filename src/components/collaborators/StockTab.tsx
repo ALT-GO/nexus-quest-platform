@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
+import { StatusSelectCell } from "./StatusSelectCell";
 import { StockFilters, getFiltersForCategory } from "./StockFilters";
 import { AddStockItemDialog } from "./AddStockItemDialog";
 import { SortDropdown, usePersistentSort, applySorting, SortOption } from "@/components/ui/sort-dropdown";
