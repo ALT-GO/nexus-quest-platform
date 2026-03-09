@@ -16,38 +16,39 @@ import { format } from "date-fns";
 interface FieldDef {
   id: string;
   label: string;
-  type: "text" | "select" | "date";
+  type: "text" | "select" | "date" | "autocomplete";
   options?: string[];
+  dbColumn?: string; // column to fetch suggestions from
 }
 
 const fieldsByCategory: Record<string, FieldDef[]> = {
   notebooks: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "marca", label: "Marca", type: "text" },
-    { id: "model", label: "Modelo", type: "text" },
+    { id: "marca", label: "Marca", type: "autocomplete", dbColumn: "marca" },
+    { id: "model", label: "Modelo", type: "autocomplete", dbColumn: "model" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
-    { id: "contrato", label: "Contrato", type: "text" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
     { id: "notes", label: "Notas", type: "text" },
     { id: "service_tag_2", label: "Service tag 2", type: "text" },
   ],
   celulares: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "marca", label: "Marca", type: "text" },
-    { id: "model", label: "Modelo", type: "text" },
+    { id: "marca", label: "Marca", type: "autocomplete", dbColumn: "marca" },
+    { id: "model", label: "Modelo", type: "autocomplete", dbColumn: "model" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
-    { id: "contrato", label: "Contrato", type: "text" },
-    { id: "asset_type", label: "Tipo", type: "text" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
+    { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
     { id: "notes", label: "Notas", type: "text" },
     { id: "imei1", label: "Imei 1", type: "text" },
     { id: "imei2", label: "Imei 2", type: "text" },
   ],
   linhas: [
     { id: "numero", label: "Número", type: "text" },
-    { id: "asset_type", label: "Tipo", type: "text" },
-    { id: "gestor", label: "Gestor", type: "text" },
-    { id: "operadora", label: "Operadora", type: "text" },
-    { id: "contrato", label: "Contrato", type: "text" },
+    { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
+    { id: "gestor", label: "Gestor", type: "autocomplete", dbColumn: "gestor" },
+    { id: "operadora", label: "Operadora", type: "autocomplete", dbColumn: "operadora" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "cost_center_eng", label: "Centro de custo - Eng", type: "text" },
     { id: "cost_center_man", label: "Centro de custo - Man", type: "text" },
   ],
@@ -58,8 +59,8 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
     { id: "email_address", label: "E-mail", type: "text" },
     { id: "created_at", label: "Data criação", type: "date" },
     { id: "licenca", label: "Licença", type: "text" },
-    { id: "gestor", label: "Gestor", type: "text" },
-    { id: "contrato", label: "Contrato", type: "text" },
+    { id: "gestor", label: "Gestor", type: "autocomplete", dbColumn: "gestor" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "cost_center_eng", label: "Centro de custo - Eng", type: "text" },
     { id: "cost_center_man", label: "Centro de custo - Man", type: "text" },
   ],
@@ -72,7 +73,84 @@ const categoryLabels: Record<string, string> = {
   licencas: "Licença",
 };
 
-/* ── Collaborator autocomplete ─────────────────────────────── */
+/* ── Generic autocomplete for any inventory column ─────────── */
+function FieldAutocomplete({
+  value,
+  onChange,
+  dbColumn,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  dbColumn: string;
+  placeholder: string;
+}) {
+  const [allValues, setAllValues] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showList, setShowList] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    (supabase
+      .from("inventory")
+      .select(dbColumn) as any)
+      .neq(dbColumn, "")
+      .not(dbColumn, "is", null)
+      .then(({ data }: { data: any[] | null }) => {
+        if (data) {
+          const unique = [...new Set(
+            data
+              .map((r: any) => (r[dbColumn] as string).trim())
+              .filter((v: string) => v && v !== "-" && v !== "—")
+          )].sort();
+          setAllValues(unique);
+        }
+      });
+  }, [dbColumn]);
+
+  useEffect(() => {
+    if (!value.trim()) { setSuggestions([]); return; }
+    const q = value.toLowerCase();
+    setSuggestions(allValues.filter((v) => v.toLowerCase().includes(q)).slice(0, 8));
+  }, [value, allValues]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShowList(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setShowList(true); }}
+        onFocus={() => setShowList(true)}
+        placeholder={placeholder}
+        className="h-9 text-sm"
+      />
+      {showList && suggestions.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-[160px] overflow-y-auto">
+          {suggestions.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent truncate"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onChange(name); setShowList(false); }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Collaborator autocomplete (from existing collaborators) ── */
 function CollaboratorAutocomplete({
   value,
   onChange,
@@ -80,8 +158,8 @@ function CollaboratorAutocomplete({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allNames, setAllNames] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -104,19 +182,14 @@ function CollaboratorAutocomplete({
   }, []);
 
   useEffect(() => {
-    if (!value.trim()) {
-      setSuggestions([]);
-      return;
-    }
+    if (!value.trim()) { setSuggestions([]); return; }
     const q = value.toLowerCase();
     setSuggestions(allNames.filter((n) => n.toLowerCase().includes(q)).slice(0, 8));
   }, [value, allNames]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowList(false);
-      }
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShowList(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -185,7 +258,6 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     if (uniqueRule && id === uniqueRule.field) setDupError("");
   };
 
-  // Check uniqueness
   const checkUnique = useCallback(async (): Promise<boolean> => {
     if (!uniqueRule) return true;
     const val = (values[uniqueRule.field] || "").trim();
@@ -208,10 +280,7 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     setSaving(true);
 
     const isUnique = await checkUnique();
-    if (!isUnique) {
-      setSaving(false);
-      return;
-    }
+    if (!isUnique) { setSaving(false); return; }
 
     const collaborator = (values.collaborator || "").trim();
     const hasCollaborator = collaborator.length > 0;
@@ -276,6 +345,20 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
                   <CollaboratorAutocomplete
                     value={values[f.id] || ""}
                     onChange={(v) => update(f.id, v)}
+                  />
+                </div>
+              );
+            }
+
+            if (f.type === "autocomplete" && f.dbColumn) {
+              return (
+                <div key={f.id} className="space-y-1.5">
+                  <label className="text-sm font-medium">{f.label}</label>
+                  <FieldAutocomplete
+                    value={values[f.id] || ""}
+                    onChange={(v) => update(f.id, v)}
+                    dbColumn={f.dbColumn}
+                    placeholder={f.label}
                   />
                 </div>
               );
