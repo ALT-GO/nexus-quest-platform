@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -18,7 +18,13 @@ interface FieldDef {
   label: string;
   type: "text" | "select" | "date" | "autocomplete";
   options?: string[];
-  dbColumn?: string; // column to fetch suggestions from
+  dbColumn?: string;
+  sanitize?: "digits" | "alphanumeric";
+}
+
+/* ── Sanitizers ────────────────────────────────────────────── */
+function sanitizeDigits(v: string): string {
+  return v.replace(/[^0-9]/g, "");
 }
 
 const fieldsByCategory: Record<string, FieldDef[]> = {
@@ -40,11 +46,11 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
     { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
     { id: "notes", label: "Notas", type: "text" },
-    { id: "imei1", label: "Imei 1", type: "text" },
-    { id: "imei2", label: "Imei 2", type: "text" },
+    { id: "imei1", label: "Imei 1", type: "text", sanitize: "digits" },
+    { id: "imei2", label: "Imei 2", type: "text", sanitize: "digits" },
   ],
   linhas: [
-    { id: "numero", label: "Número", type: "text" },
+    { id: "numero", label: "Número", type: "text", sanitize: "digits" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
     { id: "gestor", label: "Gestor", type: "autocomplete", dbColumn: "gestor" },
     { id: "operadora", label: "Operadora", type: "autocomplete", dbColumn: "operadora" },
@@ -73,7 +79,7 @@ const categoryLabels: Record<string, string> = {
   licencas: "Licença",
 };
 
-/* ── Generic autocomplete for any inventory column ─────────── */
+/* ── Generic autocomplete ──────────────────────────────────── */
 function FieldAutocomplete({
   value,
   onChange,
@@ -81,26 +87,24 @@ function FieldAutocomplete({
   placeholder,
 }: {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string, fromSuggestion?: boolean) => void;
   dbColumn: string;
   placeholder: string;
 }) {
   const [allValues, setAllValues] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
+  const [flash, setFlash] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    (supabase
-      .from("inventory")
-      .select(dbColumn) as any)
+    (supabase.from("inventory").select(dbColumn) as any)
       .neq(dbColumn, "")
       .not(dbColumn, "is", null)
       .then(({ data }: { data: any[] | null }) => {
         if (data) {
           const unique = [...new Set(
-            data
-              .map((r: any) => (r[dbColumn] as string).trim())
+            data.map((r: any) => (r[dbColumn] as string).trim())
               .filter((v: string) => v && v !== "-" && v !== "—")
           )].sort();
           setAllValues(unique);
@@ -122,15 +126,30 @@ function FieldAutocomplete({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const selectSuggestion = (name: string) => {
+    onChange(name, true);
+    setShowList(false);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 1200);
+  };
+
   return (
     <div ref={wrapperRef} className="relative">
-      <Input
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setShowList(true); }}
-        onFocus={() => setShowList(true)}
-        placeholder={placeholder}
-        className="h-9 text-sm"
-      />
+      <div className="relative">
+        <Input
+          value={value}
+          onChange={(e) => { onChange(e.target.value); setShowList(true); }}
+          onFocus={() => setShowList(true)}
+          placeholder={placeholder}
+          className={cn(
+            "h-9 text-sm transition-all",
+            flash && "ring-2 ring-success/60 border-success"
+          )}
+        />
+        {flash && (
+          <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-success animate-in fade-in zoom-in duration-200" />
+        )}
+      </div>
       {showList && suggestions.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-[160px] overflow-y-auto">
           {suggestions.map((name) => (
@@ -139,7 +158,7 @@ function FieldAutocomplete({
               type="button"
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent truncate"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(name); setShowList(false); }}
+              onClick={() => selectSuggestion(name)}
             >
               {name}
             </button>
@@ -150,7 +169,7 @@ function FieldAutocomplete({
   );
 }
 
-/* ── Collaborator autocomplete (from existing collaborators) ── */
+/* ── Collaborator autocomplete ─────────────────────────────── */
 function CollaboratorAutocomplete({
   value,
   onChange,
@@ -161,6 +180,7 @@ function CollaboratorAutocomplete({
   const [allNames, setAllNames] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
+  const [flash, setFlash] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -172,8 +192,7 @@ function CollaboratorAutocomplete({
       .then(({ data }) => {
         if (data) {
           const unique = [...new Set(
-            data
-              .map((r: any) => (r.collaborator as string).trim())
+            data.map((r: any) => (r.collaborator as string).trim())
               .filter((n) => n && n !== "-" && n !== "—")
           )].sort();
           setAllNames(unique);
@@ -195,15 +214,30 @@ function CollaboratorAutocomplete({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const selectName = (name: string) => {
+    onChange(name);
+    setShowList(false);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 1200);
+  };
+
   return (
     <div ref={wrapperRef} className="relative">
-      <Input
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setShowList(true); }}
-        onFocus={() => setShowList(true)}
-        placeholder="Colaborador"
-        className="h-9 text-sm"
-      />
+      <div className="relative">
+        <Input
+          value={value}
+          onChange={(e) => { onChange(e.target.value); setShowList(true); }}
+          onFocus={() => setShowList(true)}
+          placeholder="Colaborador"
+          className={cn(
+            "h-9 text-sm transition-all",
+            flash && "ring-2 ring-success/60 border-success"
+          )}
+        />
+        {flash && (
+          <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-success animate-in fade-in zoom-in duration-200" />
+        )}
+      </div>
       {showList && suggestions.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-[160px] overflow-y-auto">
           {suggestions.map((name) => (
@@ -212,7 +246,7 @@ function CollaboratorAutocomplete({
               type="button"
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent truncate"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(name); setShowList(false); }}
+              onClick={() => selectName(name)}
             >
               {name}
             </button>
@@ -224,9 +258,12 @@ function CollaboratorAutocomplete({
 }
 
 /* ── Uniqueness validation rules ───────────────────────────── */
-const uniqueFieldByCategory: Record<string, { field: string; label: string; dbColumn: string }> = {
-  notebooks: { field: "service_tag", label: "Service tag", dbColumn: "service_tag" },
-  celulares: { field: "imei1", label: "Imei 1", dbColumn: "imei1" },
+const uniqueFieldByCategory: Record<string, { field: string; label: string; dbColumn: string }[]> = {
+  notebooks: [{ field: "service_tag", label: "Service tag", dbColumn: "service_tag" }],
+  celulares: [
+    { field: "service_tag", label: "Service tag", dbColumn: "service_tag" },
+    { field: "imei1", label: "Imei 1", dbColumn: "imei1" },
+  ],
 };
 
 interface Props {
@@ -238,11 +275,11 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [dupError, setDupError] = useState("");
+  const [dupErrors, setDupErrors] = useState<Record<string, string>>({});
 
   const fields = fieldsByCategory[category] || [];
   const label = categoryLabels[category] || "Item";
-  const uniqueRule = uniqueFieldByCategory[category];
+  const uniqueRules = uniqueFieldByCategory[category] || [];
 
   const resetForm = () => {
     const defaults: Record<string, string> = {};
@@ -250,36 +287,47 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
       defaults.created_at = format(new Date(), "yyyy-MM-dd");
     }
     setValues(defaults);
-    setDupError("");
+    setDupErrors({});
   };
 
   const update = (id: string, val: string) => {
-    setValues((prev) => ({ ...prev, [id]: val }));
-    if (uniqueRule && id === uniqueRule.field) setDupError("");
+    // Apply sanitization
+    const fieldDef = fields.find((f) => f.id === id);
+    const sanitized = fieldDef?.sanitize === "digits" ? sanitizeDigits(val) : val;
+    setValues((prev) => ({ ...prev, [id]: sanitized }));
+    if (dupErrors[id]) setDupErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
   };
 
-  const checkUnique = useCallback(async (): Promise<boolean> => {
-    if (!uniqueRule) return true;
-    const val = (values[uniqueRule.field] || "").trim();
-    if (!val) return true;
+  const checkAllUnique = useCallback(async (): Promise<boolean> => {
+    if (uniqueRules.length === 0) return true;
+    const errors: Record<string, string> = {};
 
-    const { data: existing } = await (supabase
-      .from("inventory")
-      .select("id") as any)
-      .eq(uniqueRule.dbColumn, val)
-      .limit(1);
+    for (const rule of uniqueRules) {
+      const val = (values[rule.field] || "").trim();
+      if (!val) continue;
 
-    if (existing && existing.length > 0) {
-      setDupError(`Já existe um item com ${uniqueRule.label} "${val}"`);
+      const { data: existing } = await (supabase
+        .from("inventory")
+        .select("id") as any)
+        .eq(rule.dbColumn, val)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        errors[rule.field] = `Este item já está cadastrado (${rule.label}: "${val}")`;
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setDupErrors(errors);
       return false;
     }
     return true;
-  }, [values, uniqueRule]);
+  }, [values, uniqueRules]);
 
   const handleSave = async () => {
     setSaving(true);
 
-    const isUnique = await checkUnique();
+    const isUnique = await checkAllUnique();
     if (!isUnique) { setSaving(false); return; }
 
     const collaborator = (values.collaborator || "").trim();
@@ -301,11 +349,12 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
 
     for (const f of fields) {
       if (f.id === "collaborator" || f.id === "status") continue;
-      if (values[f.id]) {
+      const raw = values[f.id];
+      if (raw) {
         if (f.id === "created_at") {
-          payload[f.id] = new Date(values[f.id]).toISOString();
+          payload[f.id] = new Date(raw).toISOString();
         } else {
-          payload[f.id] = values[f.id];
+          payload[f.id] = f.sanitize === "digits" ? sanitizeDigits(raw) : raw.trim();
         }
       }
     }
@@ -322,6 +371,10 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     setSaving(false);
   };
 
+  const hasDupErr = (fieldId: string) => !!dupErrors[fieldId];
+  const getDupErr = (fieldId: string) => dupErrors[fieldId] || "";
+  const hasAnyDupError = Object.keys(dupErrors).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) resetForm(); }}>
       <DialogTrigger asChild>
@@ -336,8 +389,6 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
         </DialogHeader>
         <div className="grid gap-3 pt-2 sm:grid-cols-2">
           {fields.map((f) => {
-            const hasDupErr = uniqueRule?.field === f.id && dupError;
-
             if (f.id === "collaborator") {
               return (
                 <div key={f.id} className="space-y-1.5">
@@ -402,19 +453,25 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
                 <Input
                   value={values[f.id] || ""}
                   onChange={(e) => update(f.id, e.target.value)}
-                  placeholder={f.label}
-                  className={cn("h-9 text-sm", hasDupErr && "border-destructive ring-1 ring-destructive")}
+                  placeholder={f.sanitize === "digits" ? "Somente números" : f.label}
+                  className={cn("h-9 text-sm", hasDupErr(f.id) && "border-destructive ring-1 ring-destructive")}
                 />
-                {hasDupErr && (
+                {hasDupErr(f.id) && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {dupError}
+                    {getDupErr(f.id)}
                   </p>
                 )}
               </div>
             );
           })}
         </div>
+        {hasAnyDupError && (
+          <div className="flex items-center gap-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            Corrija os campos duplicados antes de cadastrar.
+          </div>
+        )}
         <div className="flex justify-end gap-2 pt-3">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving}>
