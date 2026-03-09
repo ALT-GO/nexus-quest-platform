@@ -59,6 +59,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
     { key: "notes", label: "Notas" },
     { key: "service_tag_2", label: "Service tag 2" },
   ],
@@ -72,6 +73,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo" },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
     { key: "notes", label: "Notas" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
@@ -87,6 +89,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
   ],
   licencas: [
     { key: "asset_code", label: "Id", mono: true },
@@ -100,6 +103,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
   ],
 };
 
