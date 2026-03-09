@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -6,10 +6,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCollaborators } from "@/hooks/use-collaborators";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCollaborators, Collaborator } from "@/hooks/use-collaborators";
 import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProfile";
 import { StockTab } from "@/components/collaborators/StockTab";
-import { Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package } from "lucide-react";
+import {
+  Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package,
+  LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown,
+} from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaboratorDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,14 +30,137 @@ const catConfig: Record<string, { label: string; icon: React.ElementType; color:
   licenses: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
 };
 
+type SortKey = "name" | "cargo" | "sector" | "cost_center" | "email_address" | "assetCount";
+type SortDir = "asc" | "desc";
+
+function useViewPreference() {
+  const [view, setView] = useState<"cards" | "list">(() => {
+    try { return (localStorage.getItem("collab-view") as "cards" | "list") || "list"; } catch { return "list"; }
+  });
+  const set = useCallback((v: "cards" | "list") => {
+    setView(v);
+    try { localStorage.setItem("collab-view", v); } catch {}
+  }, []);
+  return [view, set] as const;
+}
+
+function InlineNameEditor({ name, onRename }: { name: string; onRename: (newName: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+
+  useEffect(() => { setValue(name); }, [name]);
+
+  if (!editing) {
+    return (
+      <span
+        className="cursor-pointer hover:underline hover:decoration-dotted"
+        onDoubleClick={() => setEditing(true)}
+        title="Clique duas vezes para editar"
+      >
+        {name}
+      </span>
+    );
+  }
+
+  const commit = () => {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== name) {
+      onRename(trimmed);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <Input
+      autoFocus
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setValue(name); setEditing(false); }
+      }}
+      className="h-7 w-48 text-sm"
+    />
+  );
+}
+
+function CategoryBadges({ categories }: { categories: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {categories.map((cat) => {
+        const cfg = catConfig[cat];
+        return (
+          <Badge key={cat} variant="outline" className={cn("gap-1 text-xs", cfg?.color)}>
+            {cfg?.icon && <cfg.icon className="h-3 w-3" />}
+            {cfg?.label || cat}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
+
+async function deleteCollaborator(name: string, refetch: () => void) {
+  try {
+    await supabase.from("inventory").update({
+      collaborator: "", status: "Disponível", updated_at: new Date().toISOString(),
+    }).eq("collaborator", name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
+    await supabase.from("inventory").delete().eq("collaborator", name).in("category", ["licencas", "licenses"]);
+    toast.success(`Colaborador "${name}" removido. Ativos devolvidos ao estoque.`);
+    refetch();
+  } catch {
+    toast.error("Erro ao excluir colaborador");
+  }
+}
+
+async function renameCollaborator(oldName: string, newName: string, refetch: () => void) {
+  const { error } = await supabase.from("inventory").update({
+    collaborator: newName, updated_at: new Date().toISOString(),
+  }).eq("collaborator", oldName);
+  if (error) {
+    toast.error("Erro ao renomear colaborador");
+  } else {
+    toast.success(`"${oldName}" renomeado para "${newName}"`);
+    refetch();
+  }
+}
+
 export default function Colaboradores() {
   const { collaborators, loading, refetch } = useCollaborators();
   const [search, setSearch] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useViewPreference();
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const filtered = collaborators.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const filtered = collaborators
+    .filter((c) => {
+      const q = search.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.cargo?.toLowerCase().includes(q) ||
+        c.sector?.toLowerCase().includes(q) ||
+        c.email_address?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const valA = a[sortKey] ?? "";
+      const valB = b[sortKey] ?? "";
+      const cmp = typeof valA === "number" && typeof valB === "number"
+        ? valA - valB
+        : String(valA).localeCompare(String(valB));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
 
   if (selectedName) {
     return (
@@ -44,6 +172,13 @@ export default function Colaboradores() {
       </AppLayout>
     );
   }
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="ml-1 h-3 w-3" />
+      : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
 
   return (
     <AppLayout>
@@ -68,15 +203,32 @@ export default function Colaboradores() {
         </TabsList>
 
         <TabsContent value="colaboradores">
-          <div className="space-y-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar colaborador..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            {/* Search + View Toggle */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="relative max-w-md flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar colaborador..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(v) => { if (v) setViewMode(v as "cards" | "list"); }}
+                variant="outline"
+                size="sm"
+              >
+                <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Visualização em lista">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
 
             {loading ? (
@@ -90,7 +242,8 @@ export default function Colaboradores() {
                   <p>Nenhum colaborador encontrado</p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : viewMode === "cards" ? (
+              /* ========== CARD VIEW ========== */
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((c) => (
                   <Card
@@ -105,49 +258,82 @@ export default function Colaboradores() {
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium leading-tight truncate">{c.name}</p>
+                            <div className="font-medium leading-tight truncate">
+                              <InlineNameEditor name={c.name} onRename={(n) => renameCollaborator(c.name, n, refetch)} />
+                            </div>
                             <p className="text-xs text-muted-foreground">{c.assetCount} ativo(s)</p>
                           </div>
                         </div>
                         <ConfirmDeleteDialog
                           description={`Tem certeza que deseja excluir o colaborador "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
-                          onConfirm={async () => {
-                            try {
-                              // Return notebooks, celulares, linhas to stock
-                              await supabase.from("inventory").update({
-                                collaborator: "",
-                                status: "Disponível",
-                                updated_at: new Date().toISOString(),
-                              }).eq("collaborator", c.name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
-
-                              // Delete licenças
-                              await supabase.from("inventory").delete()
-                                .eq("collaborator", c.name)
-                                .in("category", ["licencas", "licenses"]);
-
-                              toast.success(`Colaborador "${c.name}" removido. Ativos devolvidos ao estoque.`);
-                              refetch();
-                            } catch {
-                              toast.error("Erro ao excluir colaborador");
-                            }
-                          }}
+                          onConfirm={() => deleteCollaborator(c.name, refetch)}
                         />
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {c.categories.map((cat) => {
-                          const cfg = catConfig[cat];
-                          return (
-                            <Badge key={cat} variant="outline" className={cn("gap-1 text-xs", cfg?.color)}>
-                              {cfg?.icon && <cfg.icon className="h-3 w-3" />}
-                              {cfg?.label || cat}
-                            </Badge>
-                          );
-                        })}
+                      <div className="mt-3">
+                        <CategoryBadges categories={c.categories} />
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+            ) : (
+              /* ========== LIST VIEW ========== */
+              <Card>
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {([
+                          ["name", "Nome"],
+                          ["cargo", "Cargo"],
+                          ["sector", "Departamento"],
+                          ["cost_center", "Centro de Custo"],
+                          ["email_address", "E-mail"],
+                          ["assetCount", "Ativos"],
+                        ] as [SortKey, string][]).map(([key, label]) => (
+                          <TableHead
+                            key={key}
+                            className="cursor-pointer select-none whitespace-nowrap hover:text-foreground"
+                            onClick={() => toggleSort(key)}
+                          >
+                            <span className="inline-flex items-center">
+                              {label}
+                              <SortIcon col={key} />
+                            </span>
+                          </TableHead>
+                        ))}
+                        <TableHead className="w-[80px]">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((c) => (
+                        <TableRow
+                          key={c.name}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedName(c.name)}
+                        >
+                          <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>
+                            <InlineNameEditor name={c.name} onRename={(n) => renameCollaborator(c.name, n, refetch)} />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{c.cargo || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{c.sector || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{c.cost_center || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{c.email_address || "—"}</TableCell>
+                          <TableCell>
+                            <CategoryBadges categories={c.categories} />
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <ConfirmDeleteDialog
+                              description={`Tem certeza que deseja excluir "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
+                              onConfirm={() => deleteCollaborator(c.name, refetch)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             )}
           </div>
         </TabsContent>
