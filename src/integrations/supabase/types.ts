@@ -152,6 +152,7 @@ export type Database = {
           cost_center_eng: string | null
           cost_center_man: string | null
           created_at: string
+          data_aquisicao: string | null
           delivered_at: string | null
           email_address: string | null
           gestor: string | null
@@ -183,6 +184,7 @@ export type Database = {
           cost_center_eng?: string | null
           cost_center_man?: string | null
           created_at?: string
+          data_aquisicao?: string | null
           delivered_at?: string | null
           email_address?: string | null
           gestor?: string | null
@@ -214,6 +216,7 @@ export type Database = {
           cost_center_eng?: string | null
           cost_center_man?: string | null
           created_at?: string
+          data_aquisicao?: string | null
           delivered_at?: string | null
           email_address?: string | null
           gestor?: string | null
