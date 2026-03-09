@@ -209,7 +209,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 /* ── Responsibility term body text (page 1) ── */
 function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string }) {
   return (
-    <div className="text-justify space-y-3 flex-1" style={{ fontSize: "11px" }}>
+    <div className="text-justify space-y-3 flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.6" }}>
       <p>
         Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
         declaro que recebi da empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
@@ -250,7 +250,7 @@ function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string 
         depreciado anualmente, visando estabelecer o Valor Contábil Atual para fins de devolução, indenização ou
         ressarcimento. A depreciação será calculada conforme as seguintes regras:
       </p>
-      <ol className="list-decimal pl-6 space-y-1">
+      <ol className="list-decimal pl-6 space-y-1" style={{ fontSize: "10pt" }}>
         <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
         <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto para Notebooks, celulares ou tablets.</li>
         <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
