@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useCollaborators, Collaborator } from "@/hooks/use-collaborators";
 import { CollaboratorProfile } from "@/components/collaborators/CollaboratorProfile";
 import { StockTab } from "@/components/collaborators/StockTab";
+import { SortDropdown, usePersistentSort, applySorting } from "@/components/ui/sort-dropdown";
 import {
   Loader2, Search, Users, Laptop, Smartphone, Phone, FileText, Package,
   LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown,
