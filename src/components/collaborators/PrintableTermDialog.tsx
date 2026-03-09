@@ -97,10 +97,12 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         </div>
 
         {/* ===== PAGE 1 ===== */}
-        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
-          <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
+        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#333", fontSize: "12pt", lineHeight: "1.6" }}>
+          <div className="print-header-table">
+            <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
+          </div>
 
-          <p className="mb-4 text-right" style={{ fontSize: "11px" }}>{todayShort}</p>
+          <p className="mb-4 text-right" style={{ fontSize: "11pt" }}>{todayShort}</p>
 
           {isDevolucao ? (
             <DevolucaoContent name={collaboratorName} cargo={cargo} />
@@ -108,7 +110,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
             <ResponsabilidadeContent name={collaboratorName} cargo={cargo} />
           )}
 
-          <div className="mt-auto">
+          <div className="print-footer mt-auto">
             <FooterTimbrado />
           </div>
         </div>
