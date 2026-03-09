@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { NewTicketDialog } from "@/components/servicedesk/NewTicketDialog";
-import { StatCard } from "@/components/ui/stat-card";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -16,12 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Search,
   Filter,
-  AlertTriangle,
   LayoutList,
   Kanban,
   Loader2,
@@ -229,14 +225,6 @@ export default function ServiceDesk() {
 
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
 
-  // Stats
-  const pendingCount = tickets.filter((t) => t.status_id === "pending").length;
-  const inProgressCount = tickets.filter((t) => t.status_id === "inProgress").length;
-  const completedCount = tickets.filter((t) => !!t.completed_at).length;
-  const slaExpiredCount = tickets.filter(
-    (t) => t.sla_expired && !isFinalStatus(t.status_id)
-  ).length;
-
   // Get subtasks for a parent ticket
   const getSubtasks = useCallback(
     (parentId: string) => tickets.filter((t) => t.parent_ticket_id === parentId),
@@ -283,34 +271,6 @@ export default function ServiceDesk() {
           </a>
         </Button>
       </PageHeader>
-
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Chamados Pendentes"
-          value={pendingCount}
-          icon={AlertCircle}
-          className="border-l-4 border-l-warning"
-        />
-        <StatCard
-          title="Em Andamento"
-          value={inProgressCount}
-          icon={Clock}
-          className="border-l-4 border-l-info"
-        />
-        <StatCard
-          title="SLA Vencido"
-          value={slaExpiredCount}
-          icon={AlertTriangle}
-          className="border-l-4 border-l-destructive"
-        />
-        <StatCard
-          title="Concluídos"
-          value={completedCount}
-          icon={CheckCircle2}
-          className="border-l-4 border-l-success"
-        />
-      </div>
 
       {/* Filters + View Toggle */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
