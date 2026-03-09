@@ -31,15 +31,13 @@ const catConfig: Record<string, { label: string; icon: React.ElementType; color:
   licenses: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
 };
 
-type SortKey = "name" | "cargo" | "sector" | "cost_center" | "email_address" | "assetCount";
+type SortKey = "name" | "cargo" | "sector" | "assetCount";
 type SortDir = "asc" | "desc";
 
 const collabSortOptions = [
   { value: "name", label: "Nome" },
   { value: "cargo", label: "Cargo" },
   { value: "sector", label: "Departamento" },
-  { value: "cost_center", label: "Centro de custo" },
-  { value: "email_address", label: "E-mail" },
   { value: "assetCount", label: "Qtd. ativos" },
 ];
 
