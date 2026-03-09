@@ -91,17 +91,17 @@ function FieldAutocomplete({
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase
+    (supabase
       .from("inventory")
-      .select(dbColumn)
+      .select(dbColumn) as any)
       .neq(dbColumn, "")
       .not(dbColumn, "is", null)
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         if (data) {
           const unique = [...new Set(
             data
               .map((r: any) => (r[dbColumn] as string).trim())
-              .filter((v) => v && v !== "-" && v !== "—")
+              .filter((v: string) => v && v !== "-" && v !== "—")
           )].sort();
           setAllValues(unique);
         }
