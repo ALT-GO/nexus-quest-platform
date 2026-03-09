@@ -445,9 +445,13 @@ export function CategoryTable({ category, label }: Props) {
     <AlertDialog open={bulkDialog.open} onOpenChange={(v) => setBulkDialog((prev) => ({ ...prev, open: v }))}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Aplicar valor em massa?</AlertDialogTitle>
+          <AlertDialogTitle>Aplicar em massa?</AlertDialogTitle>
           <AlertDialogDescription>
-            Deseja aplicar o valor de <strong>{bulkDialog.value}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?
+            {bulkDialog.field === "valor_pago" ? (
+              <>Deseja aplicar o valor de <strong>{bulkDialog.value}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?</>
+            ) : (
+              <>Deseja aplicar a data de aquisição <strong>{bulkDialog.dataAquisicao ? new Date(bulkDialog.dataAquisicao).toLocaleDateString("pt-BR") : ""}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?</>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
