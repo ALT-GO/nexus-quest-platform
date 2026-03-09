@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +13,13 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, FileDown, Calculator, DollarSign } from "lucide-react";
+import { Loader2, FileDown, Calculator, DollarSign, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { HeaderTimbrado } from "@/components/collaborators/HeaderTimbrado";
+import { FooterTimbrado } from "@/components/collaborators/FooterTimbrado";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 type Operadora = "Claro" | "Vivo" | "Salvy" | "Microsoft";
 
@@ -39,6 +44,8 @@ const formatBRL = (v: number) =>
 export default function GestaoFaturas() {
   const [selectedOp, setSelectedOp] = useState<Operadora | "">("");
   const [ajusteGlobal, setAjusteGlobal] = useState("");
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const category = selectedOp ? operadoraCategories[selectedOp] : null;
 
@@ -54,7 +61,6 @@ export default function GestaoFaturas() {
       if (category === "linhas") {
         query = query.eq("operadora", selectedOp);
       }
-      // For licencas/Microsoft, fetch all active
       if (category === "licencas") {
         query = query.eq("status", "Ativo");
       }
@@ -68,7 +74,6 @@ export default function GestaoFaturas() {
 
   const rows = useMemo<CostCenterRow[]>(() => {
     if (!items.length) return [];
-
     const map = new Map<string, { sum: number; items: number; type: "eng" | "man" }>();
 
     for (const item of items) {
@@ -78,7 +83,6 @@ export default function GestaoFaturas() {
       const eng = ((item as any).cost_center_eng || "").trim();
       const man = ((item as any).cost_center_man || "").trim();
 
-      // If both centers exist, the full value appears for each
       if (eng) {
         const existing = map.get(`eng:${eng}`) || { sum: 0, items: 0, type: "eng" as const };
         existing.sum += valor;
@@ -91,7 +95,6 @@ export default function GestaoFaturas() {
         existing.items += 1;
         map.set(`man:${man}`, existing);
       }
-      // If neither center, group as "Sem CC"
       if (!eng && !man) {
         const existing = map.get(`none:SEM_CC`) || { sum: 0, items: 0, type: "eng" as const };
         existing.sum += valor;
@@ -140,6 +143,14 @@ export default function GestaoFaturas() {
     URL.revokeObjectURL(url);
     toast.success("CSV exportado com sucesso");
   };
+
+  const handlePrint = () => {
+    setPdfOpen(true);
+    setTimeout(() => window.print(), 400);
+  };
+
+  const today = new Date().toLocaleDateString("pt-BR");
+  const mesRef = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   return (
     <AppLayout>
@@ -194,7 +205,6 @@ export default function GestaoFaturas() {
           </CardContent>
         </Card>
 
-        {/* Results */}
         {isLoading && (
           <Card>
             <CardContent className="flex items-center justify-center py-12">
@@ -212,10 +222,16 @@ export default function GestaoFaturas() {
                   ({items.length} itens encontrados)
                 </span>
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!adjustedRows.length}>
-                <FileDown className="h-4 w-4 mr-1" />
-                Exportar CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePrint} disabled={!adjustedRows.length}>
+                  <Printer className="h-4 w-4 mr-1" />
+                  Gerar PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!adjustedRows.length}>
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Exportar CSV
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {adjustedRows.length === 0 ? (
@@ -228,11 +244,11 @@ export default function GestaoFaturas() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Centro de Custo</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">Itens</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Itens Inclusos</TableHead>
                         <TableHead className="text-right">Valor Base</TableHead>
                         {ajusteNum !== 0 && <TableHead className="text-right">Ajuste</TableHead>}
-                        <TableHead className="text-right">Valor Final</TableHead>
+                        <TableHead className="text-right">Valor Total do Rateio</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -240,7 +256,7 @@ export default function GestaoFaturas() {
                         <TableRow key={`${row.type}:${row.code}`}>
                           <TableCell className="font-mono text-sm">{row.code}</TableCell>
                           <TableCell className="text-sm">
-                            {row.code === "SEM_CC" ? "—" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                            {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
                           </TableCell>
                           <TableCell className="text-right text-sm">{row.items}</TableCell>
                           <TableCell className="text-right text-sm">{formatBRL(row.sum)}</TableCell>
@@ -252,7 +268,6 @@ export default function GestaoFaturas() {
                           <TableCell className="text-right text-sm font-medium">{formatBRL(row.adjusted)}</TableCell>
                         </TableRow>
                       ))}
-                      {/* Total row */}
                       <TableRow className="bg-muted/50 font-semibold">
                         <TableCell>TOTAL</TableCell>
                         <TableCell />
@@ -271,6 +286,124 @@ export default function GestaoFaturas() {
           </Card>
         )}
       </div>
+
+      {/* ===== Printable PDF Document ===== */}
+      <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
+        <DialogContent className="max-w-[900px] max-h-[95vh] overflow-y-auto print:!block">
+          <DialogHeader className="print:hidden">
+            <DialogTitle>Relatório de Rateio — {selectedOp}</DialogTitle>
+          </DialogHeader>
+
+          <div
+            ref={printRef}
+            className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col relative"
+            style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.4" }}
+          >
+            {/* Header */}
+            <div className="print-header-table">
+              <HeaderTimbrado
+                title="Relatório de Rateio de Custos"
+                prefix={`Operadora: ${selectedOp}`}
+                docCode="FF.RTC"
+                revision="Rev. 01"
+              />
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 space-y-4 mt-2">
+              <div className="text-sm">
+                <p><strong>Operadora:</strong> {selectedOp}</p>
+                <p><strong>Competência:</strong> {mesRef}</p>
+                <p><strong>Data de emissão:</strong> {today}</p>
+                {ajusteNum !== 0 && (
+                  <p><strong>Ajuste global aplicado:</strong> {formatBRL(ajusteNum)}</p>
+                )}
+              </div>
+
+              {/* Rateio Table */}
+              <table className="w-full border-collapse text-sm" style={{ fontSize: "10pt" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f3f4f6" }}>
+                    <th className="border border-gray-400 px-3 py-2 text-left font-semibold">Centro de Custo</th>
+                    <th className="border border-gray-400 px-3 py-2 text-left font-semibold">Descrição</th>
+                    <th className="border border-gray-400 px-3 py-2 text-center font-semibold">Itens Inclusos</th>
+                    {ajusteNum !== 0 && (
+                      <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Valor Base</th>
+                    )}
+                    {ajusteNum !== 0 && (
+                      <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Ajuste</th>
+                    )}
+                    <th className="border border-gray-400 px-3 py-2 text-right font-semibold">Valor Total do Rateio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adjustedRows.map((row, i) => (
+                    <tr key={i} style={{ pageBreakInside: "avoid" }}>
+                      <td className="border border-gray-400 px-3 py-1.5 font-mono">{row.code}</td>
+                      <td className="border border-gray-400 px-3 py-1.5">
+                        {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                      </td>
+                      <td className="border border-gray-400 px-3 py-1.5 text-center">{row.items}</td>
+                      {ajusteNum !== 0 && (
+                        <td className="border border-gray-400 px-3 py-1.5 text-right">{formatBRL(row.sum)}</td>
+                      )}
+                      {ajusteNum !== 0 && (
+                        <td className="border border-gray-400 px-3 py-1.5 text-right">{formatBRL(row.adjusted - row.sum)}</td>
+                      )}
+                      <td className="border border-gray-400 px-3 py-1.5 text-right font-medium">{formatBRL(row.adjusted)}</td>
+                    </tr>
+                  ))}
+                  {/* Total */}
+                  <tr style={{ backgroundColor: "#e5e7eb", fontWeight: 700 }}>
+                    <td className="border border-gray-400 px-3 py-2" colSpan={2}>TOTAL GERAL DA FATURA</td>
+                    <td className="border border-gray-400 px-3 py-2 text-center">
+                      {adjustedRows.reduce((a, r) => a + r.items, 0)}
+                    </td>
+                    {ajusteNum !== 0 && (
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatBRL(totalBase)}</td>
+                    )}
+                    {ajusteNum !== 0 && (
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatBRL(ajusteNum)}</td>
+                    )}
+                    <td className="border border-gray-400 px-3 py-2 text-right text-base">{formatBRL(totalAdjusted)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Signature block */}
+              <div className="pt-8 mt-auto" style={{ pageBreakInside: "avoid" }}>
+                <div className="flex justify-between gap-8">
+                  <div className="flex-1 text-center">
+                    <div className="border-t border-gray-600 pt-1 mt-12">
+                      <p className="text-sm font-medium">Responsável TI</p>
+                      <p className="text-xs text-gray-500">Data: ____/____/________</p>
+                    </div>
+                  </div>
+                  <div className="flex-1 text-center">
+                    <div className="border-t border-gray-600 pt-1 mt-12">
+                      <p className="text-sm font-medium">Aprovação Financeiro</p>
+                      <p className="text-xs text-gray-500">Data: ____/____/________</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="print-footer-container mt-auto pt-2">
+              <FooterTimbrado />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 print:hidden mt-4">
+            <Button variant="outline" onClick={() => setPdfOpen(false)}>Fechar</Button>
+            <Button onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-1" />
+              Imprimir / Salvar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
