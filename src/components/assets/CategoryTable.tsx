@@ -136,9 +136,11 @@ export function CategoryTable({ category, label }: Props) {
     open: boolean;
     model: string;
     value: string;
+    dataAquisicao: string;
     count: number;
     itemId: string;
-  }>({ open: false, model: "", value: "", count: 0, itemId: "" });
+    field: "valor_pago" | "data_aquisicao" | "both";
+  }>({ open: false, model: "", value: "", dataAquisicao: "", count: 0, itemId: "", field: "valor_pago" });
 
   const formatCurrency = (v: string | number | null | undefined): string => {
     if (v === null || v === undefined || v === "") return "";
@@ -147,54 +149,66 @@ export function CategoryTable({ category, label }: Props) {
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  const handleValorPagoSave = async (item: any, rawValue: string) => {
-    const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
-    const num = parseFloat(cleaned);
-    if (isNaN(num)) return;
-
-    // Save to this item
-    await updateItem(item.id, { valor_pago: num } as any);
-
-    // Check for other items with the same model
+  const checkBulkOffer = (item: any, field: "valor_pago" | "data_aquisicao", displayValue: string, dataAq?: string) => {
     const model = (item.model || "").trim();
     if (!model) return;
-
     const othersWithModel = items.filter(
       (i) => i.id !== item.id && (i.model || "").trim().toLowerCase() === model.toLowerCase()
     );
-
     if (othersWithModel.length > 0) {
       setBulkDialog({
         open: true,
         model,
-        value: formatCurrency(num),
+        value: field === "valor_pago" ? displayValue : "",
+        dataAquisicao: field === "data_aquisicao" ? displayValue : (dataAq || ""),
         count: othersWithModel.length,
         itemId: item.id,
+        field,
       });
     }
   };
 
+  const handleValorPagoSave = async (item: any, rawValue: string) => {
+    const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return;
+    await updateItem(item.id, { valor_pago: num } as any);
+    checkBulkOffer(item, "valor_pago", formatCurrency(num));
+  };
+
+  const handleDataAquisicaoSave = async (item: any, dateValue: string) => {
+    if (!dateValue) return;
+    await updateItem(item.id, { data_aquisicao: dateValue } as any);
+    checkBulkOffer(item, "data_aquisicao", dateValue);
+  };
+
   const handleBulkUpdate = async () => {
     const model = bulkDialog.model;
-    const cleaned = bulkDialog.value.replace(/[^\d.,]/g, "").replace(",", ".");
-    const num = parseFloat(cleaned);
-
     const othersWithModel = items.filter(
       (i) => i.id !== bulkDialog.itemId && (i.model || "").trim().toLowerCase() === model.toLowerCase()
     );
-
     const ids = othersWithModel.map((i) => i.id);
-    if (ids.length > 0) {
-      const { error } = await supabase
-        .from("inventory")
-        .update({ valor_pago: num, updated_at: new Date().toISOString() } as any)
-        .in("id", ids);
+    if (ids.length === 0) { setBulkDialog((prev) => ({ ...prev, open: false })); return; }
 
-      if (error) {
-        toast.error("Erro ao atualizar em massa");
-      } else {
-        toast.success(`Valor atualizado para ${ids.length} itens do modelo "${model}"`);
-      }
+    const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (bulkDialog.field === "valor_pago" && bulkDialog.value) {
+      const cleaned = bulkDialog.value.replace(/[^\d.,]/g, "").replace(",", ".");
+      updatePayload.valor_pago = parseFloat(cleaned);
+    }
+    if (bulkDialog.field === "data_aquisicao" && bulkDialog.dataAquisicao) {
+      updatePayload.data_aquisicao = bulkDialog.dataAquisicao;
+    }
+
+    const { error } = await supabase
+      .from("inventory")
+      .update(updatePayload as any)
+      .in("id", ids);
+
+    if (error) {
+      toast.error("Erro ao atualizar em massa");
+    } else {
+      const label = bulkDialog.field === "valor_pago" ? "Valor Pago" : "Data de Aquisição";
+      toast.success(`${label} atualizado para ${ids.length} itens do modelo "${model}"`);
     }
     setBulkDialog((prev) => ({ ...prev, open: false }));
   };
