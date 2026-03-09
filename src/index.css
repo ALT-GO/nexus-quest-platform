@@ -304,11 +304,22 @@
     margin-bottom: 15px !important;
   }
 
-  /* 8. Footer - always at bottom of last page */
-  .print-footer {
+  /* 8. Footer - fixed at bottom of page */
+  .print-footer-container {
+    margin-top: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: auto !important;
+    width: calc(100% + 40mm) !important;
+    margin-left: -20mm !important;
+    margin-bottom: -20mm !important;
+    line-height: 0 !important;
+  }
+
+  .print-footer-img {
+    width: 100% !important;
+    display: block !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* 9. Signature section - keep together */
