@@ -116,27 +116,26 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         </div>
 
         {/* ===== PAGE 2 ===== */}
-        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col break-before-page" style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#333", fontSize: "12pt", lineHeight: "1.6" }}>
-          <div className="print-header-table">
+        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col break-before-page" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.45" }}>
+          <div className="print-header-table mb-2">
             <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
           </div>
 
           {isDevolucao && (
-            <p className="font-bold mb-3 uppercase" style={{ fontSize: "10pt", color: "#444" }}>DADOS DOS ITENS</p>
+            <p className="font-bold mb-2 uppercase" style={{ fontSize: "9pt", color: "#444" }}>DADOS DOS ITENS</p>
           )}
 
-          {/* Asset Table - page-break-inside: avoid applied via CSS */}
-          <table className="w-full border-collapse mb-8" style={{ fontSize: "10pt" }}>
+          <table className="w-full border-collapse mb-4" style={{ fontSize: "9pt" }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>ITEM</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>DETALHE</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>VALOR PAGO</th>
-                <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>VALOR CONTÁBIL ATUAL</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>ITEM</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>DETALHE</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>VALOR PAGO</th>
+                <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>VALOR CONTÁBIL ATUAL</th>
                 {!isDevolucao && (
                   <>
-                    <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>ESTADO</th>
-                    <th className="p-2 border border-[#999] text-left font-bold" style={{ fontSize: "9pt" }}>OBSERVAÇÃO</th>
+                    <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>ESTADO</th>
+                    <th className="p-1.5 border border-[#999] text-left font-bold" style={{ fontSize: "8pt" }}>OBSERVAÇÃO</th>
                   </>
                 )}
               </tr>
@@ -144,7 +143,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
             <tbody>
               {assets.length === 0 ? (
                 <tr>
-                  <td colSpan={isDevolucao ? 4 : 6} className="p-3 border border-[#999] text-center" style={{ color: "#999" }}>
+                  <td colSpan={isDevolucao ? 4 : 6} className="p-2 border border-[#999] text-center" style={{ color: "#999" }}>
                     Nenhum ativo vinculado
                   </td>
                 </tr>
@@ -160,14 +159,14 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                     : "N/A";
                   return (
                     <tr key={asset.id}>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{getItemType(asset)}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{getAssetDetail(asset)}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{valorPagoDisplay}</td>
-                      <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{valorContabilDisplay}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{getItemType(asset)}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{getAssetDetail(asset)}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{valorPagoDisplay}</td>
+                      <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{valorContabilDisplay}</td>
                       {!isDevolucao && (
                         <>
-                          <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{asset.status || "—"}</td>
-                          <td className="p-2 border border-[#999]" style={{ fontSize: "10pt" }}>{asset.notes || ""}</td>
+                          <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{asset.status || "—"}</td>
+                          <td className="p-1.5 border border-[#999]" style={{ fontSize: "9pt" }}>{asset.notes || ""}</td>
                         </>
                       )}
                     </tr>
@@ -175,29 +174,27 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 })
               )}
               <tr>
-                <td colSpan={isDevolucao ? 4 : 6} className="p-2 border border-[#999] font-bold" style={{ color: "#666", fontSize: "10pt" }}>
+                <td colSpan={isDevolucao ? 4 : 6} className="p-1.5 border border-[#999] font-bold" style={{ color: "#666", fontSize: "9pt" }}>
                   OBS:
                 </td>
               </tr>
             </tbody>
           </table>
 
-          {/* Date + Signatures */}
-          <p className="mb-8" style={{ fontSize: "11pt" }}>{todayShort}.</p>
+          <p className="mb-4" style={{ fontSize: "10pt" }}>{todayShort}.</p>
 
-          {/* Signatures - kept together */}
-          <div className="print-signatures mt-auto space-y-10 mb-8">
+          <div className="print-signatures mt-auto space-y-6 mb-4">
             <div>
-              <p className="mb-1 font-bold" style={{ fontSize: "11pt" }}>Assinatura do Empregado:</p>
-              <div className="border-b border-[#666] w-64 mt-6"></div>
+              <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura do Empregado:</p>
+              <div className="border-b border-[#666] w-64 mt-4"></div>
             </div>
             <div>
-              <p className="mb-1 font-bold" style={{ fontSize: "11pt" }}>Assinatura da Testemunha:</p>
-              <div className="border-b border-[#666] w-80 mt-6"></div>
+              <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura da Testemunha:</p>
+              <div className="border-b border-[#666] w-80 mt-4"></div>
             </div>
           </div>
 
-          <div className="print-footer">
+          <div className="print-footer pt-2">
             <FooterTimbrado />
           </div>
         </div>
