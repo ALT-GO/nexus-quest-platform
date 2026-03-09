@@ -23,8 +23,6 @@ interface FieldDef {
 const fieldsByCategory: Record<string, FieldDef[]> = {
   notebooks: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "marca", label: "Marca", type: "text" },
     { id: "model", label: "Modelo", type: "text" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
@@ -35,8 +33,6 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
   ],
   celulares: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "marca", label: "Marca", type: "text" },
     { id: "model", label: "Modelo", type: "text" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
@@ -48,8 +44,6 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
   ],
   linhas: [
     { id: "numero", label: "Número", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "asset_type", label: "Tipo", type: "text" },
     { id: "gestor", label: "Gestor", type: "text" },
     { id: "operadora", label: "Operadora", type: "text" },
