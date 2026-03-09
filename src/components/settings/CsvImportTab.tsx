@@ -126,6 +126,34 @@ function isBlank(val: string | null | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Normalização de categoria: siglas → nomes completos                */
+/* ------------------------------------------------------------------ */
+const categoryAliases: Record<string, string> = {
+  "NT": "notebooks",
+  "NOTEBOOK": "notebooks",
+  "NOTEBOOKS": "notebooks",
+  "COMP": "notebooks",
+  "COMPUTADOR": "notebooks",
+  "CEL": "celulares",
+  "CELULAR": "celulares",
+  "CELULARES": "celulares",
+  "LIN": "linhas",
+  "LINHA": "linhas",
+  "LINHAS": "linhas",
+  "LINHA TELEFÔNICA": "linhas",
+  "LINHA TELEFONICA": "linhas",
+  "LIC": "licencas",
+  "LICENÇA": "licencas",
+  "LICENCA": "licencas",
+  "LICENCAS": "licencas",
+};
+
+function normalizeCategory(val: string): string {
+  const key = norm(val);
+  return categoryAliases[key] || val.toLowerCase();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Comparação inteligente de nomes (primeiro + último ou fuzzy)       */
 /* ------------------------------------------------------------------ */
 interface FuzzyResult {
