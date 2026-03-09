@@ -402,10 +402,10 @@ export default function GestaoFaturas() {
         map.set(`man:${man}`, existing);
       }
       if (!eng && !man) {
-        const existing = map.get(`none:SEM_CC`) || { sum: 0, items: 0, type: "none" as const };
+        const existing = map.get(`none:9999`) || { sum: 0, items: 0, type: "none" as const };
         existing.sum += valor;
         existing.items += 1;
-        map.set(`none:SEM_CC`, existing);
+        map.set(`none:9999`, existing);
       }
     }
 
@@ -435,7 +435,7 @@ export default function GestaoFaturas() {
     if (!adjustedRows.length) return;
     const header = "Centro de Custo;Descrição;Qtd Itens;Valor Total do Rateio";
     const lines = adjustedRows.map(
-      (r) => `${r.code};${r.code === "SEM_CC" ? "Sem CC" : r.type === "eng" ? "Engenharia" : "Manutenção"};${r.items};${r.adjusted.toFixed(2)}`
+      (r) => `${r.code};${r.code === "9999" ? "Sem CC (alerta)" : r.type === "eng" ? "Engenharia" : "Manutenção"};${r.items};${r.adjusted.toFixed(2)}`
     );
     const totalLine = `TOTAL;;${adjustedRows.reduce((a, r) => a + r.items, 0)};${totalAdjusted.toFixed(2)}`;
     const csv = [header, ...lines, totalLine].join("\n");
@@ -512,7 +512,13 @@ export default function GestaoFaturas() {
                       Rateio — {generatedOp}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Competência: {generatedMesAno} • {reportItems.length} itens encontrados
+                      Competência: {generatedMesAno} • {reportItems.length} itens total •
+                      {(() => {
+                        const ignored = reportItems.filter((i) => !((i as any).valor_mensal > 0)).length;
+                        return ignored > 0
+                          ? <span className="text-destructive"> {ignored} ignorados (sem valor)</span>
+                          : <span> todos com valor preenchido</span>;
+                      })()}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -562,7 +568,7 @@ export default function GestaoFaturas() {
                             <TableRow key={`${row.type}:${row.code}`}>
                               <TableCell className="font-mono text-sm">{row.code}</TableCell>
                               <TableCell className="text-sm">
-                                {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                                {row.code === "9999" ? <span className="text-destructive font-medium">⚠ Sem centro de custo</span> : row.type === "eng" ? "Engenharia" : "Manutenção"}
                               </TableCell>
                               <TableCell className="text-right text-sm">{row.items}</TableCell>
                               <TableCell className="text-right text-sm">{formatBRL(row.sum)}</TableCell>
@@ -704,7 +710,7 @@ export default function GestaoFaturas() {
                     <tr key={i} style={{ pageBreakInside: "avoid" }}>
                       <td className="border border-gray-400 px-3 py-1.5 font-mono">{row.code}</td>
                       <td className="border border-gray-400 px-3 py-1.5">
-                        {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                        {row.code === "9999" ? "⚠ Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
                       </td>
                       <td className="border border-gray-400 px-3 py-1.5 text-center">{row.items}</td>
                       <td className="border border-gray-400 px-3 py-1.5 text-right font-medium">{formatBRL(row.adjusted)}</td>
