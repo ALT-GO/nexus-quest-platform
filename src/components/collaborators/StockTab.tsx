@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
 import { StockFilters, getFiltersForCategory } from "./StockFilters";
 import { AddStockItemDialog } from "./AddStockItemDialog";
+import { SortDropdown, usePersistentSort, applySorting, SortOption } from "@/components/ui/sort-dropdown";
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
