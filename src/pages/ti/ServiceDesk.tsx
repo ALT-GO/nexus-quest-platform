@@ -272,34 +272,6 @@ export default function ServiceDesk() {
         </Button>
       </PageHeader>
 
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Chamados Pendentes"
-          value={pendingCount}
-          icon={AlertCircle}
-          className="border-l-4 border-l-warning"
-        />
-        <StatCard
-          title="Em Andamento"
-          value={inProgressCount}
-          icon={Clock}
-          className="border-l-4 border-l-info"
-        />
-        <StatCard
-          title="SLA Vencido"
-          value={slaExpiredCount}
-          icon={AlertTriangle}
-          className="border-l-4 border-l-destructive"
-        />
-        <StatCard
-          title="Concluídos"
-          value={completedCount}
-          icon={CheckCircle2}
-          className="border-l-4 border-l-success"
-        />
-      </div>
-
       {/* Filters + View Toggle */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="relative flex-1">
