@@ -643,6 +643,28 @@ export function CsvImportTab() {
       };
       delete payload.dbColumn;
 
+      // Normalize category if present in CSV data
+      if (payload.category && typeof payload.category === "string") {
+        payload.category = normalizeCategory(payload.category);
+      }
+
+      // Normalize status abbreviations
+      if (payload.status) {
+        const statusMap: Record<string, string> = {
+          "DISPONIVEL": "Disponível",
+          "DISPONÍVEL": "Disponível",
+          "EM USO": "Em uso",
+          "MANUTENCAO": "Manutenção",
+          "MANUTENÇÃO": "Manutenção",
+          "RESERVADO": "Reservado",
+          "BAIXADO": "Baixado",
+          "ATIVO": "Ativo",
+          "DESLIGADO": "Desligado",
+        };
+        const normStatus = norm(payload.status);
+        if (statusMap[normStatus]) payload.status = statusMap[normStatus];
+      }
+
       const collabValue = (payload.collaborator || "").trim();
       if (collabValue) {
         if (!payload.status) payload.status = "Em uso";
