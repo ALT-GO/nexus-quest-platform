@@ -435,7 +435,7 @@ export default function GestaoFaturas() {
     if (!adjustedRows.length) return;
     const header = "Centro de Custo;Descrição;Qtd Itens;Valor Total do Rateio";
     const lines = adjustedRows.map(
-      (r) => `${r.code};${r.code === "SEM_CC" ? "Sem CC" : r.type === "eng" ? "Engenharia" : "Manutenção"};${r.items};${r.adjusted.toFixed(2)}`
+      (r) => `${r.code};${r.code === "9999" ? "Sem CC (alerta)" : r.type === "eng" ? "Engenharia" : "Manutenção"};${r.items};${r.adjusted.toFixed(2)}`
     );
     const totalLine = `TOTAL;;${adjustedRows.reduce((a, r) => a + r.items, 0)};${totalAdjusted.toFixed(2)}`;
     const csv = [header, ...lines, totalLine].join("\n");
