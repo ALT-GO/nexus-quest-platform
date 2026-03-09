@@ -12,6 +12,7 @@ import Colaboradores from "./pages/ti/Colaboradores";
 import CentralInteligencia from "./pages/CentralInteligencia";
 import ChamadoPublico from "./pages/ti/ChamadoPublico";
 import Configuracoes from "./pages/Configuracoes";
+import GestaoFaturas from "./pages/ti/GestaoFaturas";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import ForgotPassword from "./pages/auth/ForgotPassword";
