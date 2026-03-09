@@ -197,10 +197,10 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     const val = (values[uniqueRule.field] || "").trim();
     if (!val) return true;
 
-    const { data: existing } = await supabase
+    const { data: existing } = await (supabase
       .from("inventory")
-      .select("id")
-      .eq(uniqueRule.dbColumn as any, val)
+      .select("id") as any)
+      .eq(uniqueRule.dbColumn, val)
       .limit(1);
 
     if (existing && existing.length > 0) {
