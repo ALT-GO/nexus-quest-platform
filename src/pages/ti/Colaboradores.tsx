@@ -134,11 +134,11 @@ export default function Colaboradores() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {c.categories.map((cat) => {
-                          const Icon = catIcons[cat];
+                          const cfg = catConfig[cat];
                           return (
-                            <Badge key={cat} variant="secondary" className="gap-1 text-xs">
-                              {Icon && <Icon className="h-3 w-3" />}
-                              {catLabels[cat] || cat}
+                            <Badge key={cat} variant="outline" className={cn("gap-1 text-xs", cfg?.color)}>
+                              {cfg?.icon && <cfg.icon className="h-3 w-3" />}
+                              {cfg?.label || cat}
                             </Badge>
                           );
                         })}
