@@ -355,6 +355,10 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
       if (raw) {
         if (f.id === "created_at") {
           payload[f.id] = new Date(raw).toISOString();
+        } else if (f.id === "valor_pago") {
+          const cleaned = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+          const num = parseFloat(cleaned);
+          payload[f.id] = isNaN(num) ? null : num;
         } else {
           payload[f.id] = f.sanitize === "digits" ? sanitizeDigits(raw) : raw.trim();
         }
