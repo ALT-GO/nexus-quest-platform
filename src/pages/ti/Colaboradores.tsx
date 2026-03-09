@@ -155,8 +155,7 @@ export default function Colaboradores() {
       return (
         c.name.toLowerCase().includes(q) ||
         c.cargo?.toLowerCase().includes(q) ||
-        c.sector?.toLowerCase().includes(q) ||
-        c.email_address?.toLowerCase().includes(q)
+        c.sector?.toLowerCase().includes(q)
       );
     }),
     sortKey,
