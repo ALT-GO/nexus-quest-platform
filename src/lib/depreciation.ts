@@ -4,8 +4,8 @@
  * Rules:
  * - Useful life: 5 years
  * - Residual value (floor): 50% of acquisition value
- * - Annual depreciation = (acquisition - residual) / 5
- * - Book value = acquisition - (annual_dep × complete_years)
+ * - Annual depreciation = (Valor Pago - Valor Residual) / 5
+ * - Book value = Valor Pago - (Depreciação Anual × Anos de Uso)
  * - Book value never drops below the residual (50%)
  */
 
@@ -19,8 +19,8 @@ export interface DepreciationResult {
   valorResidual: number;
   /** Fixed annual depreciation amount */
   depreciacaoAnual: number;
-  /** Complete years elapsed since signing date */
-  anosCompletos: number;
+  /** Years elapsed since acquisition (with decimal precision for months) */
+  anosDeUso: number;
   /** Total depreciation accumulated */
   depreciacaoAcumulada: number;
   /** Current book value (never below residual) */
@@ -30,45 +30,57 @@ export interface DepreciationResult {
 /**
  * Calculate linear depreciation.
  * @param valorPago - Acquisition value (from "Valor Pago")
- * @param deliveredAt - Signing date of the responsibility term (delivered_at)
+ * @param dataAquisicao - Acquisition date (from "Data de Aquisição")
  * @param referenceDate - Date to calculate against (defaults to now)
  */
 export function calcDepreciation(
   valorPago: number | null | undefined,
-  deliveredAt: string | null | undefined,
+  dataAquisicao: string | null | undefined,
   referenceDate: Date = new Date()
 ): DepreciationResult | null {
-  if (!valorPago || valorPago <= 0 || !deliveredAt) return null;
+  if (!valorPago || valorPago <= 0 || !dataAquisicao) return null;
 
-  const startDate = new Date(deliveredAt);
+  const startDate = new Date(dataAquisicao);
   if (isNaN(startDate.getTime())) return null;
 
+  // Formula: Valor Residual = 50% do Valor Pago
   const valorResidual = valorPago * RESIDUAL_RATE;
+  
+  // Formula: Depreciação Anual = (Valor Pago - Valor Residual) / 5
   const depreciacaoAnual = (valorPago - valorResidual) / USEFUL_LIFE_YEARS;
 
-  // Complete years elapsed
+  // Calculate years of use with decimal precision (monthly)
   const diffMs = referenceDate.getTime() - startDate.getTime();
   if (diffMs < 0) {
-    // Asset not yet delivered
+    // Future acquisition date - no depreciation yet
     return {
       valorAquisicao: valorPago,
       valorResidual,
       depreciacaoAnual,
-      anosCompletos: 0,
+      anosDeUso: 0,
       depreciacaoAcumulada: 0,
       valorContabil: valorPago,
     };
   }
 
-  const anosCompletos = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
-  const depreciacaoAcumulada = depreciacaoAnual * Math.min(anosCompletos, USEFUL_LIFE_YEARS);
+  // Years with decimal precision (e.g., 2.5 years = 2 years and 6 months)
+  const anosDeUso = diffMs / (365.25 * 24 * 60 * 60 * 1000);
+  
+  // Cap at useful life for depreciation calculation
+  const anosParaCalculo = Math.min(anosDeUso, USEFUL_LIFE_YEARS);
+  
+  // Formula: Depreciação Acumulada = Depreciação Anual × Anos de Uso
+  const depreciacaoAcumulada = depreciacaoAnual * anosParaCalculo;
+  
+  // Formula: Valor Contábil = Valor Pago - Depreciação Acumulada
+  // Floor rule: Never below 50% (Valor Residual)
   const valorContabil = Math.max(valorPago - depreciacaoAcumulada, valorResidual);
 
   return {
     valorAquisicao: valorPago,
     valorResidual,
     depreciacaoAnual,
-    anosCompletos,
+    anosDeUso: Math.round(anosDeUso * 100) / 100, // Round to 2 decimal places
     depreciacaoAcumulada,
     valorContabil,
   };
