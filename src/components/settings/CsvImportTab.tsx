@@ -233,6 +233,8 @@ export function CsvImportTab() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<SimilarMatch[]>([]);
+  const [duplicateResolutions, setDuplicateResolutions] = useState<DuplicateResolution[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validCsvTypes = ["text/csv", "application/vnd.ms-excel", "text/plain"];
