@@ -719,7 +719,53 @@ export function CsvImportTab() {
               </Collapsible>
             )}
 
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center gap-3 pt-4">
+              {result.errorDetails.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    const doc = new jsPDF();
+                    const now = new Date();
+                    const ts = now.toLocaleString("pt-BR");
+
+                    doc.setFontSize(14);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Relatório de Erros — Importação CSV", 105, 18, { align: "center" });
+
+                    doc.setFontSize(9);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`Arquivo: ${file?.name || "—"}`, 14, 28);
+                    doc.text(`Categoria: ${category}`, 14, 33);
+                    doc.text(`Data: ${ts}`, 14, 38);
+                    doc.text(`Total: ${(result.inserted + result.updated + result.errors)} | Erros: ${result.errors}`, 14, 43);
+
+                    const body = result.errorDetails.map((err) => [
+                      String(err.line),
+                      err.message,
+                      Object.entries(err.data)
+                        .map(([k, v]) => `${k}: ${v || "(vazio)"}`)
+                        .join("\n"),
+                    ]);
+
+                    autoTable(doc, {
+                      startY: 50,
+                      head: [["Linha", "Erro", "Dados da Linha"]],
+                      body,
+                      headStyles: { fillColor: [220, 53, 69], fontSize: 8 },
+                      bodyStyles: { fontSize: 7 },
+                      columnStyles: { 2: { cellWidth: 80 } },
+                      styles: { overflow: "linebreak" },
+                      margin: { left: 14, right: 14 },
+                    });
+
+                    doc.save(`erros-importacao-${now.toISOString().slice(0, 10)}.pdf`);
+                    toast.success("PDF de erros baixado com sucesso!");
+                  }}
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Baixar Relatório (PDF)
+                </Button>
+              )}
               <Button onClick={reset} variant="outline">
                 <Upload className="mr-2 h-4 w-4" />
                 Nova importação
