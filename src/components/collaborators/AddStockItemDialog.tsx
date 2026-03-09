@@ -23,8 +23,6 @@ interface FieldDef {
 const fieldsByCategory: Record<string, FieldDef[]> = {
   notebooks: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "marca", label: "Marca", type: "text" },
     { id: "model", label: "Modelo", type: "text" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
@@ -35,8 +33,6 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
   ],
   celulares: [
     { id: "service_tag", label: "Service tag", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "marca", label: "Marca", type: "text" },
     { id: "model", label: "Modelo", type: "text" },
     { id: "cost_center", label: "Centro de custo", type: "text" },
@@ -48,8 +44,6 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
   ],
   linhas: [
     { id: "numero", label: "Número", type: "text" },
-    { id: "collaborator", label: "Colaborador", type: "text" },
-    { id: "cargo", label: "Cargo", type: "text" },
     { id: "asset_type", label: "Tipo", type: "text" },
     { id: "gestor", label: "Gestor", type: "text" },
     { id: "operadora", label: "Operadora", type: "text" },
@@ -226,14 +220,14 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
     if (category === "licencas") {
       status = values.status || (hasCollaborator ? "Ativo" : "Disponível");
     } else {
-      status = hasCollaborator ? "Em uso" : "Disponível";
+      status = "Disponível";
     }
 
     const payload: Record<string, any> = {
       category,
       asset_code: "TEMP",
       status,
-      collaborator,
+      collaborator: category === "licencas" ? collaborator : "",
     };
 
     for (const f of fields) {
