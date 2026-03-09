@@ -15,21 +15,21 @@ export default function GestaoAtivos() {
 
       <Tabs defaultValue="notebooks" className="space-y-6">
         <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="notebooks" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="notebooks" className="gap-2 px-4 py-2 data-[state=active]:bg-blue-500/15 data-[state=active]:text-blue-700 data-[state=active]:shadow-sm">
             <Laptop className="h-4 w-4" />
-            <span>Notebooks</span>
+            <span>Notebook</span>
           </TabsTrigger>
-          <TabsTrigger value="celulares" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="celulares" className="gap-2 px-4 py-2 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
             <Smartphone className="h-4 w-4" />
-            <span>Celulares</span>
+            <span>Celular</span>
           </TabsTrigger>
-          <TabsTrigger value="linhas" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="linhas" className="gap-2 px-4 py-2 data-[state=active]:bg-purple-500/15 data-[state=active]:text-purple-700 data-[state=active]:shadow-sm">
             <Phone className="h-4 w-4" />
-            <span>Linhas</span>
+            <span>Linha Telefônica</span>
           </TabsTrigger>
-          <TabsTrigger value="licencas" className="gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsTrigger value="licencas" className="gap-2 px-4 py-2 data-[state=active]:bg-yellow-500/15 data-[state=active]:text-yellow-700 data-[state=active]:shadow-sm">
             <FileText className="h-4 w-4" />
-            <span>Licenças</span>
+            <span>Licença</span>
           </TabsTrigger>
         </TabsList>
 

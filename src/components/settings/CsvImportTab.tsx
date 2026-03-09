@@ -243,21 +243,31 @@ export function CsvImportTab() {
       return;
     }
     setFile(f);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const parsed = parseCSV(text);
-      if (parsed.headers.length === 0) {
-        toast.error("Arquivo CSV vazio ou inválido");
-        return;
-      }
-      setCsvData(parsed);
-      setStep("category");
+
+    const tryRead = (encoding: string, fallbackEncoding?: string) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        // If UTF-8 produced replacement characters, retry with ISO-8859-1
+        if (fallbackEncoding && text.includes("\uFFFD")) {
+          tryRead(fallbackEncoding);
+          return;
+        }
+        const parsed = parseCSV(text);
+        if (parsed.headers.length === 0) {
+          toast.error("Arquivo CSV vazio ou inválido");
+          return;
+        }
+        setCsvData(parsed);
+        setStep("category");
+      };
+      reader.onerror = () => {
+        toast.error("Erro ao ler o arquivo. Tente salvar como UTF-8.");
+      };
+      reader.readAsText(f, encoding);
     };
-    reader.onerror = () => {
-      toast.error("Erro ao ler o arquivo. Tente salvar como UTF-8.");
-    };
-    reader.readAsText(f, "UTF-8");
+
+    tryRead("UTF-8", "ISO-8859-1");
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

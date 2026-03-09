@@ -196,7 +196,7 @@ export function StockTab({ onAssigned }: StockTabProps) {
                       <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
                       <TableCell>
                         {cfg && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
+                          <Badge variant="outline" className={cn("gap-1 text-xs", cfg.color)}>
                             <cfg.icon className="h-3 w-3" />
                             {cfg.label}
                           </Badge>
