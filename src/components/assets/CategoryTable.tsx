@@ -369,7 +369,7 @@ export function CategoryTable({ category, label }: Props) {
                         <TableCell key={col.key}>
                           <InlineCellEditor
                             value={raw != null && raw !== "" ? String(raw) : ""}
-                            onSave={(v) => handleValorPagoSave(item, v)}
+                            onSave={(v) => handleCurrencySave(item, col.key, v)}
                             type="number"
                             displayRender={(v) => (
                               <span className="text-sm">{v ? formatCurrency(v) : <span className="text-muted-foreground italic">—</span>}</span>
