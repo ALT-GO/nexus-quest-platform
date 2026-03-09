@@ -314,6 +314,10 @@ interface StockTabProps {
 export function StockTab({ onAssigned }: StockTabProps) {
   const { items, loading, refetch } = useAvailableStock();
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("notebooks");
+  const [filtersByTab, setFiltersByTab] = useState<Record<string, Record<string, string>>>({
+    notebooks: {}, celulares: {}, linhas: {}, licencas: {},
+  });
 
   const unowned = items.filter((i) => isUnowned(i.collaborator));
 
@@ -330,7 +334,6 @@ export function StockTab({ onAssigned }: StockTabProps) {
     if (error) {
       toast.error("Erro ao salvar alteração");
     }
-    // Realtime subscription will refresh data automatically
   };
 
   if (loading) {
@@ -353,7 +356,7 @@ export function StockTab({ onAssigned }: StockTabProps) {
         />
       </div>
 
-      <Tabs defaultValue="notebooks">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {tabConfig.map((tab) => {
             const count = unowned.filter((i) => i.category === tab.key).length;
@@ -367,13 +370,19 @@ export function StockTab({ onAssigned }: StockTabProps) {
         </TabsList>
 
         {tabConfig.map((tab) => (
-          <TabsContent key={tab.key} value={tab.key}>
+          <TabsContent key={tab.key} value={tab.key} className="space-y-3">
+            <StockFilters
+              category={tab.key}
+              values={filtersByTab[tab.key] || {}}
+              onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
+            />
             <CategoryStockTable
               items={unowned.filter((i) => i.category === tab.key)}
               category={tab.key}
               search={search}
               onAssigned={handleAssigned}
               onCellSave={handleCellSave}
+              advancedFilters={filtersByTab[tab.key] || {}}
             />
           </TabsContent>
         ))}
