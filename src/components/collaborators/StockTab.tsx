@@ -75,8 +75,6 @@ interface ColDef {
 
 const notebookCols: ColDef[] = [
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
-  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
-  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
   { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
@@ -88,8 +86,6 @@ const notebookCols: ColDef[] = [
 
 const celularCols: ColDef[] = [
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
-  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
-  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
   { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
@@ -102,8 +98,6 @@ const celularCols: ColDef[] = [
 
 const linhaCols: ColDef[] = [
   { id: "numero", header: "Número", field: "numero", accessor: (i) => i.numero || "" },
-  { id: "collaborator", header: "Colaborador", field: "collaborator", accessor: (i) => i.collaborator || "" },
-  { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
   { id: "asset_type", header: "Tipo", field: "asset_type", accessor: (i) => i.asset_type || "" },
   { id: "gestor", header: "Gestor", field: "gestor", accessor: (i) => i.gestor || "" },
   { id: "operadora", header: "Operadora", field: "operadora", accessor: (i) => i.operadora || "" },
