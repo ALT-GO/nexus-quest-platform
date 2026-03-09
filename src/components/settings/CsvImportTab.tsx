@@ -301,6 +301,44 @@ export function CsvImportTab() {
 
   const runImport = async () => {
     if (!category) return;
+
+    // --- Duplicate detection step ---
+    // Extract collaborator names from CSV rows
+    const collabColIndex = mapping.findIndex(
+      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
+    );
+    if (collabColIndex >= 0) {
+      const existingCollabs = await getExistingCollaborators();
+      const existingNames = Array.from(existingCollabs).map((n) => n); // lowercase
+      // We need original-case names from DB for display
+      const { data: rawCollabs } = await supabase
+        .from("inventory")
+        .select("collaborator")
+        .neq("collaborator", "")
+        .not("collaborator", "is", null);
+      const originalNames = Array.from(
+        new Set((rawCollabs || []).map((r: any) => (r.collaborator as string).trim()).filter(Boolean))
+      );
+
+      const csvNames = csvData.rows
+        .map((row, idx) => ({ name: (row[collabColIndex] || "").trim(), rowIndex: idx }))
+        .filter((r) => r.name !== "");
+
+      const matches = findDuplicates(csvNames, originalNames);
+
+      if (matches.length > 0 && duplicateResolutions.length === 0) {
+        // Pause and show resolver
+        setDuplicateMatches(matches);
+        setStep("resolving");
+        return;
+      }
+    }
+
+    await executeImport();
+  };
+
+  const executeImport = async () => {
+    if (!category) return;
     setStep("importing");
     setProgress(0);
 
@@ -315,6 +353,31 @@ export function CsvImportTab() {
 
     setResult(result);
     setStep("done");
+  };
+
+  const handleDuplicateResolved = (resolutions: DuplicateResolution[]) => {
+    setDuplicateResolutions(resolutions);
+    setDuplicateMatches([]);
+    // Apply resolutions to CSV data: replace names that should be linked
+    const collabColIndex = mapping.findIndex(
+      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
+    );
+    if (collabColIndex >= 0) {
+      const updatedRows = [...csvData.rows.map((r) => [...r])];
+      for (const res of resolutions) {
+        if (res.action === "link") {
+          updatedRows[res.csvRowIndex][collabColIndex] = res.resolvedName;
+        }
+      }
+      setCsvData((prev) => ({ ...prev, rows: updatedRows }));
+    }
+    // Continue with import
+    setTimeout(() => executeImport(), 100);
+  };
+
+  const handleDuplicateCancelled = () => {
+    setDuplicateMatches([]);
+    setStep("mapping");
   };
 
   const importCollaborators = async (res: ImportResult, total: number) => {
