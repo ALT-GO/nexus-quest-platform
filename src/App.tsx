@@ -80,6 +80,7 @@ function AppRoutes() {
       <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
       <Route path="/ti/ativos" element={<Navigate to="/ti/colaboradores" replace />} />
       <Route path="/ti/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
+      <Route path="/ti/faturas" element={<ProtectedRoute><GestaoFaturas /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
       {/* Admin-only: Central de Inteligência */}
