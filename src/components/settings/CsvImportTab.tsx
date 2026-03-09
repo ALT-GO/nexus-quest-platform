@@ -126,6 +126,34 @@ function isBlank(val: string | null | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Normalização de categoria: siglas → nomes completos                */
+/* ------------------------------------------------------------------ */
+const categoryAliases: Record<string, string> = {
+  "NT": "notebooks",
+  "NOTEBOOK": "notebooks",
+  "NOTEBOOKS": "notebooks",
+  "COMP": "notebooks",
+  "COMPUTADOR": "notebooks",
+  "CEL": "celulares",
+  "CELULAR": "celulares",
+  "CELULARES": "celulares",
+  "LIN": "linhas",
+  "LINHA": "linhas",
+  "LINHAS": "linhas",
+  "LINHA TELEFÔNICA": "linhas",
+  "LINHA TELEFONICA": "linhas",
+  "LIC": "licencas",
+  "LICENÇA": "licencas",
+  "LICENCA": "licencas",
+  "LICENCAS": "licencas",
+};
+
+function normalizeCategory(val: string): string {
+  const key = norm(val);
+  return categoryAliases[key] || val.toLowerCase();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Comparação inteligente de nomes (primeiro + último ou fuzzy)       */
 /* ------------------------------------------------------------------ */
 interface FuzzyResult {
@@ -614,6 +642,28 @@ export function CsvImportTab() {
         ...record,
       };
       delete payload.dbColumn;
+
+      // Normalize category if present in CSV data
+      if (payload.category && typeof payload.category === "string") {
+        payload.category = normalizeCategory(payload.category);
+      }
+
+      // Normalize status abbreviations
+      if (payload.status) {
+        const statusMap: Record<string, string> = {
+          "DISPONIVEL": "Disponível",
+          "DISPONÍVEL": "Disponível",
+          "EM USO": "Em uso",
+          "MANUTENCAO": "Manutenção",
+          "MANUTENÇÃO": "Manutenção",
+          "RESERVADO": "Reservado",
+          "BAIXADO": "Baixado",
+          "ATIVO": "Ativo",
+          "DESLIGADO": "Desligado",
+        };
+        const normStatus = norm(payload.status);
+        if (statusMap[normStatus]) payload.status = statusMap[normStatus];
+      }
 
       const collabValue = (payload.collaborator || "").trim();
       if (collabValue) {
