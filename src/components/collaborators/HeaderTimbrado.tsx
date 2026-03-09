@@ -14,11 +14,11 @@ export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02"
       <tbody>
         <tr>
           <td
-            className="border border-[#999] p-3 align-middle"
+            className="border border-[#999] p-2 align-middle text-center"
             style={{ width: "35%", borderColor: "#999" }}
             rowSpan={2}
           >
-            <img src={orionLogo} alt="Orion" className="h-8 object-contain max-h-[25mm]" />
+            <img src={orionLogo} alt="Orion" className="object-contain mx-auto" style={{ height: "20mm", maxHeight: "20mm" }} />
           </td>
           <td
             className="border border-[#999] p-2 text-center align-middle"

@@ -97,27 +97,27 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
         </div>
 
         {/* ===== PAGE 1 ===== */}
-        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.45" }}>
-          <div className="print-header-table mb-2">
+        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col relative" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.4" }}>
+          <div className="print-header-table mb-1">
             <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} prefix={headerPrefix} />
           </div>
 
-          <p className="mb-2 text-right" style={{ fontSize: "10pt" }}>{todayShort}</p>
+          <p className="mb-1 text-right" style={{ fontSize: "10pt" }}>{todayShort}</p>
 
-          {isDevolucao ? (
-            <DevolucaoContent name={collaboratorName} cargo={cargo} />
-          ) : (
-            <ResponsabilidadeContent name={collaboratorName} cargo={cargo} />
-          )}
-
-          <div className="print-footer mt-auto pt-2">
-            <FooterTimbrado />
+          <div className="print-content-area flex-1">
+            {isDevolucao ? (
+              <DevolucaoContent name={collaboratorName} cargo={cargo} />
+            ) : (
+              <ResponsabilidadeContent name={collaboratorName} cargo={cargo} />
+            )}
           </div>
+
+          <FooterTimbrado />
         </div>
 
         {/* ===== PAGE 2 ===== */}
-        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col break-before-page" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.45" }}>
-          <div className="print-header-table mb-2">
+        <div className="print-page p-6 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col relative break-before-page" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", color: "#333", fontSize: "11pt", lineHeight: "1.4" }}>
+          <div className="print-header-table mb-1">
             <HeaderTimbrado title={headerTitle} docCode={docCode} revision={isDevolucao ? "rev 01" : "Rev. 02"} pageInfo="Página 2 de 2" prefix={headerPrefix} />
           </div>
 
@@ -183,20 +183,18 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
 
           <p className="mb-4" style={{ fontSize: "10pt" }}>{todayShort}.</p>
 
-          <div className="print-signatures mt-auto space-y-6 mb-4">
+          <div className="print-signatures space-y-4 mb-2">
             <div>
               <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura do Empregado:</p>
-              <div className="border-b border-[#666] w-64 mt-4"></div>
+              <div className="border-b border-[#666] w-64 mt-3"></div>
             </div>
             <div>
               <p className="mb-1 font-bold" style={{ fontSize: "10pt" }}>Assinatura da Testemunha:</p>
-              <div className="border-b border-[#666] w-80 mt-4"></div>
+              <div className="border-b border-[#666] w-80 mt-3"></div>
             </div>
           </div>
 
-          <div className="print-footer pt-2">
-            <FooterTimbrado />
-          </div>
+          <FooterTimbrado />
         </div>
       </DialogContent>
     </Dialog>

@@ -224,28 +224,37 @@
 
   /* 4. Page styling - A4 dimensions */
   .print-page {
-    width: 170mm !important; /* 210mm - 40mm margins */
-    min-height: auto !important;
+    width: 170mm !important;
+    height: 257mm !important; /* 297mm - 40mm margins */
+    min-height: 257mm !important;
     max-width: none !important;
     padding: 0 !important;
     margin: 0 auto !important;
     background: white !important;
     color: #000 !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
     
-    /* Professional fonts */
     font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 12pt !important;
-    line-height: 1.5 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
     
-    /* Page breaks */
     page-break-after: always;
     break-after: page;
-    page-break-inside: avoid;
+    overflow: hidden !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   .print-page:last-child {
     page-break-after: auto;
     break-after: auto;
+  }
+
+  /* Content area grows to fill space */
+  .print-content-area {
+    flex: 1 !important;
   }
 
   /* 5. Force page break before second page */
@@ -295,11 +304,22 @@
     margin-bottom: 15px !important;
   }
 
-  /* 8. Footer - always at bottom of last page */
-  .print-footer {
+  /* 8. Footer - fixed at bottom of page */
+  .print-footer-container {
+    margin-top: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: auto !important;
+    width: calc(100% + 40mm) !important;
+    margin-left: -20mm !important;
+    margin-bottom: -20mm !important;
+    line-height: 0 !important;
+  }
+
+  .print-footer-img {
+    width: 100% !important;
+    display: block !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* 9. Signature section - keep together */
@@ -315,7 +335,7 @@
   .print-page span {
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 11pt !important;
-    line-height: 1.6 !important;
+    line-height: 1.4 !important;
     color: #000 !important;
   }
 
@@ -334,6 +354,8 @@
   .print-page img {
     max-width: 100% !important;
     page-break-inside: avoid !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* 12. Hide dialog overlay completely */
