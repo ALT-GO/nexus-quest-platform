@@ -96,8 +96,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
-    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
+    { key: "valor_mensal", label: "Valor Mensal (R$)", type: "currency" },
   ],
   licencas: [
     { key: "asset_code", label: "Id", mono: true },
@@ -111,8 +110,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
-    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
+    { key: "valor_mensal", label: "Valor Mensal (R$)", type: "currency" },
   ],
 };
 
