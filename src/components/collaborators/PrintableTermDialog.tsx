@@ -25,14 +25,32 @@ const categoryLabels: Record<string, string> = {
   licenses: "Licenças",
 };
 
+function getAssetDescription(asset: any): string {
+  const parts: string[] = [];
+  if (asset.marca) parts.push(asset.marca);
+  if (asset.model) parts.push(asset.model);
+  if (!parts.length && asset.licenca) parts.push(asset.licenca);
+  if (!parts.length && asset.asset_type) parts.push(asset.asset_type);
+  const catLabel = categoryLabels[asset.category] || asset.category;
+  return parts.length ? `${catLabel} – ${parts.join(" ")}` : catLabel;
+}
+
+function getAssetIdentifier(asset: any): string {
+  if (asset.service_tag) return `Service Tag: ${asset.service_tag}`;
+  if (asset.imei1) return `IMEI: ${asset.imei1}`;
+  if (asset.numero) return `Número: ${asset.numero}`;
+  if (asset.email_address) return `E-mail: ${asset.email_address}`;
+  return "—";
+}
+
 export function PrintableTermDialog({ open, onOpenChange, collaboratorName, assets, type }: Props) {
   const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  const cargo = assets.find((a: any) => a.cargo)?.cargo || "___________________________";
-  const categories = [...new Set(assets.map((a) => a.category))];
+  const todayShort = format(new Date(), "'São Paulo, 'dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const cargo = assets.find((a: any) => a.cargo)?.cargo || "______________________";
   const isDevolucao = type === "devolucao";
-  
+
   const headerTitle = isDevolucao ? "TERMO DE DEVOLUÇÃO" : "TERMO DE RESPONSABILIDADE";
-  const dialogTitle = isDevolucao ? "Termo de Devolução de Equipamentos" : "Termo de Responsabilidade de Equipamentos";
+  const dialogTitle = isDevolucao ? "Termo de Devolução" : "Termo de Responsabilidade";
   const docCode = isDevolucao ? "FF.165" : "FF.164";
 
   const handlePrint = () => window.print();
@@ -40,7 +58,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-background print-term-dialog">
-        {/* Toolbar - hidden on print */}
+        {/* Toolbar */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-background border-b shadow-sm print:hidden">
           <DialogTitle className="text-lg font-bold">{dialogTitle}</DialogTitle>
           <div className="flex items-center gap-2">
@@ -54,112 +72,161 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
           </div>
         </div>
 
-        {/* A4 printable page */}
-        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans text-sm flex flex-col" style={{ color: "#333" }}>
-          
-          <HeaderTimbrado title={headerTitle} docCode={docCode} />
+        {/* ===== PAGE 1 ===== */}
+        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
+          <HeaderTimbrado title={headerTitle} docCode={docCode} pageInfo="Página 1 de 2" />
 
-          {/* Collaborator Info */}
-          <div className="mb-6 text-xs">
-            <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-2">
-              <span className="font-bold text-[#555]">Colaborador:</span>
-              <span className="border-b border-[#ccc]">{collaboratorName}</span>
-              <span className="font-bold text-[#555]">Data:</span>
-              <span className="border-b border-[#ccc]">{today}</span>
-              <span className="font-bold text-[#555]">Cargo:</span>
-              <span className="border-b border-[#ccc]">{cargo}</span>
-              <span className="font-bold text-[#555]">CPF:</span>
-              <span className="border-b border-[#ccc]">___________________________</span>
-            </div>
-          </div>
+          <p className="mb-4 text-right" style={{ fontSize: "11px" }}>{todayShort}</p>
 
-          {/* Asset Tables */}
-          <div className="mb-6 flex-1">
-            {assets.length === 0 ? (
-              <p className="text-[#999] italic py-4 text-center text-xs">Nenhum ativo vinculado.</p>
-            ) : (
-              <div className="space-y-4">
-                {categories.map((cat) => {
-                  const catAssets = assets.filter((a) => a.category === cat);
-                  const label = categoryLabels[cat] || cat;
-                  return (
-                    <div key={cat}>
-                      <p className="font-bold text-xs mb-1 text-[#444] uppercase">{label}</p>
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr style={{ backgroundColor: "#f0f0f0" }}>
-                            <th className="p-1.5 border border-[#ccc] font-semibold w-20">ID</th>
-                            <th className="p-1.5 border border-[#ccc] font-semibold">Marca / Modelo</th>
-                            <th className="p-1.5 border border-[#ccc] font-semibold w-40">Identificador</th>
-                            <th className="p-1.5 border border-[#ccc] font-semibold w-24">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {catAssets.map((asset: any) => {
-                            let detalhes = asset.model || asset.asset_type || asset.licenca || "—";
-                            if (asset.marca) detalhes = `${asset.marca} ${detalhes}`;
-                            const identificador = asset.service_tag || asset.numero || asset.imei1 || asset.email_address || "—";
-                            return (
-                              <tr key={asset.id}>
-                                <td className="p-1.5 border border-[#ccc] font-mono">{asset.asset_code}</td>
-                                <td className="p-1.5 border border-[#ccc]">{detalhes}</td>
-                                <td className="p-1.5 border border-[#ccc] font-mono">{identificador}</td>
-                                <td className="p-1.5 border border-[#ccc]">{asset.status || "—"}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {isDevolucao ? (
+            <DevolucaoContent name={collaboratorName} cargo={cargo} />
+          ) : (
+            <ResponsabilidadeContent name={collaboratorName} cargo={cargo} />
+          )}
 
-          {/* Declaration */}
-          <div className="mb-8 text-xs text-justify leading-relaxed space-y-3">
-            {isDevolucao ? (
-              <p>
-                Declaro para os devidos fins que estou devolvendo os equipamentos e/ou acessos acima listados,
-                de propriedade da Orion, nas mesmas condições em que os recebi, ressalvado o desgaste natural pelo uso.
-                Estou ciente de que a entrega destes itens encerra a minha responsabilidade sobre a guarda e zelo dos mesmos.
-              </p>
-            ) : (
-              <>
-                <p>
-                  Declaro para os devidos fins que recebi os equipamentos e/ou acessos acima listados,
-                  de propriedade da Orion, em perfeitas condições de uso e funcionamento.
-                </p>
-                <p>
-                  Comprometo-me a zelar pela integridade, conservação e uso estritamente profissional dos recursos disponibilizados,
-                  bem como devolvê-los imediatamente em caso de desligamento ou quando solicitado pela empresa.
-                </p>
-              </>
-            )}
+          <div className="mt-auto">
+            <FooterTimbrado />
           </div>
+        </div>
+
+        {/* ===== PAGE 2 ===== */}
+        <div className="print-page p-10 mx-auto w-full max-w-[210mm] min-h-[297mm] font-sans flex flex-col break-before-page" style={{ color: "#333", fontSize: "11px", lineHeight: "1.6" }}>
+          <HeaderTimbrado title={headerTitle} docCode={docCode} revision="Rev. 02" pageInfo="Página 2 de 2" />
+
+          {/* Asset Table */}
+          <table className="w-full border-collapse mb-8" style={{ fontSize: "10px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#f0f0f0" }}>
+                <th className="p-2 border border-[#bbb] text-left font-bold">ITEM</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">VALOR PAGO</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">VALOR CONTÁBIL ATUAL</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">ID</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">ESTADO</th>
+                <th className="p-2 border border-[#bbb] text-left font-bold">OBSERVAÇÃO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assets.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-3 border border-[#bbb] text-center" style={{ color: "#999" }}>
+                    Nenhum ativo vinculado
+                  </td>
+                </tr>
+              ) : (
+                assets.map((asset: any) => (
+                  <tr key={asset.id}>
+                    <td className="p-1.5 border border-[#bbb]">{getAssetDescription(asset)}</td>
+                    <td className="p-1.5 border border-[#bbb]"></td>
+                    <td className="p-1.5 border border-[#bbb]"></td>
+                    <td className="p-1.5 border border-[#bbb] font-mono">{getAssetIdentifier(asset)}</td>
+                    <td className="p-1.5 border border-[#bbb]">{asset.status || "—"}</td>
+                    <td className="p-1.5 border border-[#bbb]">{asset.notes || ""}</td>
+                  </tr>
+                ))
+              )}
+              <tr>
+                <td colSpan={6} className="p-1.5 border border-[#bbb] font-bold" style={{ color: "#666" }}>
+                  OBS:
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           {/* Signatures */}
-          <div className="grid grid-cols-2 gap-16 text-center text-xs mb-6 break-inside-avoid">
-            <div className="pt-12">
-              <div className="border-t border-[#666] mx-4 mb-1"></div>
-              <p className="font-semibold">{collaboratorName}</p>
-              <p className="text-[#888]">Colaborador(a)</p>
+          <div className="mt-auto space-y-12 mb-8">
+            <div>
+              <p className="mb-1 font-bold" style={{ fontSize: "11px" }}>Assinatura do Empregado:</p>
+              <div className="border-b border-[#666] w-64 mt-8"></div>
             </div>
-            <div className="pt-12">
-              <div className="border-t border-[#666] mx-4 mb-1"></div>
-              <p className="font-semibold">Responsável de TI</p>
-              <p className="text-[#888]">Orion</p>
+            <div>
+              <p className="mb-1 font-bold" style={{ fontSize: "11px" }}>Assinatura da Testemunha:</p>
+              <div className="border-b border-[#666] w-80 mt-8"></div>
             </div>
-          </div>
-
-          <div className="text-center text-[10px] text-[#888] mb-4">
-            Local e data: _____________________________________, {today}
           </div>
 
           <FooterTimbrado />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ── Responsibility term body text (page 1) ── */
+function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string }) {
+  return (
+    <div className="text-justify space-y-3 flex-1" style={{ fontSize: "11px" }}>
+      <p>
+        Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
+        declaro que recebi da empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
+        o(s) equipamento(s) descrito(s) na página seguinte.
+      </p>
+      <p>
+        Assumo total responsabilidade pela sua manutenção, conservação e devolução, comprometendo-me a cuidar para que
+        o(s) equipamento(s) seja(m) devolvido(s) em perfeito estado de funcionamento, exceto por desgaste decorrente do
+        uso normal ou desuso devido à obsolescência tecnológica.
+      </p>
+      <p>
+        Caso o equipamento não seja devolvido em perfeito estado por culpa ou dolo, comprometo-me a ressarcir a empresa
+        pelos danos causados, limitados ao valor de mercado do equipamento. Em caso de perda, serei responsável pelo
+        ressarcimento à empresa do valor de compra de um novo equipamento equivalente.
+      </p>
+      <p>
+        Declaro ter ciência de que o equipamento é de uso exclusivo para atividades profissionais e que seu uso é
+        obrigatório durante o horário de trabalho. É estritamente proibido o uso de máquinas pessoais para realização de
+        atividades profissionais, assim como o uso do equipamento para fins pessoais, salvo autorização expressa da empresa.
+      </p>
+      <p>
+        Estou ciente de que é proibido o empréstimo, aluguel ou cessão do equipamento a terceiros sem autorização expressa
+        do empregador.
+      </p>
+      <p>
+        No contexto de home office ou modelo híbrido, o uso do equipamento é obrigatório para a realização das atividades
+        profissionais. É minha responsabilidade garantir que o equipamento seja utilizado adequadamente, em um ambiente
+        seguro e propício ao trabalho.
+      </p>
+      <p>
+        Estou ciente de que a violação das cláusulas deste termo, incluindo o uso indevido do equipamento, poderá resultar
+        em medidas disciplinares, que podem incluir advertência, suspensão ou até rescisão por justa causa, conforme as
+        diretrizes da empresa e a legislação vigente.
+      </p>
+      <p>
+        No caso de desligamento, comprometo-me a devolver o equipamento no momento da assinatura do aviso prévio. Caso não
+        o faça, autorizo o desconto do valor do equipamento na minha rescisão contratual. O valor do equipamento será
+        depreciado anualmente, visando estabelecer o Valor Contábil Atual para fins de devolução, indenização ou
+        ressarcimento. A depreciação será calculada conforme as seguintes regras:
+      </p>
+      <ol className="list-decimal pl-6 space-y-1">
+        <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
+        <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto para Notebooks, celulares ou tablets.</li>
+        <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
+        <li><strong>Depreciação Anual fixa</strong> = (valor de aquisição - valor mínimo) / 5 anos</li>
+        <li>O valor de depreciação anual fixa será multiplicado pela quantia de cada ano completo desde a data de assinatura do termo de responsabilidade.</li>
+      </ol>
+    </div>
+  );
+}
+
+/* ── Return term body text (page 1) ── */
+function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
+  return (
+    <div className="text-justify space-y-3 flex-1" style={{ fontSize: "11px" }}>
+      <p>
+        Eu, <strong>{name}</strong>, portador(a) do CPF nº ______________________ e RG nº ______________________,
+        declaro que estou devolvendo à empresa <strong>ORION Engenharia e Tecnologia S/A</strong>, sob o CNPJ nº 01.011.976/0004-75,
+        o(s) equipamento(s) descrito(s) na página seguinte.
+      </p>
+      <p>
+        Declaro que os equipamentos estão sendo devolvidos nas condições descritas na tabela da página 2,
+        ressalvado o desgaste natural decorrente do uso normal durante o período em que estiveram sob minha responsabilidade.
+      </p>
+      <p>
+        Estou ciente de que, a partir desta data, encerra-se a minha responsabilidade sobre a guarda, zelo e conservação
+        dos equipamentos acima mencionados, desde que a devolução seja aceita pela área de Tecnologia da Informação da empresa.
+      </p>
+      <p>
+        Caso sejam identificados danos além do desgaste natural no momento da conferência, comprometo-me a ressarcir a
+        empresa conforme os termos estabelecidos no Termo de Responsabilidade original assinado no ato do recebimento.
+      </p>
+    </div>
   );
 }
