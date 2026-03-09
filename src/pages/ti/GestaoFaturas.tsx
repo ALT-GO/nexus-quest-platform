@@ -512,7 +512,13 @@ export default function GestaoFaturas() {
                       Rateio — {generatedOp}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Competência: {generatedMesAno} • {reportItems.length} itens encontrados
+                      Competência: {generatedMesAno} • {reportItems.length} itens total •
+                      {(() => {
+                        const ignored = reportItems.filter((i) => !((i as any).valor_mensal > 0)).length;
+                        return ignored > 0
+                          ? <span className="text-destructive"> {ignored} ignorados (sem valor)</span>
+                          : <span> todos com valor preenchido</span>;
+                      })()}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
