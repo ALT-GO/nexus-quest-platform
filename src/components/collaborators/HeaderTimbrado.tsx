@@ -18,7 +18,7 @@ export function HeaderTimbrado({ title, docCode = "FF.164", revision = "Rev. 02"
             style={{ width: "35%", borderColor: "#999" }}
             rowSpan={2}
           >
-            <img src={orionLogo} alt="Orion" className="h-12 object-contain" />
+            <img src={orionLogo} alt="Orion" className="h-8 object-contain max-h-[25mm]" />
           </td>
           <td
             className="border border-[#999] p-2 text-center align-middle"
