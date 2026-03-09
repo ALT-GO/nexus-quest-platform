@@ -12,9 +12,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, FileDown, Calculator, DollarSign, Printer, Phone, FileText, ClipboardList } from "lucide-react";
+import { Loader2, FileDown, Calculator, DollarSign, Printer, Phone, FileText, ClipboardList, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { HeaderTimbrado } from "@/components/collaborators/HeaderTimbrado";
 import { FooterTimbrado } from "@/components/collaborators/FooterTimbrado";
