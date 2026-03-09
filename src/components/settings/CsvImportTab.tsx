@@ -10,6 +10,8 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, ArrowRight, Ch
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { findDuplicates, type SimilarMatch } from "@/lib/name-similarity";
+import { DuplicateResolverDialog, type DuplicateResolution } from "./DuplicateResolverDialog";
 
 type ImportCategory = "notebooks" | "celulares" | "linhas" | "licencas" | "colaborador";
 
@@ -94,7 +96,7 @@ const collaboratorMappings: Record<string, string> = {
   "e-mail": "email",
 };
 
-type ImportStep = "upload" | "category" | "mapping" | "importing" | "done";
+type ImportStep = "upload" | "category" | "mapping" | "resolving" | "importing" | "done";
 
 interface MappingEntry {
   csvHeader: string;
@@ -231,6 +233,8 @@ export function CsvImportTab() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<SimilarMatch[]>([]);
+  const [duplicateResolutions, setDuplicateResolutions] = useState<DuplicateResolution[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validCsvTypes = ["text/csv", "application/vnd.ms-excel", "text/plain"];
@@ -297,6 +301,44 @@ export function CsvImportTab() {
 
   const runImport = async () => {
     if (!category) return;
+
+    // --- Duplicate detection step ---
+    // Extract collaborator names from CSV rows
+    const collabColIndex = mapping.findIndex(
+      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
+    );
+    if (collabColIndex >= 0) {
+      const existingCollabs = await getExistingCollaborators();
+      const existingNames = Array.from(existingCollabs).map((n) => n); // lowercase
+      // We need original-case names from DB for display
+      const { data: rawCollabs } = await supabase
+        .from("inventory")
+        .select("collaborator")
+        .neq("collaborator", "")
+        .not("collaborator", "is", null);
+      const originalNames = Array.from(
+        new Set((rawCollabs || []).map((r: any) => (r.collaborator as string).trim()).filter(Boolean))
+      );
+
+      const csvNames = csvData.rows
+        .map((row, idx) => ({ name: (row[collabColIndex] || "").trim(), rowIndex: idx }))
+        .filter((r) => r.name !== "");
+
+      const matches = findDuplicates(csvNames, originalNames);
+
+      if (matches.length > 0 && duplicateResolutions.length === 0) {
+        // Pause and show resolver
+        setDuplicateMatches(matches);
+        setStep("resolving");
+        return;
+      }
+    }
+
+    await executeImport();
+  };
+
+  const executeImport = async () => {
+    if (!category) return;
     setStep("importing");
     setProgress(0);
 
@@ -311,6 +353,31 @@ export function CsvImportTab() {
 
     setResult(result);
     setStep("done");
+  };
+
+  const handleDuplicateResolved = (resolutions: DuplicateResolution[]) => {
+    setDuplicateResolutions(resolutions);
+    setDuplicateMatches([]);
+    // Apply resolutions to CSV data: replace names that should be linked
+    const collabColIndex = mapping.findIndex(
+      (m) => m.dbColumn === "collaborator" || m.dbColumn === "name"
+    );
+    if (collabColIndex >= 0) {
+      const updatedRows = [...csvData.rows.map((r) => [...r])];
+      for (const res of resolutions) {
+        if (res.action === "link") {
+          updatedRows[res.csvRowIndex][collabColIndex] = res.resolvedName;
+        }
+      }
+      setCsvData((prev) => ({ ...prev, rows: updatedRows }));
+    }
+    // Continue with import
+    setTimeout(() => executeImport(), 100);
+  };
+
+  const handleDuplicateCancelled = () => {
+    setDuplicateMatches([]);
+    setStep("mapping");
   };
 
   const importCollaborators = async (res: ImportResult, total: number) => {
@@ -458,6 +525,8 @@ export function CsvImportTab() {
     setMapping([]);
     setProgress(0);
     setResult(null);
+    setDuplicateMatches([]);
+    setDuplicateResolutions([]);
   };
 
   const columnOptions = category === "colaborador" ? collaboratorColumns : inventoryColumns;
@@ -575,6 +644,15 @@ export function CsvImportTab() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Step 3.5: Duplicate resolution */}
+        {step === "resolving" && duplicateMatches.length > 0 && (
+          <DuplicateResolverDialog
+            matches={duplicateMatches}
+            onComplete={handleDuplicateResolved}
+            onCancel={handleDuplicateCancelled}
+          />
         )}
 
         {/* Step 4: Progress */}
