@@ -31,15 +31,13 @@ const catConfig: Record<string, { label: string; icon: React.ElementType; color:
   licenses: { label: "Licença", icon: FileText, color: "bg-yellow-500/15 text-yellow-700 border-yellow-300" },
 };
 
-type SortKey = "name" | "cargo" | "sector" | "cost_center" | "email_address" | "assetCount";
+type SortKey = "name" | "cargo" | "sector" | "assetCount";
 type SortDir = "asc" | "desc";
 
 const collabSortOptions = [
   { value: "name", label: "Nome" },
   { value: "cargo", label: "Cargo" },
   { value: "sector", label: "Departamento" },
-  { value: "cost_center", label: "Centro de custo" },
-  { value: "email_address", label: "E-mail" },
   { value: "assetCount", label: "Qtd. ativos" },
 ];
 
@@ -157,8 +155,7 @@ export default function Colaboradores() {
       return (
         c.name.toLowerCase().includes(q) ||
         c.cargo?.toLowerCase().includes(q) ||
-        c.sector?.toLowerCase().includes(q) ||
-        c.email_address?.toLowerCase().includes(q)
+        c.sector?.toLowerCase().includes(q)
       );
     }),
     sortKey,
@@ -311,8 +308,6 @@ export default function Colaboradores() {
                           ["name", "Nome"],
                           ["cargo", "Cargo"],
                           ["sector", "Departamento"],
-                          ["cost_center", "Centro de Custo"],
-                          ["email_address", "E-mail"],
                           ["assetCount", "Ativos"],
                         ] as [SortKey, string][]).map(([key, label]) => (
                           <TableHead
@@ -341,8 +336,6 @@ export default function Colaboradores() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{c.cargo || "—"}</TableCell>
                           <TableCell className="text-muted-foreground">{c.sector || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">{c.cost_center || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">{c.email_address || "—"}</TableCell>
                           <TableCell>
                             <CategoryBadges categories={c.categories} />
                           </TableCell>
