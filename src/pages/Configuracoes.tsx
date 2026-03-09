@@ -11,6 +11,7 @@ import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { CsvImportTab } from "@/components/settings/CsvImportTab";
 import { DangerZoneTab } from "@/components/settings/DangerZoneTab";
+import { IntegrityAuditorTab } from "@/components/settings/IntegrityAuditorTab";
 import { useAuth } from "@/hooks/use-auth";
 import {
   User,
@@ -21,6 +22,7 @@ import {
   Save,
   Users,
   FileSpreadsheet,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Configuracoes() {
