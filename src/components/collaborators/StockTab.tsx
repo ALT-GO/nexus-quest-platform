@@ -446,46 +446,58 @@ export function StockTab({ onAssigned }: StockTabProps) {
           })}
         </TabsList>
 
-        {tabConfig.map((tab) => (
-          <TabsContent key={tab.key} value={tab.key} className="space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {tab.key === "licencas" && (
-                  <>
-                    <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
-                    {(["all", "Ativo", "Inativo"] as const).map((opt) => (
-                      <Button
-                        key={opt}
-                        variant={licenseStatusFilter === opt ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => setLicenseStatusFilter(opt)}
-                      >
-                        {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
-                      </Button>
-                    ))}
-                  </>
-                )}
+        {tabConfig.map((tab) => {
+          const tabSort = sortByTab[tab.key];
+          const tabSortOptions = sortOptionsByCategory[tab.key] || commonSortOpts;
+          return (
+            <TabsContent key={tab.key} value={tab.key} className="space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {tab.key === "licencas" && (
+                    <>
+                      <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
+                      {(["all", "Ativo", "Inativo"] as const).map((opt) => (
+                        <Button
+                          key={opt}
+                          variant={licenseStatusFilter === opt ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setLicenseStatusFilter(opt)}
+                        >
+                          {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
+                        </Button>
+                      ))}
+                    </>
+                  )}
+                  <SortDropdown
+                    options={tabSortOptions}
+                    sortKey={tabSort.sortKey}
+                    sortDir={tabSort.sortDir as "asc" | "desc"}
+                    onSort={(k, d) => tabSort.setSort(k, d)}
+                  />
+                </div>
+                <AddStockItemDialog category={tab.key} onCreated={handleAssigned} />
               </div>
-              <AddStockItemDialog category={tab.key} onCreated={handleAssigned} />
-            </div>
-            <StockFilters
-              category={tab.key}
-              values={filtersByTab[tab.key] || {}}
-              onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
-            />
-            <CategoryStockTable
-              items={tab.key === "licencas"
-                ? filteredLicenses
-                : unowned.filter((i) => i.category === tab.key)}
-              category={tab.key}
-              search={search}
-              onAssigned={handleAssigned}
-              onCellSave={handleCellSave}
-              advancedFilters={filtersByTab[tab.key] || {}}
-            />
-          </TabsContent>
-        ))}
+              <StockFilters
+                category={tab.key}
+                values={filtersByTab[tab.key] || {}}
+                onChange={(v) => setFiltersByTab((prev) => ({ ...prev, [tab.key]: v }))}
+              />
+              <CategoryStockTable
+                items={tab.key === "licencas"
+                  ? filteredLicenses
+                  : unowned.filter((i) => i.category === tab.key)}
+                category={tab.key}
+                search={search}
+                onAssigned={handleAssigned}
+                onCellSave={handleCellSave}
+                advancedFilters={filtersByTab[tab.key] || {}}
+                stockSortKey={tabSort.sortKey}
+                stockSortDir={tabSort.sortDir as "asc" | "desc"}
+              />
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );
