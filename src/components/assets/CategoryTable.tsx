@@ -10,6 +10,12 @@ import { FieldManagerDialog } from "@/components/assets/FieldManagerDialog";
 import { Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState } from "react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const statusColors: Record<string, string> = {
   "Disponível": "bg-emerald-500/15 text-emerald-600",
@@ -33,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 interface ColDef {
   key: string;
   label: string;
-  type?: "text" | "select" | "date" | "status";
+  type?: "text" | "select" | "date" | "status" | "currency" | "readonly";
   options?: string[];
   mono?: boolean;
 }
@@ -53,6 +59,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
     { key: "notes", label: "Notas" },
     { key: "service_tag_2", label: "Service tag 2" },
   ],
@@ -66,6 +73,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo" },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
     { key: "notes", label: "Notas" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
@@ -81,6 +89,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
   ],
   licencas: [
     { key: "asset_code", label: "Id", mono: true },
@@ -94,6 +103,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
   ],
 };
 
@@ -112,17 +122,92 @@ export function CategoryTable({ category, label }: Props) {
 
   const columns = columnsByCategory[category] || [];
 
+  // Bulk update dialog state
+  const [bulkDialog, setBulkDialog] = useState<{
+    open: boolean;
+    model: string;
+    value: string;
+    count: number;
+    itemId: string;
+  }>({ open: false, model: "", value: "", count: 0, itemId: "" });
+
+  const formatCurrency = (v: string | number | null | undefined): string => {
+    if (v === null || v === undefined || v === "") return "";
+    const num = typeof v === "string" ? parseFloat(v) : v;
+    if (isNaN(num)) return "";
+    return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const handleValorPagoSave = async (item: any, rawValue: string) => {
+    const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return;
+
+    // Save to this item
+    await updateItem(item.id, { valor_pago: num } as any);
+
+    // Check for other items with the same model
+    const model = (item.model || "").trim();
+    if (!model) return;
+
+    const othersWithModel = items.filter(
+      (i) => i.id !== item.id && (i.model || "").trim().toLowerCase() === model.toLowerCase()
+    );
+
+    if (othersWithModel.length > 0) {
+      setBulkDialog({
+        open: true,
+        model,
+        value: formatCurrency(num),
+        count: othersWithModel.length,
+        itemId: item.id,
+      });
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    const model = bulkDialog.model;
+    const cleaned = bulkDialog.value.replace(/[^\d.,]/g, "").replace(",", ".");
+    const num = parseFloat(cleaned);
+
+    const othersWithModel = items.filter(
+      (i) => i.id !== bulkDialog.itemId && (i.model || "").trim().toLowerCase() === model.toLowerCase()
+    );
+
+    const ids = othersWithModel.map((i) => i.id);
+    if (ids.length > 0) {
+      const { error } = await supabase
+        .from("inventory")
+        .update({ valor_pago: num, updated_at: new Date().toISOString() } as any)
+        .in("id", ids);
+
+      if (error) {
+        toast.error("Erro ao atualizar em massa");
+      } else {
+        toast.success(`Valor atualizado para ${ids.length} itens do modelo "${model}"`);
+      }
+    }
+    setBulkDialog((prev) => ({ ...prev, open: false }));
+  };
+
   const handleNewAsset = async (data: Record<string, string>, fieldVals: Record<string, string>) => {
     const payload: Record<string, any> = {
       category,
       asset_code: "TEMP",
     };
-    // Map all form fields to columns
     for (const col of columns) {
       if (col.key === "asset_code" || col.key === "created_at") continue;
-      if (data[col.key] !== undefined) payload[col.key] = data[col.key];
+      if (col.type === "readonly") continue;
+      if (data[col.key] !== undefined) {
+        if (col.type === "currency") {
+          const cleaned = data[col.key].replace(/[^\d.,]/g, "").replace(",", ".");
+          const num = parseFloat(cleaned);
+          payload[col.key] = isNaN(num) ? null : num;
+        } else {
+          payload[col.key] = data[col.key];
+        }
+      }
     }
-    // Set defaults
     if (!payload.status) payload.status = category === "licencas" ? "Ativo" : "Disponível";
 
     const { data: inserted, error } = await supabase
@@ -161,6 +246,7 @@ export function CategoryTable({ category, label }: Props) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-semibold">{label}</CardTitle>
@@ -187,7 +273,6 @@ export function CategoryTable({ category, label }: Props) {
               {items.map((item) => (
                 <TableRow key={item.id}>
                   {columns.map((col) => {
-                    // Read-only columns
                     if (col.key === "asset_code") {
                       return (
                         <TableCell key={col.key} className="font-mono text-xs">
@@ -202,7 +287,31 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    // Status column
+                    // Readonly (N/A for linhas/licencas)
+                    if (col.type === "readonly") {
+                      return (
+                        <TableCell key={col.key} className="text-sm text-muted-foreground italic">
+                          N/A
+                        </TableCell>
+                      );
+                    }
+                    // Currency column (valor_pago)
+                    if (col.type === "currency") {
+                      const raw = (item as any)[col.key];
+                      const display = raw != null && raw !== "" ? formatCurrency(raw) : "";
+                      return (
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={raw != null && raw !== "" ? String(raw) : ""}
+                            onSave={(v) => handleValorPagoSave(item, v)}
+                            type="number"
+                            displayRender={(v) => (
+                              <span className="text-sm">{v ? formatCurrency(v) : <span className="text-muted-foreground italic">—</span>}</span>
+                            )}
+                          />
+                        </TableCell>
+                      );
+                    }
                     if (col.type === "status") {
                       return (
                         <TableCell key={col.key}>
@@ -216,7 +325,6 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    // Select columns
                     if (col.type === "select" && col.options) {
                       return (
                         <TableCell key={col.key}>
@@ -229,7 +337,6 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    // Editable text columns
                     return (
                       <TableCell key={col.key} className={col.mono ? "font-mono text-xs" : ""}>
                         <InlineCellEditor
@@ -268,5 +375,21 @@ export function CategoryTable({ category, label }: Props) {
         </div>
       </CardContent>
     </Card>
+
+    <AlertDialog open={bulkDialog.open} onOpenChange={(v) => setBulkDialog((prev) => ({ ...prev, open: v }))}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Aplicar valor em massa?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deseja aplicar o valor de <strong>{bulkDialog.value}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Não, apenas este</AlertDialogCancel>
+          <AlertDialogAction onClick={handleBulkUpdate}>Sim, aplicar a todos</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

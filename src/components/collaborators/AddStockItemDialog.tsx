@@ -35,6 +35,7 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
     { id: "cost_center", label: "Centro de custo", type: "text" },
     { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
+    { id: "valor_pago", label: "Valor Pago (R$)", type: "text", sanitize: "digits" as any },
     { id: "notes", label: "Notas", type: "text" },
     { id: "service_tag_2", label: "Service tag 2", type: "text" },
   ],
@@ -45,6 +46,7 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
     { id: "cost_center", label: "Centro de custo", type: "text" },
     { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
+    { id: "valor_pago", label: "Valor Pago (R$)", type: "text", sanitize: "digits" as any },
     { id: "notes", label: "Notas", type: "text" },
     { id: "imei1", label: "Imei 1", type: "text", sanitize: "digits" },
     { id: "imei2", label: "Imei 2", type: "text", sanitize: "digits" },
@@ -291,9 +293,9 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
   };
 
   const update = (id: string, val: string) => {
-    // Apply sanitization
     const fieldDef = fields.find((f) => f.id === id);
-    const sanitized = fieldDef?.sanitize === "digits" ? sanitizeDigits(val) : val;
+    // valor_pago allows decimals, don't strip digits-only
+    const sanitized = id === "valor_pago" ? val : (fieldDef?.sanitize === "digits" ? sanitizeDigits(val) : val);
     setValues((prev) => ({ ...prev, [id]: sanitized }));
     if (dupErrors[id]) setDupErrors((prev) => { const n = { ...prev }; delete n[id]; return n; });
   };
@@ -353,6 +355,10 @@ export function AddStockItemDialog({ category, onCreated }: Props) {
       if (raw) {
         if (f.id === "created_at") {
           payload[f.id] = new Date(raw).toISOString();
+        } else if (f.id === "valor_pago") {
+          const cleaned = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+          const num = parseFloat(cleaned);
+          payload[f.id] = isNaN(num) ? null : num;
         } else {
           payload[f.id] = f.sanitize === "digits" ? sanitizeDigits(raw) : raw.trim();
         }

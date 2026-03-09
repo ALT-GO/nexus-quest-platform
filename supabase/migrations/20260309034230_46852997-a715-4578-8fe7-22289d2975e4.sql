@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory ADD COLUMN valor_pago numeric(12,2) DEFAULT NULL;

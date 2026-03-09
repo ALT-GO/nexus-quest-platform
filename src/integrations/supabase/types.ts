@@ -170,6 +170,7 @@ export type Database = {
           service_tag_2: string | null
           status: string
           updated_at: string
+          valor_pago: number | null
         }
         Insert: {
           asset_code: string
@@ -200,6 +201,7 @@ export type Database = {
           service_tag_2?: string | null
           status?: string
           updated_at?: string
+          valor_pago?: number | null
         }
         Update: {
           asset_code?: string
@@ -230,6 +232,7 @@ export type Database = {
           service_tag_2?: string | null
           status?: string
           updated_at?: string
+          valor_pago?: number | null
         }
         Relationships: []
       }
