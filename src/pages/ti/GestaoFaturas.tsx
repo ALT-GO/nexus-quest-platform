@@ -562,7 +562,7 @@ export default function GestaoFaturas() {
                             <TableRow key={`${row.type}:${row.code}`}>
                               <TableCell className="font-mono text-sm">{row.code}</TableCell>
                               <TableCell className="text-sm">
-                                {row.code === "SEM_CC" ? "Sem centro de custo" : row.type === "eng" ? "Engenharia" : "Manutenção"}
+                                {row.code === "9999" ? <span className="text-destructive font-medium">⚠ Sem centro de custo</span> : row.type === "eng" ? "Engenharia" : "Manutenção"}
                               </TableCell>
                               <TableCell className="text-right text-sm">{row.items}</TableCell>
                               <TableCell className="text-right text-sm">{formatBRL(row.sum)}</TableCell>
