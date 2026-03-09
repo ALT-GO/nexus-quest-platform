@@ -594,6 +594,14 @@ export default function GestaoFaturas() {
                       </Table>
                     </div>
                   )}
+                  {adjustedRows.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+                      <div className="flex gap-6 text-sm">
+                        <span>Total de itens com valor: <strong>{adjustedRows.reduce((a, r) => a + r.items, 0)}</strong></span>
+                        <span>Valor Total da Fatura: <strong>{formatBRL(totalAdjusted)}</strong></span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
