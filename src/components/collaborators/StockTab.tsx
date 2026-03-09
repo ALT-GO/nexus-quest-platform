@@ -409,22 +409,27 @@ export function StockTab({ onAssigned }: StockTabProps) {
 
         {tabConfig.map((tab) => (
           <TabsContent key={tab.key} value={tab.key} className="space-y-3">
-            {tab.key === "licencas" && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
-                {(["all", "Ativo", "Inativo"] as const).map((opt) => (
-                  <Button
-                    key={opt}
-                    variant={licenseStatusFilter === opt ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setLicenseStatusFilter(opt)}
-                  >
-                    {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
-                  </Button>
-                ))}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {tab.key === "licencas" && (
+                  <>
+                    <span className="text-xs font-medium text-muted-foreground">Exibir:</span>
+                    {(["all", "Ativo", "Inativo"] as const).map((opt) => (
+                      <Button
+                        key={opt}
+                        variant={licenseStatusFilter === opt ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setLicenseStatusFilter(opt)}
+                      >
+                        {opt === "all" ? "Todas" : opt === "Ativo" ? "Somente ativas" : "Somente inativas"}
+                      </Button>
+                    ))}
+                  </>
+                )}
               </div>
-            )}
+              <AddStockItemDialog category={tab.key} onCreated={handleAssigned} />
+            </div>
             <StockFilters
               category={tab.key}
               values={filtersByTab[tab.key] || {}}
