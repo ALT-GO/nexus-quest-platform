@@ -60,9 +60,10 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
-    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" },
+    { key: "data_aquisicao", label: "Data Aquisição", type: "date" },
     { key: "delivered_at", label: "Data Assinatura", type: "date" },
-    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" as any },
+    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" },
     { key: "notes", label: "Notas" },
     { key: "service_tag_2", label: "Service tag 2" },
   ],
@@ -76,9 +77,10 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo" },
-    { key: "valor_pago", label: "Valor Pago", type: "currency" as any },
+    { key: "valor_pago", label: "Valor Pago", type: "currency" },
+    { key: "data_aquisicao", label: "Data Aquisição", type: "date" },
     { key: "delivered_at", label: "Data Assinatura", type: "date" },
-    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" as any },
+    { key: "_valor_contabil", label: "Valor Contábil", type: "computed" },
     { key: "notes", label: "Notas" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
@@ -94,7 +96,8 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
+    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
   ],
   licencas: [
     { key: "asset_code", label: "Id", mono: true },
@@ -108,7 +111,8 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" as any },
+    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
+    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
   ],
 };
 
@@ -132,9 +136,11 @@ export function CategoryTable({ category, label }: Props) {
     open: boolean;
     model: string;
     value: string;
+    dataAquisicao: string;
     count: number;
     itemId: string;
-  }>({ open: false, model: "", value: "", count: 0, itemId: "" });
+    field: "valor_pago" | "data_aquisicao" | "both";
+  }>({ open: false, model: "", value: "", dataAquisicao: "", count: 0, itemId: "", field: "valor_pago" });
 
   const formatCurrency = (v: string | number | null | undefined): string => {
     if (v === null || v === undefined || v === "") return "";
@@ -143,54 +149,66 @@ export function CategoryTable({ category, label }: Props) {
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  const handleValorPagoSave = async (item: any, rawValue: string) => {
-    const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
-    const num = parseFloat(cleaned);
-    if (isNaN(num)) return;
-
-    // Save to this item
-    await updateItem(item.id, { valor_pago: num } as any);
-
-    // Check for other items with the same model
+  const checkBulkOffer = (item: any, field: "valor_pago" | "data_aquisicao", displayValue: string, dataAq?: string) => {
     const model = (item.model || "").trim();
     if (!model) return;
-
     const othersWithModel = items.filter(
       (i) => i.id !== item.id && (i.model || "").trim().toLowerCase() === model.toLowerCase()
     );
-
     if (othersWithModel.length > 0) {
       setBulkDialog({
         open: true,
         model,
-        value: formatCurrency(num),
+        value: field === "valor_pago" ? displayValue : "",
+        dataAquisicao: field === "data_aquisicao" ? displayValue : (dataAq || ""),
         count: othersWithModel.length,
         itemId: item.id,
+        field,
       });
     }
   };
 
+  const handleValorPagoSave = async (item: any, rawValue: string) => {
+    const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return;
+    await updateItem(item.id, { valor_pago: num } as any);
+    checkBulkOffer(item, "valor_pago", formatCurrency(num));
+  };
+
+  const handleDataAquisicaoSave = async (item: any, dateValue: string) => {
+    if (!dateValue) return;
+    await updateItem(item.id, { data_aquisicao: dateValue } as any);
+    checkBulkOffer(item, "data_aquisicao", dateValue);
+  };
+
   const handleBulkUpdate = async () => {
     const model = bulkDialog.model;
-    const cleaned = bulkDialog.value.replace(/[^\d.,]/g, "").replace(",", ".");
-    const num = parseFloat(cleaned);
-
     const othersWithModel = items.filter(
       (i) => i.id !== bulkDialog.itemId && (i.model || "").trim().toLowerCase() === model.toLowerCase()
     );
-
     const ids = othersWithModel.map((i) => i.id);
-    if (ids.length > 0) {
-      const { error } = await supabase
-        .from("inventory")
-        .update({ valor_pago: num, updated_at: new Date().toISOString() } as any)
-        .in("id", ids);
+    if (ids.length === 0) { setBulkDialog((prev) => ({ ...prev, open: false })); return; }
 
-      if (error) {
-        toast.error("Erro ao atualizar em massa");
-      } else {
-        toast.success(`Valor atualizado para ${ids.length} itens do modelo "${model}"`);
-      }
+    const updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (bulkDialog.field === "valor_pago" && bulkDialog.value) {
+      const cleaned = bulkDialog.value.replace(/[^\d.,]/g, "").replace(",", ".");
+      updatePayload.valor_pago = parseFloat(cleaned);
+    }
+    if (bulkDialog.field === "data_aquisicao" && bulkDialog.dataAquisicao) {
+      updatePayload.data_aquisicao = bulkDialog.dataAquisicao;
+    }
+
+    const { error } = await supabase
+      .from("inventory")
+      .update(updatePayload as any)
+      .in("id", ids);
+
+    if (error) {
+      toast.error("Erro ao atualizar em massa");
+    } else {
+      const label = bulkDialog.field === "valor_pago" ? "Valor Pago" : "Data de Aquisição";
+      toast.success(`${label} atualizado para ${ids.length} itens do modelo "${model}"`);
     }
     setBulkDialog((prev) => ({ ...prev, open: false }));
   };
@@ -285,26 +303,32 @@ export function CategoryTable({ category, label }: Props) {
                         </TableCell>
                       );
                     }
-                    if (col.key === "created_at" || (col.key === "delivered_at" && col.type === "date")) {
-                      if (col.key === "delivered_at") {
-                        const dateVal = (item as any).delivered_at;
-                        const formatted = dateVal ? new Date(dateVal).toLocaleDateString("pt-BR") : "";
+                    // Editable date columns (delivered_at, data_aquisicao, created_at readonly)
+                    if (col.type === "date" && (col.key === "delivered_at" || col.key === "data_aquisicao" || col.key === "created_at")) {
+                      if (col.key === "created_at") {
                         return (
-                          <TableCell key={col.key}>
-                            <InlineCellEditor
-                              value={dateVal ? new Date(dateVal).toISOString().split("T")[0] : ""}
-                              onSave={(v) => updateItem(item.id, { delivered_at: v ? new Date(v).toISOString() : null } as any)}
-                              type="date"
-                              displayRender={(v) => (
-                                <span className="text-sm">{v ? new Date(v).toLocaleDateString("pt-BR") : <span className="text-muted-foreground italic">—</span>}</span>
-                              )}
-                            />
+                          <TableCell key={col.key} className="text-sm">
+                            {getCellValue(item, "created_at")}
                           </TableCell>
                         );
                       }
+                      const dateVal = (item as any)[col.key];
                       return (
-                        <TableCell key={col.key} className="text-sm">
-                          {getCellValue(item, "created_at")}
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={dateVal ? (col.key === "data_aquisicao" ? dateVal : new Date(dateVal).toISOString().split("T")[0]) : ""}
+                            onSave={(v) => {
+                              if (col.key === "data_aquisicao") {
+                                handleDataAquisicaoSave(item, v);
+                              } else {
+                                updateItem(item.id, { [col.key]: v ? new Date(v).toISOString() : null } as any);
+                              }
+                            }}
+                            type="date"
+                            displayRender={(v) => (
+                              <span className="text-sm">{v ? new Date(v).toLocaleDateString("pt-BR") : <span className="text-muted-foreground italic">—</span>}</span>
+                            )}
+                          />
                         </TableCell>
                       );
                     }
@@ -421,9 +445,13 @@ export function CategoryTable({ category, label }: Props) {
     <AlertDialog open={bulkDialog.open} onOpenChange={(v) => setBulkDialog((prev) => ({ ...prev, open: v }))}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Aplicar valor em massa?</AlertDialogTitle>
+          <AlertDialogTitle>Aplicar em massa?</AlertDialogTitle>
           <AlertDialogDescription>
-            Deseja aplicar o valor de <strong>{bulkDialog.value}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?
+            {bulkDialog.field === "valor_pago" ? (
+              <>Deseja aplicar o valor de <strong>{bulkDialog.value}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?</>
+            ) : (
+              <>Deseja aplicar a data de aquisição <strong>{bulkDialog.dataAquisicao ? new Date(bulkDialog.dataAquisicao).toLocaleDateString("pt-BR") : ""}</strong> a todos os outros <strong>{bulkDialog.count}</strong> itens do modelo <strong>"{bulkDialog.model}"</strong>?</>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
