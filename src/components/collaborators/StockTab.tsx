@@ -338,14 +338,14 @@ export function StockTab({ onAssigned }: StockTabProps) {
   }, []);
 
   // Fetch licenses on mount and subscribe to realtime
-  useState(() => {
+  useEffect(() => {
     fetchAllLicenses();
     const channel = supabase
       .channel("licenses-stock-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchAllLicenses())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  });
+  }, [fetchAllLicenses]);
 
   const handleAssigned = () => {
     refetch();
