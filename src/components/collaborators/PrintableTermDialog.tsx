@@ -261,7 +261,7 @@ function ResponsabilidadeContent({ name, cargo }: { name: string; cargo: string 
 /* ── Return term body text (page 1) ── */
 function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
   return (
-    <div className="text-justify space-y-3 flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.6" }}>
+    <div className="text-justify space-y-2 flex-1" style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontSize: "11pt", lineHeight: "1.45" }}>
       <p>
         Eu, <strong>{name}</strong>, CPF ______________________ RG ______________________,
         declaro, para todos os fins de direito, que o(s) seguinte(s) equipamento(s) tecnológico(s) está(ão) sendo
