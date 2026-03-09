@@ -16,12 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Search,
   Filter,
-  AlertTriangle,
   LayoutList,
   Kanban,
   Loader2,
