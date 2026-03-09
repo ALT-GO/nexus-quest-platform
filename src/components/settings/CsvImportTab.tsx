@@ -6,7 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -100,11 +101,18 @@ interface MappingEntry {
   dbColumn: string;
 }
 
+interface ErrorDetail {
+  line: number;
+  message: string;
+  data: Record<string, string>;
+}
+
 interface ImportResult {
   inserted: number;
   updated: number;
   errors: number;
   collaboratorsCreated: number;
+  errorDetails: ErrorDetail[];
 }
 
 function detectDelimiter(text: string): string {
@@ -188,6 +196,32 @@ const collaboratorColumns = [
   { value: "email", label: "Email" },
 ];
 
+function ErrorDetailRow({ error }: { error: ErrorDetail }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="text-sm">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full p-3 text-left hover:bg-muted/50 transition-colors"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        <span className="font-mono text-destructive shrink-0">Linha {error.line}</span>
+        <span className="text-muted-foreground truncate">{error.message}</span>
+      </button>
+      {open && (
+        <div className="px-9 pb-3 grid grid-cols-2 gap-x-4 gap-y-1">
+          {Object.entries(error.data).map(([key, val]) => (
+            <div key={key} className="contents">
+              <span className="text-muted-foreground font-mono text-xs">{key}</span>
+              <span className="text-xs truncate">{val || <span className="italic text-muted-foreground/50">(vazio)</span>}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CsvImportTab() {
   const [step, setStep] = useState<ImportStep>("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -256,7 +290,7 @@ export function CsvImportTab() {
     setStep("importing");
     setProgress(0);
 
-    const result: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0 };
+    const result: ImportResult = { inserted: 0, updated: 0, errors: 0, collaboratorsCreated: 0, errorDetails: [] };
     const total = csvData.rows.length;
 
     if (category === "colaborador") {
@@ -280,7 +314,11 @@ export function CsvImportTab() {
       });
 
       const name = record.name;
-      if (!name) { res.errors++; continue; }
+      if (!name) {
+        res.errors++;
+        res.errorDetails.push({ line: i + 2, message: "Campo 'nome' está vazio ou não mapeado", data: record });
+        continue;
+      }
 
       // Check if collaborator already exists (has any inventory entry)
       if (existingCollabs.has(name.toLowerCase().trim())) {
@@ -379,23 +417,23 @@ export function CsvImportTab() {
           const { error } = await supabase.from("inventory").update(updatePayload).eq("id", existingId);
           if (error) {
             console.error(`Erro ao atualizar linha ${i + 2}:`, error.message, record);
-            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
             res.errors++;
+            res.errorDetails.push({ line: i + 2, message: `Atualização: ${error.message}`, data: record });
           } else { res.updated++; }
         } else {
           payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) {
             console.error(`Erro ao inserir linha ${i + 2}:`, error.message, record);
-            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
             res.errors++;
+            res.errorDetails.push({ line: i + 2, message: `Inserção: ${error.message}`, data: record });
           } else { res.inserted++; }
           if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
         }
       } catch (err: any) {
         console.error(`Exceção na linha ${i + 2}:`, err?.message || err, record);
-        toast.error(`Exceção na linha ${i + 2}: ${err?.message || "Erro desconhecido"}`);
         res.errors++;
+        res.errorDetails.push({ line: i + 2, message: `Exceção: ${err?.message || "Erro desconhecido"}`, data: record });
       }
 
       setProgress(Math.round(((i + 1) / total) * 100));
@@ -570,6 +608,26 @@ export function CsvImportTab() {
                 </div>
               )}
             </div>
+
+            {/* Error Details Panel */}
+            {result.errorDetails.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-left hover:bg-destructive/10 transition-colors group">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                  <span className="font-medium text-destructive flex-1">
+                    {result.errorDetails.length} erro(s) encontrado(s) — clique para ver detalhes
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-destructive transition-transform group-data-[state=closed]:rotate-[-90deg]" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 max-h-[350px] overflow-y-auto rounded-lg border divide-y">
+                    {result.errorDetails.map((err, idx) => (
+                      <ErrorDetailRow key={idx} error={err} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             <div className="flex justify-center pt-4">
               <Button onClick={reset} variant="outline">
