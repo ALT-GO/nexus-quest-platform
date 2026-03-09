@@ -48,25 +48,36 @@ export function useCollaborators() {
     setLoading(true);
     const { data, error } = await supabase
       .from("inventory")
-      .select("collaborator, category")
+      .select("collaborator, category, cargo, sector, cost_center, email_address")
       .neq("collaborator", "")
       .not("collaborator", "is", null);
 
     if (!error && data) {
-      const map = new Map<string, Set<string>>();
-      const countMap = new Map<string, number>();
+      const map = new Map<string, { cats: Set<string>; count: number; cargo: string; sector: string; cost_center: string; email_address: string }>();
       for (const row of data) {
         const name = (row.collaborator as string).trim();
         if (!name) continue;
-        if (!map.has(name)) map.set(name, new Set());
-        map.get(name)!.add(row.category);
-        countMap.set(name, (countMap.get(name) || 0) + 1);
+        if (!map.has(name)) {
+          map.set(name, { cats: new Set(), count: 0, cargo: "", sector: "", cost_center: "", email_address: "" });
+        }
+        const entry = map.get(name)!;
+        entry.cats.add(row.category);
+        entry.count += 1;
+        // Keep first non-empty value found
+        if (!entry.cargo && row.cargo) entry.cargo = row.cargo;
+        if (!entry.sector && row.sector) entry.sector = row.sector;
+        if (!entry.cost_center && row.cost_center) entry.cost_center = row.cost_center;
+        if (!entry.email_address && row.email_address) entry.email_address = row.email_address;
       }
       const list: Collaborator[] = Array.from(map.entries())
-        .map(([name, cats]) => ({
+        .map(([name, info]) => ({
           name,
-          assetCount: countMap.get(name) || 0,
-          categories: Array.from(cats),
+          assetCount: info.count,
+          categories: Array.from(info.cats),
+          cargo: info.cargo,
+          sector: info.sector,
+          cost_center: info.cost_center,
+          email_address: info.email_address,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
       setCollaborators(list);
