@@ -336,8 +336,6 @@ export default function Colaboradores() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{c.cargo || "—"}</TableCell>
                           <TableCell className="text-muted-foreground">{c.sector || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">{c.cost_center || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">{c.email_address || "—"}</TableCell>
                           <TableCell>
                             <CategoryBadges categories={c.categories} />
                           </TableCell>
