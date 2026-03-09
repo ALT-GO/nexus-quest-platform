@@ -96,8 +96,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
-    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
+    { key: "valor_mensal", label: "Valor Mensal (R$)", type: "currency" },
   ],
   licencas: [
     { key: "asset_code", label: "Id", mono: true },
@@ -111,8 +110,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "contrato", label: "Contrato" },
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
-    { key: "valor_pago", label: "Valor Pago", type: "readonly" },
-    { key: "data_aquisicao", label: "Data Aquisição", type: "readonly" },
+    { key: "valor_mensal", label: "Valor Mensal (R$)", type: "currency" },
   ],
 };
 
@@ -168,12 +166,14 @@ export function CategoryTable({ category, label }: Props) {
     }
   };
 
-  const handleValorPagoSave = async (item: any, rawValue: string) => {
+  const handleCurrencySave = async (item: any, field: string, rawValue: string) => {
     const cleaned = rawValue.replace(/[^\d.,]/g, "").replace(",", ".");
     const num = parseFloat(cleaned);
     if (isNaN(num)) return;
-    await updateItem(item.id, { valor_pago: num } as any);
-    checkBulkOffer(item, "valor_pago", formatCurrency(num));
+    await updateItem(item.id, { [field]: num } as any);
+    if (field === "valor_pago") {
+      checkBulkOffer(item, "valor_pago", formatCurrency(num));
+    }
   };
 
   const handleDataAquisicaoSave = async (item: any, dateValue: string) => {
@@ -369,7 +369,7 @@ export function CategoryTable({ category, label }: Props) {
                         <TableCell key={col.key}>
                           <InlineCellEditor
                             value={raw != null && raw !== "" ? String(raw) : ""}
-                            onSave={(v) => handleValorPagoSave(item, v)}
+                            onSave={(v) => handleCurrencySave(item, col.key, v)}
                             type="number"
                             displayRender={(v) => (
                               <span className="text-sm">{v ? formatCurrency(v) : <span className="text-muted-foreground italic">—</span>}</span>

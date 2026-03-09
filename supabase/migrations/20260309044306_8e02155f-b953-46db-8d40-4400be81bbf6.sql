@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory ADD COLUMN valor_mensal numeric NULL DEFAULT NULL;
