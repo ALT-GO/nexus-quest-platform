@@ -48,7 +48,7 @@ interface ColDef {
 }
 
 const statusOptionsDefault = ["Disponível", "Em uso", "Manutenção", "Reservado", "Baixado"];
-const statusOptionsLicenca = ["Ativo", "Desligado"];
+const statusOptionsLicenca = ["Ativo", "Inativo", "Desligado"];
 const tipoNotebook = ["Administrativo", "Campo"];
 
 const columnsByCategory: Record<string, ColDef[]> = {
