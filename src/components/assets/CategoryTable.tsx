@@ -336,14 +336,14 @@ export function CategoryTable({ category, label }: Props) {
                     if (col.type === "computed" && col.key === "_valor_contabil") {
                       const dep = calcDepreciation(
                         (item as any).valor_pago,
-                        (item as any).delivered_at
+                        (item as any).data_aquisicao
                       );
                       return (
                         <TableCell key={col.key}>
                           {dep ? (
                             <span
                               className="text-sm font-medium cursor-help"
-                              title={`Aquisição: ${formatBRL(dep.valorAquisicao)} | Residual (50%): ${formatBRL(dep.valorResidual)} | Dep. anual: ${formatBRL(dep.depreciacaoAnual)} | Anos: ${dep.anosCompletos}`}
+                              title={`Aquisição: ${formatBRL(dep.valorAquisicao)} | Residual (50%): ${formatBRL(dep.valorResidual)} | Dep. anual: ${formatBRL(dep.depreciacaoAnual)} | Anos de uso: ${dep.anosDeUso}`}
                             >
                               {formatBRL(dep.valorContabil)}
                             </span>

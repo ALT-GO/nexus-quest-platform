@@ -150,7 +150,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
               ) : (
                 assets.map((asset: any) => {
                   const canDepreciate = asset.category === "notebooks" || asset.category === "celulares";
-                  const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.delivered_at) : null;
+                  const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.data_aquisicao) : null;
                   return (
                     <tr key={asset.id}>
                       <td className="p-1.5 border border-[#bbb]">{getItemType(asset)}</td>
