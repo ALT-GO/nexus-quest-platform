@@ -107,9 +107,18 @@ interface ImportResult {
   collaboratorsCreated: number;
 }
 
+function detectDelimiter(text: string): string {
+  const firstLine = text.split(/\r?\n/)[0] || "";
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  return semicolons >= commas ? ";" : ",";
+}
+
 function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length === 0) return { headers: [], rows: [] };
+
+  const delimiter = detectDelimiter(text);
 
   const parseLine = (line: string): string[] => {
     const result: string[] = [];
@@ -119,7 +128,7 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
       const ch = line[i];
       if (ch === '"') {
         inQuotes = !inQuotes;
-      } else if ((ch === "," || ch === ";") && !inQuotes) {
+      } else if (ch === delimiter && !inQuotes) {
         result.push(current.trim());
         current = "";
       } else {
@@ -130,8 +139,8 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
     return result;
   };
 
-  const headers = parseLine(lines[0]);
-  const rows = lines.slice(1).map(parseLine).filter((r) => r.some((c) => c !== ""));
+  const headers = parseLine(lines[0]).map((h) => h.trim());
+  const rows = lines.slice(1).map(parseLine).filter((r) => r.some((c) => c.trim() !== ""));
   return { headers, rows };
 }
 
