@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
+import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
 import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
