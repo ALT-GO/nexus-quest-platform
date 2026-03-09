@@ -113,6 +113,33 @@ export type Database = {
         }
         Relationships: []
       }
+      integrity_duplicate_ignores: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duplicate_type: string
+          id: string
+          key_a: string
+          key_b: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duplicate_type: string
+          id?: string
+          key_a: string
+          key_b: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duplicate_type?: string
+          id?: string
+          key_a?: string
+          key_b?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           asset_code: string

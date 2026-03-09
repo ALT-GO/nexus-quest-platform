@@ -11,6 +11,7 @@ import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { CsvImportTab } from "@/components/settings/CsvImportTab";
 import { DangerZoneTab } from "@/components/settings/DangerZoneTab";
+import { IntegrityAuditorTab } from "@/components/settings/IntegrityAuditorTab";
 import { useAuth } from "@/hooks/use-auth";
 import {
   User,
@@ -21,6 +22,7 @@ import {
   Save,
   Users,
   FileSpreadsheet,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -57,6 +59,10 @@ export default function Configuracoes() {
           <TabsTrigger value="import" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             Importação
+          </TabsTrigger>
+          <TabsTrigger value="integrity" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Auditório
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
@@ -222,6 +228,9 @@ export default function Configuracoes() {
         </TabsContent>
         <TabsContent value="import">
           <CsvImportTab />
+        </TabsContent>
+        <TabsContent value="integrity">
+          <IntegrityAuditorTab />
         </TabsContent>
         {isAdmin && (
           <TabsContent value="users">
