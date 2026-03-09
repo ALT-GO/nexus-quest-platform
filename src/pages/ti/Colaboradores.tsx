@@ -218,20 +218,28 @@ export default function Colaboradores() {
                   className="pl-10"
                 />
               </div>
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(v) => { if (v) setViewMode(v as "cards" | "list"); }}
-                variant="outline"
-                size="sm"
-              >
-                <ToggleGroupItem value="cards" aria-label="Visualização em cards">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Visualização em lista">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+              <div className="flex items-center gap-2">
+                <SortDropdown
+                  options={collabSortOptions}
+                  sortKey={sortKey}
+                  sortDir={sortDir as "asc" | "desc"}
+                  onSort={(k, d) => setSort(k, d)}
+                />
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(v) => { if (v) setViewMode(v as "cards" | "list"); }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="list" aria-label="Visualização em lista">
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
 
             {loading ? (
