@@ -373,21 +373,28 @@ export function CsvImportTab() {
 
       try {
         if (existingId) {
-          // Update existing
           const updatePayload = { ...payload };
           delete updatePayload.category;
           updatePayload.updated_at = new Date().toISOString();
-          await supabase.from("inventory").update(updatePayload).eq("id", existingId);
-          res.updated++;
+          const { error } = await supabase.from("inventory").update(updatePayload).eq("id", existingId);
+          if (error) {
+            console.error(`Erro ao atualizar linha ${i + 2}:`, error.message, record);
+            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
+            res.errors++;
+          } else { res.updated++; }
         } else {
-          // Insert new
-          payload.asset_code = "TEMP"; // trigger generates real code
+          payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
-          if (error) { res.errors++; } else { res.inserted++; }
-          // Track unique key to avoid dupes within same file
+          if (error) {
+            console.error(`Erro ao inserir linha ${i + 2}:`, error.message, record);
+            toast.error(`Erro na linha ${i + 2}: ${error.message}`);
+            res.errors++;
+          } else { res.inserted++; }
           if (uniqueVal) existingMap.set(uniqueVal.trim().toLowerCase(), "new");
         }
-      } catch {
+      } catch (err: any) {
+        console.error(`Exceção na linha ${i + 2}:`, err?.message || err, record);
+        toast.error(`Exceção na linha ${i + 2}: ${err?.message || "Erro desconhecido"}`);
         res.errors++;
       }
 
