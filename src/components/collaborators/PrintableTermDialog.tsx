@@ -270,7 +270,7 @@ function DevolucaoContent({ name, cargo }: { name: string; cargo: string }) {
 
       <p className="font-bold mt-4">A depreciação foi calculada conforme as seguintes regras:</p>
 
-      <ol className="list-decimal pl-6 space-y-1" style={{ fontSize: "10pt" }}>
+      <ol className="list-decimal pl-6 space-y-0.5" style={{ fontSize: "9pt" }}>
         <li><strong>Vida Útil e Método de Depreciação:</strong> A depreciação será calculada pelo método linear ao longo de cinco (5) anos (Vida Útil Padrão para TI).</li>
         <li><strong>Valor Mínimo (Piso):</strong> A depreciação cessará assim que o Valor Contábil Atual atingir o valor residual mínimo estabelecido pela Empresa, sendo este 50% do valor pago tanto em Notebook, celulares ou tablets.</li>
         <li><strong>Cálculo da Depreciação Anual:</strong> O valor a ser depreciado a cada ano completo de uso será calculado com base no Valor de Aquisição (coluna "valor pago" da tabela) subtraído do Valor Mínimo (piso descrito no tópico 2 acima), dividido pela vida útil de 5 anos.</li>
