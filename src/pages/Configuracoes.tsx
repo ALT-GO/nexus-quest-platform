@@ -227,8 +227,9 @@ export default function Configuracoes() {
           </Card>
           <DangerZoneTab />
         </TabsContent>
-        <TabsContent value="import">
+        <TabsContent value="import" className="space-y-6">
           <CsvImportTab />
+          <TicketImportTab />
         </TabsContent>
         <TabsContent value="integrity">
           <IntegrityAuditorTab />

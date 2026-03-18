@@ -266,7 +266,7 @@ export default function ServiceDesk() {
           onReorder={reorderStatuses}
         />
         <NewTicketDialog />
-        <PlannerImportDialog />
+        
         <Button variant="outline" asChild>
           <a href="/chamado-publico" target="_blank">
             Ver Formulário Público
