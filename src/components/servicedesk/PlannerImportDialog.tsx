@@ -347,7 +347,7 @@ export function PlannerImportDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-1.5">
           <FileSpreadsheet className="h-4 w-4" />
-          Importar do Planner (CSV)
+          Importar do Planner
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
