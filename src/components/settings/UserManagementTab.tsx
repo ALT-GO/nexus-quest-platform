@@ -117,13 +117,14 @@ export function UserManagementTab() {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from("user_invites").insert({
+    const { data: inserted, error } = await supabase.from("user_invites").insert({
       email: inviteEmail.toLowerCase().trim(),
       role: inviteRole as any,
       invited_by: user?.id ?? null,
-    });
+    }).select();
     setSaving(false);
-    if (error) {
+    console.log("Invite insert result:", { inserted, error });
+    if (error || !inserted?.length) {
       if (error.code === "23505") {
         toast.error("Este e-mail já possui um convite.");
       } else {
