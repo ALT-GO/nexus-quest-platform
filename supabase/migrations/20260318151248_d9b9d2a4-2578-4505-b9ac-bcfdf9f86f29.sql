@@ -1,0 +1,1 @@
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS progress text NOT NULL DEFAULT 'not_started';

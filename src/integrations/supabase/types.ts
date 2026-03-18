@@ -385,6 +385,7 @@ export type Database = {
           id: string
           parent_ticket_id: string | null
           priority: string
+          progress: string
           requester: string
           sla_deadline: string
           sla_expired: boolean
@@ -409,6 +410,7 @@ export type Database = {
           id?: string
           parent_ticket_id?: string | null
           priority?: string
+          progress?: string
           requester: string
           sla_deadline: string
           sla_expired?: boolean
@@ -433,6 +435,7 @@ export type Database = {
           id?: string
           parent_ticket_id?: string | null
           priority?: string
+          progress?: string
           requester?: string
           sla_deadline?: string
           sla_expired?: boolean
