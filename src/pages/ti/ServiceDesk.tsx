@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { NewTicketDialog } from "@/components/servicedesk/NewTicketDialog";
+import { PlannerImportDialog } from "@/components/servicedesk/PlannerImportDialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -265,6 +266,7 @@ export default function ServiceDesk() {
           onReorder={reorderStatuses}
         />
         <NewTicketDialog />
+        <PlannerImportDialog />
         <Button variant="outline" asChild>
           <a href="/chamado-publico" target="_blank">
             Ver Formulário Público

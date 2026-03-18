@@ -373,12 +373,15 @@ export type Database = {
         Row: {
           asset_id: string | null
           assignee: string | null
+          bucket_name: string | null
           category: string
+          checklist: Json | null
           completed_at: string | null
           created_at: string
           department: string | null
           description: string
           email: string
+          external_notes: string | null
           id: string
           parent_ticket_id: string | null
           priority: string
@@ -394,12 +397,15 @@ export type Database = {
         Insert: {
           asset_id?: string | null
           assignee?: string | null
+          bucket_name?: string | null
           category: string
+          checklist?: Json | null
           completed_at?: string | null
           created_at?: string
           department?: string | null
           description: string
           email: string
+          external_notes?: string | null
           id?: string
           parent_ticket_id?: string | null
           priority?: string
@@ -415,12 +421,15 @@ export type Database = {
         Update: {
           asset_id?: string | null
           assignee?: string | null
+          bucket_name?: string | null
           category?: string
+          checklist?: Json | null
           completed_at?: string | null
           created_at?: string
           department?: string | null
           description?: string
           email?: string
+          external_notes?: string | null
           id?: string
           parent_ticket_id?: string | null
           priority?: string
