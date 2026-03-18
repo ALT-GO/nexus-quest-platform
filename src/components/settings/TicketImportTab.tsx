@@ -68,12 +68,12 @@ const targetFields = [
   { value: "assignee", label: "Responsável" },
   { value: "requester", label: "Solicitante" },
   { value: "priority", label: "Prioridade" },
-  { value: "bucket_name", label: "Bucket (Categoria)" },
+  { value: "bucket_name", label: "Bucket (Etapa Kanban)" },
   { value: "checklist", label: "Lista de Verificação" },
   { value: "external_notes", label: "Anotações" },
   { value: "start_date", label: "Data de Início" },
   { value: "completed_date", label: "Data de Conclusão" },
-  { value: "status_id", label: "Progresso / Status" },
+  { value: "progress", label: "Progresso" },
   { value: "category", label: "Rótulos / Categoria" },
 ];
 
