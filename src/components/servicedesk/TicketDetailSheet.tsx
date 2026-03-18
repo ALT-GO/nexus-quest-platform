@@ -48,6 +48,8 @@ import {
   Square,
   CheckSquare,
   Circle,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
