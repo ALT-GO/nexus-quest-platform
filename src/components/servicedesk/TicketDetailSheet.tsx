@@ -635,75 +635,41 @@ export function TicketDetailSheet({
               const checkedCount = items.filter((i) => i.checked).length;
               const progressPercent = items.length > 0 ? Math.round((checkedCount / items.length) * 100) : 0;
 
-              const toggleItem = async (idx: number) => {
-                const updated = items.map((item, i) =>
-                  i === idx ? { ...item, checked: !item.checked } : item
-                );
+              const updateChecklist = async (updated: ChecklistItem[]) => {
                 await supabase
                   .from("tickets")
                   .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
                   .eq("id", ticket.id as any);
+              };
+
+              const toggleItem = async (idx: number) => {
+                updateChecklist(items.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item));
+              };
+
+              const deleteItem = async (idx: number) => {
+                updateChecklist(items.filter((_, i) => i !== idx));
+              };
+
+              const editItem = async (idx: number, newText: string) => {
+                if (!newText.trim()) return deleteItem(idx);
+                updateChecklist(items.map((item, i) => i === idx ? { ...item, text: newText.trim() } : item));
               };
 
               const addItem = async (text: string) => {
-                const updated = [...items, { text, checked: false }];
-                await supabase
-                  .from("tickets")
-                  .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
-                  .eq("id", ticket.id as any);
+                updateChecklist([...items, { text, checked: false }]);
               };
 
               return (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                      <ListChecks className="h-3 w-3" />
-                      Lista de verificação {items.length > 0 ? `${checkedCount} / ${items.length}` : ""}
-                    </label>
-                  </div>
-                  {items.length > 0 && (
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-0.5">
-                    {items.map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => toggleItem(idx)}
-                        className="flex items-center gap-2.5 w-full px-1 py-1.5 text-sm text-left hover:bg-muted/50 rounded transition-colors"
-                      >
-                        {item.checked ? (
-                          <CheckSquare className="h-4 w-4 text-primary flex-shrink-0" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
-                        )}
-                        <span className={cn(item.checked && "line-through text-muted-foreground")}>
-                          {item.text}
-                        </span>
-                      </button>
-                    ))}
-                    {!isCompleted && (
-                      <div className="flex items-center gap-2.5 px-1 py-1.5">
-                        <Circle className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
-                        <input
-                          type="text"
-                          placeholder="Adicionar um item"
-                          className="flex-1 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/50"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                              addItem((e.target as HTMLInputElement).value.trim());
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ChecklistSection
+                  items={items}
+                  checkedCount={checkedCount}
+                  progressPercent={progressPercent}
+                  isCompleted={isCompleted}
+                  onToggle={toggleItem}
+                  onDelete={deleteItem}
+                  onEdit={editItem}
+                  onAdd={addItem}
+                />
               );
             })()}
 
