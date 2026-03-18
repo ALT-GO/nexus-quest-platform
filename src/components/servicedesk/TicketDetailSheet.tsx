@@ -28,7 +28,7 @@ import { useTicketHistory } from "@/hooks/use-ticket-history";
 import { StatusCustom } from "@/hooks/use-custom-status";
 import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaInfo } from "@/hooks/use-sla";
-import { Ticket } from "@/hooks/use-tickets";
+import { Ticket, ChecklistItem } from "@/hooks/use-tickets";
 import {
   CheckCircle2,
   X,
