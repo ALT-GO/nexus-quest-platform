@@ -364,10 +364,10 @@ export function PlannerImportDialog() {
               <Upload className="h-8 w-8 text-primary" />
             </div>
             <div className="text-center space-y-1">
-              <p className="text-sm font-medium">Selecione o arquivo CSV exportado do Planner</p>
-              <p className="text-xs text-muted-foreground">Formatos aceitos: .csv (separado por vírgula ou ponto-e-vírgula)</p>
+              <p className="text-sm font-medium">Selecione o arquivo exportado do Planner</p>
+              <p className="text-xs text-muted-foreground">Formatos aceitos: .csv, .xlsx, .xls</p>
             </div>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileSelect} />
             <Button onClick={() => fileRef.current?.click()} className="gap-2">
               <Upload className="h-4 w-4" />
               Escolher Arquivo
