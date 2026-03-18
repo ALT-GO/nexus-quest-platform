@@ -106,7 +106,8 @@ function mapPriority(val: string): "low" | "medium" | "high" {
 
 function parseChecklist(raw: string): ChecklistItem[] {
   if (!raw) return [];
-  return raw.split(/[;\n]/).map(l => l.trim()).filter(Boolean).map(line => ({
+  // Split by ";", newline, or ":" (Planner uses ":" as separator for "Itens da lista de verificação")
+  return raw.split(/[:;\n]/).map(l => l.trim()).filter(Boolean).map(line => ({
     text: line.replace(/^\[[ x]\]\s*/i, "").replace(/^✓\s*/, "").trim(),
     checked: /^\[x\]/i.test(line) || /^✓/.test(line),
   }));
