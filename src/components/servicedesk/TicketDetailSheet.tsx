@@ -456,10 +456,10 @@ export function TicketDetailSheet({
 
             {/* Fields grid */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Status */}
+              {/* Progresso */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Status
+                  <Tag className="h-3 w-3" /> Progresso
                 </label>
                 <Select
                   value={ticket.status_id}
