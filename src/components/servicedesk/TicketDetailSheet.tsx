@@ -47,6 +47,7 @@ import {
   ListChecks,
   Square,
   CheckSquare,
+  Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -456,10 +457,10 @@ export function TicketDetailSheet({
 
             {/* Fields grid */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Status */}
+              {/* Progresso */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Status
+                  <Tag className="h-3 w-3" /> Progresso
                 </label>
                 <Select
                   value={ticket.status_id}
@@ -520,10 +521,10 @@ export function TicketDetailSheet({
                 </Select>
               </div>
 
-              {/* Category */}
+              {/* Rótulos */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Tipo
+                  <Tag className="h-3 w-3" /> Rótulos
                 </label>
                 <Select
                   value={ticket.category}
@@ -591,16 +592,19 @@ export function TicketDetailSheet({
             </div>
 
             {/* Checklist */}
-            {ticket.checklist && (() => {
+            {(() => {
               let items: ChecklistItem[] = [];
               try {
-                items = typeof ticket.checklist === "string"
-                  ? JSON.parse(ticket.checklist)
-                  : ticket.checklist;
+                if (ticket.checklist) {
+                  items = typeof ticket.checklist === "string"
+                    ? JSON.parse(ticket.checklist)
+                    : ticket.checklist;
+                }
               } catch { items = []; }
-              if (!Array.isArray(items) || items.length === 0) return null;
+              if (!Array.isArray(items)) items = [];
 
               const checkedCount = items.filter((i) => i.checked).length;
+              const progressPercent = items.length > 0 ? Math.round((checkedCount / items.length) * 100) : 0;
 
               const toggleItem = async (idx: number) => {
                 const updated = items.map((item, i) =>
@@ -612,29 +616,63 @@ export function TicketDetailSheet({
                   .eq("id", ticket.id as any);
               };
 
+              const addItem = async (text: string) => {
+                const updated = [...items, { text, checked: false }];
+                await supabase
+                  .from("tickets")
+                  .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
+                  .eq("id", ticket.id as any);
+              };
+
               return (
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <ListChecks className="h-3 w-3" />
-                    Lista de Verificação ({checkedCount}/{items.length})
-                  </label>
-                  <div className="rounded-md border divide-y">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <ListChecks className="h-3 w-3" />
+                      Lista de verificação {items.length > 0 ? `${checkedCount} / ${items.length}` : ""}
+                    </label>
+                  </div>
+                  {items.length > 0 && (
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
                     {items.map((item, idx) => (
                       <button
                         key={idx}
                         onClick={() => toggleItem(idx)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-2.5 w-full px-1 py-1.5 text-sm text-left hover:bg-muted/50 rounded transition-colors"
                       >
                         {item.checked ? (
-                          <CheckSquare className="h-4 w-4 text-success flex-shrink-0" />
+                          <CheckSquare className="h-4 w-4 text-primary flex-shrink-0" />
                         ) : (
-                          <Square className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <Square className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                         )}
                         <span className={cn(item.checked && "line-through text-muted-foreground")}>
                           {item.text}
                         </span>
                       </button>
                     ))}
+                    {!isCompleted && (
+                      <div className="flex items-center gap-2.5 px-1 py-1.5">
+                        <Circle className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Adicionar um item"
+                          className="flex-1 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/50"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              addItem((e.target as HTMLInputElement).value.trim());
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               );

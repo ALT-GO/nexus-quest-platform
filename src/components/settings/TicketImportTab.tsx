@@ -47,7 +47,9 @@ const defaultFieldMap: Record<string, string> = {
   "due date": "completed_date",
   "data de vencimento": "completed_date",
   "lista de verificação": "checklist",
+  "itens da lista de verificação": "checklist",
   "checklist": "checklist",
+  "checklist items": "checklist",
   "anotações": "external_notes",
   "notes": "external_notes",
   "notas": "external_notes",
@@ -104,7 +106,8 @@ function mapPriority(val: string): "low" | "medium" | "high" {
 
 function parseChecklist(raw: string): ChecklistItem[] {
   if (!raw) return [];
-  return raw.split(/[;\n]/).map(l => l.trim()).filter(Boolean).map(line => ({
+  // Split by ";", newline, or ":" (Planner uses ":" as separator for "Itens da lista de verificação")
+  return raw.split(/[:;\n]/).map(l => l.trim()).filter(Boolean).map(line => ({
     text: line.replace(/^\[[ x]\]\s*/i, "").replace(/^✓\s*/, "").trim(),
     checked: /^\[x\]/i.test(line) || /^✓/.test(line),
   }));
@@ -200,9 +203,63 @@ export function TicketImportTab() {
     return entry ? (row[entry[0]] || "") : "";
   };
 
+  // Ensure a kanban status exists for a given bucket name, return its id
+  const ensureBucketStatus = async (bucketName: string): Promise<string | null> => {
+    if (!bucketName.trim()) return null;
+
+    // Check if a status with this name already exists
+    const { data: existing } = await supabase
+      .from("status_config")
+      .select("id")
+      .ilike("nome", bucketName.trim());
+
+    if (existing && existing.length > 0) {
+      return (existing[0] as any).id;
+    }
+
+    // Create new kanban stage for this bucket
+    const id = `bucket_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const { data: maxOrdem } = await supabase
+      .from("status_config")
+      .select("ordem")
+      .order("ordem", { ascending: false })
+      .limit(1);
+
+    const newOrdem = maxOrdem && maxOrdem.length > 0 ? (maxOrdem[0] as any).ordem + 1 : 10;
+
+    const { error } = await supabase.from("status_config").insert({
+      id,
+      nome: bucketName.trim(),
+      cor: `${Math.floor(Math.random() * 360)} 70% 50%`,
+      ordem: newOrdem,
+      ativo: true,
+      is_final: false,
+      status_type: "in_progress",
+    } as any);
+
+    if (error) {
+      console.error("Error creating bucket status:", error);
+      return null;
+    }
+
+    toast.info(`Etapa "${bucketName}" criada no Kanban`);
+    return id;
+  };
+
   const handleImport = async () => {
     setStep("importing");
     let success = 0, errors = 0;
+
+    // Pre-create all bucket statuses
+    const bucketStatusCache: Record<string, string | null> = {};
+    const uniqueBuckets = new Set<string>();
+    for (const row of csvRows) {
+      const bucket = getMappedValue(row, "bucket_name")?.trim();
+      if (bucket) uniqueBuckets.add(bucket);
+    }
+    for (const bucket of uniqueBuckets) {
+      bucketStatusCache[bucket] = await ensureBucketStatus(bucket);
+    }
 
     for (let i = 0; i < csvRows.length; i++) {
       const row = csvRows[i];
@@ -215,7 +272,7 @@ export function TicketImportTab() {
         const bucketName = getMappedValue(row, "bucket_name") || "";
         const checklist = parseChecklist(getMappedValue(row, "checklist"));
         const externalNotes = getMappedValue(row, "external_notes") || "";
-        const category = getMappedValue(row, "category") || bucketName || "Gerais/Outros";
+        const category = getMappedValue(row, "category") || "Gerais/Outros";
         const completedDate = tryParseDate(getMappedValue(row, "completed_date"));
         const progressRaw = getMappedValue(row, "status_id").toLowerCase();
 
@@ -223,9 +280,15 @@ export function TicketImportTab() {
         const slaHours = slaByCategory[category] ?? 24;
         const slaDeadline = completedDate ? new Date(completedDate) : new Date(now.getTime() + slaHours * 3600000);
 
-        let statusId = "pending";
-        if (progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("100")) statusId = "done";
-        else if (progressRaw.includes("andamento") || progressRaw.includes("progress") || progressRaw.includes("50")) statusId = "in_progress";
+        // Use bucket status if available, otherwise map from progress
+        let statusId = bucketStatusCache[bucketName] || "pending";
+        if (!bucketStatusCache[bucketName]) {
+          if (progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("não iniciado") === false && progressRaw.includes("100")) statusId = "done";
+          else if (progressRaw.includes("andamento") || progressRaw.includes("progress") || progressRaw.includes("50")) statusId = "in_progress";
+          else if (progressRaw.includes("não iniciado") || progressRaw.includes("not started")) statusId = "pending";
+        }
+
+        const isDone = progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("100");
 
         const { error } = await supabase.from("tickets").insert({
           title, category,
@@ -233,7 +296,7 @@ export function TicketImportTab() {
           requester, email: "planner-import@empresa.com", assignee, priority,
           status_id: statusId, sla_hours: slaHours, sla_deadline: slaDeadline.toISOString(),
           ticket_number: "",
-          completed_at: statusId === "done" ? (completedDate || now.toISOString()) : null,
+          completed_at: isDone ? (completedDate || now.toISOString()) : null,
           checklist: checklist.length > 0 ? JSON.stringify(checklist) : "[]",
           external_notes: externalNotes, bucket_name: bucketName,
         } as any);
