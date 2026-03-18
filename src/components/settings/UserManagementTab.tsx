@@ -125,10 +125,10 @@ export function UserManagementTab() {
     setSaving(false);
     console.log("Invite insert result:", { inserted, error });
     if (error || !inserted?.length) {
-      if (error.code === "23505") {
+      if (error?.code === "23505") {
         toast.error("Este e-mail já possui um convite.");
       } else {
-        toast.error(error.message);
+        toast.error(error?.message || "Erro ao criar convite. Verifique suas permissões.");
       }
       return;
     }
