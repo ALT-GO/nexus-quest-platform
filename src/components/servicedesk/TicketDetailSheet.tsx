@@ -590,6 +590,76 @@ export function TicketDetailSheet({
               )}
             </div>
 
+            {/* Checklist */}
+            {ticket.checklist && (() => {
+              let items: ChecklistItem[] = [];
+              try {
+                items = typeof ticket.checklist === "string"
+                  ? JSON.parse(ticket.checklist)
+                  : ticket.checklist;
+              } catch { items = []; }
+              if (!Array.isArray(items) || items.length === 0) return null;
+
+              const checkedCount = items.filter((i) => i.checked).length;
+
+              const toggleItem = async (idx: number) => {
+                const updated = items.map((item, i) =>
+                  i === idx ? { ...item, checked: !item.checked } : item
+                );
+                await supabase
+                  .from("tickets")
+                  .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
+                  .eq("id", ticket.id as any);
+              };
+
+              return (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <ListChecks className="h-3 w-3" />
+                    Lista de Verificação ({checkedCount}/{items.length})
+                  </label>
+                  <div className="rounded-md border divide-y">
+                    {items.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => toggleItem(idx)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors"
+                      >
+                        {item.checked ? (
+                          <CheckSquare className="h-4 w-4 text-success flex-shrink-0" />
+                        ) : (
+                          <Square className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <span className={cn(item.checked && "line-through text-muted-foreground")}>
+                          {item.text}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Bucket / External Notes */}
+            {(ticket.bucket_name || ticket.external_notes) && (
+              <div className="space-y-2">
+                {ticket.bucket_name && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Bucket Original</label>
+                    <p className="text-sm mt-0.5">{ticket.bucket_name}</p>
+                  </div>
+                )}
+                {ticket.external_notes && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Anotações do Planner</label>
+                    <div className="rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap mt-0.5">
+                      {ticket.external_notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Asset Section */}
             <div>
               <AssetLinker
