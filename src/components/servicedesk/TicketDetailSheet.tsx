@@ -520,10 +520,10 @@ export function TicketDetailSheet({
                 </Select>
               </div>
 
-              {/* Category */}
+              {/* Rótulos */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Tipo
+                  <Tag className="h-3 w-3" /> Rótulos
                 </label>
                 <Select
                   value={ticket.category}
