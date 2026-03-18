@@ -47,6 +47,7 @@ import {
   ListChecks,
   Square,
   CheckSquare,
+  Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
