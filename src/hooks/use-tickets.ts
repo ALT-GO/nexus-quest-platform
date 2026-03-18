@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { slaByCategory } from "@/hooks/use-sla";
 import { toast } from "sonner";
 
+export interface ChecklistItem {
+  text: string;
+  checked: boolean;
+}
+
 export interface Ticket {
   id: string;
   ticket_number: string;
@@ -23,6 +28,9 @@ export interface Ticket {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  checklist: ChecklistItem[] | null;
+  external_notes: string | null;
+  bucket_name: string | null;
 }
 
 export function useTickets() {
