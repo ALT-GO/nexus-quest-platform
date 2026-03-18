@@ -114,9 +114,13 @@ export function UserManagementTab() {
       return;
     }
     setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+
     const { error } = await supabase.from("user_invites").insert({
       email: inviteEmail.toLowerCase().trim(),
       role: inviteRole as any,
+      invited_by: user?.id ?? null,
     });
     setSaving(false);
     if (error) {
