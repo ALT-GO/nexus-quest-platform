@@ -37,8 +37,8 @@ const defaultFieldMap: Record<string, string> = {
   "nome do bucket": "bucket_name",
   "bucket name": "bucket_name",
   "bucket": "bucket_name",
-  "progresso": "status_id",
-  "progress": "status_id",
+  "progresso": "progress",
+  "progress": "progress",
   "prioridade": "priority",
   "priority": "priority",
   "data de início": "start_date",
@@ -68,12 +68,12 @@ const targetFields = [
   { value: "assignee", label: "Responsável" },
   { value: "requester", label: "Solicitante" },
   { value: "priority", label: "Prioridade" },
-  { value: "bucket_name", label: "Bucket (Categoria)" },
+  { value: "bucket_name", label: "Bucket (Etapa Kanban)" },
   { value: "checklist", label: "Lista de Verificação" },
   { value: "external_notes", label: "Anotações" },
   { value: "start_date", label: "Data de Início" },
   { value: "completed_date", label: "Data de Conclusão" },
-  { value: "status_id", label: "Progresso / Status" },
+  { value: "progress", label: "Progresso" },
   { value: "category", label: "Rótulos / Categoria" },
 ];
 
@@ -274,27 +274,26 @@ export function TicketImportTab() {
         const externalNotes = getMappedValue(row, "external_notes") || "";
         const category = getMappedValue(row, "category") || "Gerais/Outros";
         const completedDate = tryParseDate(getMappedValue(row, "completed_date"));
-        const progressRaw = getMappedValue(row, "status_id").toLowerCase();
+        const progressRaw = getMappedValue(row, "progress").toLowerCase();
 
         const now = new Date();
         const slaHours = slaByCategory[category] ?? 24;
         const slaDeadline = completedDate ? new Date(completedDate) : new Date(now.getTime() + slaHours * 3600000);
 
-        // Use bucket status if available, otherwise map from progress
-        let statusId = bucketStatusCache[bucketName] || "pending";
-        if (!bucketStatusCache[bucketName]) {
-          if (progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("não iniciado") === false && progressRaw.includes("100")) statusId = "done";
-          else if (progressRaw.includes("andamento") || progressRaw.includes("progress") || progressRaw.includes("50")) statusId = "in_progress";
-          else if (progressRaw.includes("não iniciado") || progressRaw.includes("not started")) statusId = "pending";
-        }
+        // Map progress: Não iniciado / Em andamento / Concluída
+        let progress = "not_started";
+        if (progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("100")) progress = "completed";
+        else if (progressRaw.includes("andamento") || progressRaw.includes("progress") || progressRaw.includes("50")) progress = "in_progress";
 
-        const isDone = progressRaw.includes("concluíd") || progressRaw.includes("completed") || progressRaw.includes("100");
+        // Use bucket status if available for kanban column
+        const statusId = bucketStatusCache[bucketName] || "pending";
+        const isDone = progress === "completed";
 
         const { error } = await supabase.from("tickets").insert({
           title, category,
           description: [description, externalNotes ? `\n--- Anotações do Planner ---\n${externalNotes}` : ""].filter(Boolean).join(""),
           requester, email: "planner-import@empresa.com", assignee, priority,
-          status_id: statusId, sla_hours: slaHours, sla_deadline: slaDeadline.toISOString(),
+          status_id: statusId, progress, sla_hours: slaHours, sla_deadline: slaDeadline.toISOString(),
           ticket_number: "",
           completed_at: isDone ? (completedDate || now.toISOString()) : null,
           checklist: checklist.length > 0 ? JSON.stringify(checklist) : "[]",

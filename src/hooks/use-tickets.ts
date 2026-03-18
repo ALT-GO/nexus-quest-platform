@@ -31,6 +31,7 @@ export interface Ticket {
   checklist: ChecklistItem[] | null;
   external_notes: string | null;
   bucket_name: string | null;
+  progress: "not_started" | "in_progress" | "completed";
 }
 
 export function useTickets() {

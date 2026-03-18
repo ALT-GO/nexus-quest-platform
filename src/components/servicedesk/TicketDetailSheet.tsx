@@ -48,12 +48,128 @@ import {
   Square,
   CheckSquare,
   Circle,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
+function ChecklistSection({
+  items,
+  checkedCount,
+  progressPercent,
+  isCompleted,
+  onToggle,
+  onDelete,
+  onEdit,
+  onAdd,
+}: {
+  items: ChecklistItem[];
+  checkedCount: number;
+  progressPercent: number;
+  isCompleted: boolean;
+  onToggle: (idx: number) => void;
+  onDelete: (idx: number) => void;
+  onEdit: (idx: number, text: string) => void;
+  onAdd: (text: string) => void;
+}) {
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const startEdit = (idx: number, text: string) => {
+    setEditingIdx(idx);
+    setEditText(text);
+  };
+
+  const commitEdit = () => {
+    if (editingIdx !== null) {
+      onEdit(editingIdx, editText);
+      setEditingIdx(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <ListChecks className="h-3 w-3" />
+          Lista de verificação {items.length > 0 ? `${checkedCount} / ${items.length}` : ""}
+        </label>
+      </div>
+      {items.length > 0 && (
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+      <div className="space-y-0.5">
+        {items.map((item, idx) => (
+          <div
+            key={idx}
+            className="group flex items-center gap-2.5 w-full px-1 py-1.5 text-sm hover:bg-muted/50 rounded transition-colors"
+          >
+            <button onClick={() => onToggle(idx)} className="flex-shrink-0">
+              {item.checked ? (
+                <CheckSquare className="h-4 w-4 text-primary" />
+              ) : (
+                <Square className="h-4 w-4 text-muted-foreground/50" />
+              )}
+            </button>
+            {editingIdx === idx ? (
+              <input
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Escape") setEditingIdx(null);
+                }}
+                autoFocus
+                className="flex-1 bg-transparent text-sm outline-none border-b border-primary"
+              />
+            ) : (
+              <span
+                className={cn("flex-1 cursor-default", item.checked && "line-through text-muted-foreground")}
+                onDoubleClick={() => !isCompleted && startEdit(idx, item.text)}
+              >
+                {item.text}
+              </span>
+            )}
+            {!isCompleted && editingIdx !== idx && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(idx); }}
+                className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted-foreground hover:text-destructive transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        {!isCompleted && (
+          <div className="flex items-center gap-2.5 px-1 py-1.5">
+            <Circle className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Adicionar um item"
+              className="flex-1 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                  onAdd((e.target as HTMLInputElement).value.trim());
+                  (e.target as HTMLInputElement).value = "";
+                }
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 const categories = [
   "Acesso e permissões",
   "Problemas com Computador/Notebook",
@@ -153,6 +269,13 @@ export function TicketDetailSheet({
       await logHistory("timesheet", "Cronômetro pausado", "Admin");
     } else {
       await startTimer();
+      // Auto-set progress to "in_progress"
+      if (ticket.progress === "not_started") {
+        await supabase
+          .from("tickets")
+          .update({ progress: "in_progress", updated_at: new Date().toISOString() } as any)
+          .eq("id", ticket.id as any);
+      }
       // Auto-move to "In Progress" on first play if still in a "todo" status
       const currentSt = statuses.find((s) => s.id === ticket.status_id);
       if (currentSt?.statusType === "todo") {
@@ -289,7 +412,7 @@ export function TicketDetailSheet({
     const doneStatusId = finalStatus?.id || "done";
     const { error } = await supabase
       .from("tickets")
-      .update({ completed_at: new Date().toISOString(), status_id: doneStatusId, updated_at: new Date().toISOString() } as any)
+      .update({ completed_at: new Date().toISOString(), status_id: doneStatusId, progress: "completed", updated_at: new Date().toISOString() } as any)
       .eq("id", ticket.id as any);
 
     if (!error) {
@@ -463,17 +586,37 @@ export function TicketDetailSheet({
                   <Tag className="h-3 w-3" /> Progresso
                 </label>
                 <Select
-                  value={ticket.status_id}
-                  onValueChange={handleStatusChange}
+                  value={ticket.progress || "not_started"}
+                  onValueChange={async (v) => {
+                    await supabase
+                      .from("tickets")
+                      .update({ progress: v, updated_at: new Date().toISOString() } as any)
+                      .eq("id", ticket.id as any);
+                  }}
                   disabled={isCompleted}
                 >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statuses.filter((s) => s.ativo).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                    ))}
+                    <SelectItem value="not_started">
+                      <span className="flex items-center gap-2">
+                        <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                        Não iniciado
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="in_progress">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 text-primary" />
+                        Em andamento
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        Concluída
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -606,75 +749,41 @@ export function TicketDetailSheet({
               const checkedCount = items.filter((i) => i.checked).length;
               const progressPercent = items.length > 0 ? Math.round((checkedCount / items.length) * 100) : 0;
 
-              const toggleItem = async (idx: number) => {
-                const updated = items.map((item, i) =>
-                  i === idx ? { ...item, checked: !item.checked } : item
-                );
+              const updateChecklist = async (updated: ChecklistItem[]) => {
                 await supabase
                   .from("tickets")
                   .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
                   .eq("id", ticket.id as any);
+              };
+
+              const toggleItem = async (idx: number) => {
+                updateChecklist(items.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item));
+              };
+
+              const deleteItem = async (idx: number) => {
+                updateChecklist(items.filter((_, i) => i !== idx));
+              };
+
+              const editItem = async (idx: number, newText: string) => {
+                if (!newText.trim()) return deleteItem(idx);
+                updateChecklist(items.map((item, i) => i === idx ? { ...item, text: newText.trim() } : item));
               };
 
               const addItem = async (text: string) => {
-                const updated = [...items, { text, checked: false }];
-                await supabase
-                  .from("tickets")
-                  .update({ checklist: JSON.stringify(updated), updated_at: new Date().toISOString() } as any)
-                  .eq("id", ticket.id as any);
+                updateChecklist([...items, { text, checked: false }]);
               };
 
               return (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                      <ListChecks className="h-3 w-3" />
-                      Lista de verificação {items.length > 0 ? `${checkedCount} / ${items.length}` : ""}
-                    </label>
-                  </div>
-                  {items.length > 0 && (
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-0.5">
-                    {items.map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => toggleItem(idx)}
-                        className="flex items-center gap-2.5 w-full px-1 py-1.5 text-sm text-left hover:bg-muted/50 rounded transition-colors"
-                      >
-                        {item.checked ? (
-                          <CheckSquare className="h-4 w-4 text-primary flex-shrink-0" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
-                        )}
-                        <span className={cn(item.checked && "line-through text-muted-foreground")}>
-                          {item.text}
-                        </span>
-                      </button>
-                    ))}
-                    {!isCompleted && (
-                      <div className="flex items-center gap-2.5 px-1 py-1.5">
-                        <Circle className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
-                        <input
-                          type="text"
-                          placeholder="Adicionar um item"
-                          className="flex-1 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/50"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                              addItem((e.target as HTMLInputElement).value.trim());
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ChecklistSection
+                  items={items}
+                  checkedCount={checkedCount}
+                  progressPercent={progressPercent}
+                  isCompleted={isCompleted}
+                  onToggle={toggleItem}
+                  onDelete={deleteItem}
+                  onEdit={editItem}
+                  onAdd={addItem}
+                />
               );
             })()}
 
