@@ -298,7 +298,7 @@ export function TicketDetailSheet({
     const doneStatusId = finalStatus?.id || "done";
     const { error } = await supabase
       .from("tickets")
-      .update({ completed_at: new Date().toISOString(), status_id: doneStatusId, updated_at: new Date().toISOString() } as any)
+      .update({ completed_at: new Date().toISOString(), status_id: doneStatusId, progress: "completed", updated_at: new Date().toISOString() } as any)
       .eq("id", ticket.id as any);
 
     if (!error) {
