@@ -56,6 +56,120 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
+function ChecklistSection({
+  items,
+  checkedCount,
+  progressPercent,
+  isCompleted,
+  onToggle,
+  onDelete,
+  onEdit,
+  onAdd,
+}: {
+  items: ChecklistItem[];
+  checkedCount: number;
+  progressPercent: number;
+  isCompleted: boolean;
+  onToggle: (idx: number) => void;
+  onDelete: (idx: number) => void;
+  onEdit: (idx: number, text: string) => void;
+  onAdd: (text: string) => void;
+}) {
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const startEdit = (idx: number, text: string) => {
+    setEditingIdx(idx);
+    setEditText(text);
+  };
+
+  const commitEdit = () => {
+    if (editingIdx !== null) {
+      onEdit(editingIdx, editText);
+      setEditingIdx(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <ListChecks className="h-3 w-3" />
+          Lista de verificação {items.length > 0 ? `${checkedCount} / ${items.length}` : ""}
+        </label>
+      </div>
+      {items.length > 0 && (
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+      <div className="space-y-0.5">
+        {items.map((item, idx) => (
+          <div
+            key={idx}
+            className="group flex items-center gap-2.5 w-full px-1 py-1.5 text-sm hover:bg-muted/50 rounded transition-colors"
+          >
+            <button onClick={() => onToggle(idx)} className="flex-shrink-0">
+              {item.checked ? (
+                <CheckSquare className="h-4 w-4 text-primary" />
+              ) : (
+                <Square className="h-4 w-4 text-muted-foreground/50" />
+              )}
+            </button>
+            {editingIdx === idx ? (
+              <input
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Escape") setEditingIdx(null);
+                }}
+                autoFocus
+                className="flex-1 bg-transparent text-sm outline-none border-b border-primary"
+              />
+            ) : (
+              <span
+                className={cn("flex-1 cursor-default", item.checked && "line-through text-muted-foreground")}
+                onDoubleClick={() => !isCompleted && startEdit(idx, item.text)}
+              >
+                {item.text}
+              </span>
+            )}
+            {!isCompleted && editingIdx !== idx && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(idx); }}
+                className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted-foreground hover:text-destructive transition-all"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        {!isCompleted && (
+          <div className="flex items-center gap-2.5 px-1 py-1.5">
+            <Circle className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Adicionar um item"
+              className="flex-1 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground/50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                  onAdd((e.target as HTMLInputElement).value.trim());
+                  (e.target as HTMLInputElement).value = "";
+                }
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 const categories = [
   "Acesso e permissões",
   "Problemas com Computador/Notebook",
