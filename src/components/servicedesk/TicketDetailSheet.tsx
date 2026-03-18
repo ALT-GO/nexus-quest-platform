@@ -44,6 +44,9 @@ import {
   Play,
   Pause,
   Timer,
+  ListChecks,
+  Square,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
