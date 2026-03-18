@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { CsvImportTab } from "@/components/settings/CsvImportTab";
+import { TicketImportTab } from "@/components/settings/TicketImportTab";
 import { DangerZoneTab } from "@/components/settings/DangerZoneTab";
 import { IntegrityAuditorTab } from "@/components/settings/IntegrityAuditorTab";
 import { useAuth } from "@/hooks/use-auth";
