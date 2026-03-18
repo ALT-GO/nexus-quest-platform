@@ -155,6 +155,13 @@ export function TicketDetailSheet({
       await logHistory("timesheet", "Cronômetro pausado", "Admin");
     } else {
       await startTimer();
+      // Auto-set progress to "in_progress"
+      if (ticket.progress === "not_started") {
+        await supabase
+          .from("tickets")
+          .update({ progress: "in_progress", updated_at: new Date().toISOString() } as any)
+          .eq("id", ticket.id as any);
+      }
       // Auto-move to "In Progress" on first play if still in a "todo" status
       const currentSt = statuses.find((s) => s.id === ticket.status_id);
       if (currentSt?.statusType === "todo") {
