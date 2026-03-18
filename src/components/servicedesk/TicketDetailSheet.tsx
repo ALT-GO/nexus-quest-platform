@@ -472,17 +472,37 @@ export function TicketDetailSheet({
                   <Tag className="h-3 w-3" /> Progresso
                 </label>
                 <Select
-                  value={ticket.status_id}
-                  onValueChange={handleStatusChange}
+                  value={ticket.progress || "not_started"}
+                  onValueChange={async (v) => {
+                    await supabase
+                      .from("tickets")
+                      .update({ progress: v, updated_at: new Date().toISOString() } as any)
+                      .eq("id", ticket.id as any);
+                  }}
                   disabled={isCompleted}
                 >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statuses.filter((s) => s.ativo).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                    ))}
+                    <SelectItem value="not_started">
+                      <span className="flex items-center gap-2">
+                        <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                        Não iniciado
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="in_progress">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 text-primary" />
+                        Em andamento
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        Concluída
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
