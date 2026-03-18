@@ -177,47 +177,80 @@ export function PlannerImportDialog() {
     setImportResults({ success: 0, errors: 0 });
   };
 
+  const processData = useCallback((headers: string[], dataRows: string[][]) => {
+    const rows: ParsedRow[] = [];
+    for (const cols of dataRows) {
+      const row: ParsedRow = {};
+      headers.forEach((h, idx) => {
+        row[h] = cols[idx] || "";
+      });
+      rows.push(row);
+    }
+
+    setCsvHeaders(headers);
+    setCsvRows(rows);
+
+    // Auto-map fields
+    const mapping: Record<string, string> = {};
+    headers.forEach((h) => {
+      const normalized = h.toLowerCase().trim();
+      mapping[h] = defaultFieldMap[normalized] || "__ignore__";
+    });
+    setFieldMapping(mapping);
+    setStep("mapping");
+  }, []);
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      if (!text) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
 
-      const lines = text.split(/\r?\n/).filter((l) => l.trim());
-      if (lines.length < 2) {
-        toast.error("O CSV precisa ter pelo menos um cabeçalho e uma linha de dados.");
-        return;
-      }
+    if (ext === "csv") {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string;
+        if (!text) return;
+        const lines = text.split(/\r?\n/).filter((l) => l.trim());
+        if (lines.length < 2) {
+          toast.error("O arquivo precisa ter pelo menos um cabeçalho e uma linha de dados.");
+          return;
+        }
+        const headers = parseCsvLine(lines[0]);
+        const dataRows = lines.slice(1).map((l) => parseCsvLine(l));
+        processData(headers, dataRows);
+      };
+      reader.readAsText(file, "UTF-8");
+    } else if (ext === "xlsx" || ext === "xls") {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const json: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-      const headers = parseCsvLine(lines[0]);
-      const rows: ParsedRow[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseCsvLine(lines[i]);
-        const row: ParsedRow = {};
-        headers.forEach((h, idx) => {
-          row[h] = cols[idx] || "";
-        });
-        rows.push(row);
-      }
+          if (json.length < 2) {
+            toast.error("A planilha precisa ter pelo menos um cabeçalho e uma linha de dados.");
+            return;
+          }
 
-      setCsvHeaders(headers);
-      setCsvRows(rows);
+          const headers = json[0].map((h) => String(h).trim());
+          const dataRows = json.slice(1).filter((r) => r.some((c) => String(c).trim())).map((r) => r.map((c) => String(c)));
+          processData(headers, dataRows);
+        } catch (err) {
+          console.error("Excel parse error:", err);
+          toast.error("Erro ao ler o arquivo Excel. Verifique se o formato está correto.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      toast.error("Formato não suportado. Use CSV (.csv) ou Excel (.xlsx, .xls).");
+    }
 
-      // Auto-map fields
-      const mapping: Record<string, string> = {};
-      headers.forEach((h) => {
-        const normalized = h.toLowerCase().trim();
-        mapping[h] = defaultFieldMap[normalized] || "__ignore__";
-      });
-      setFieldMapping(mapping);
-      setStep("mapping");
-    };
-    reader.readAsText(file, "UTF-8");
     e.target.value = "";
-  }, []);
+  }, [processData]);
 
   const handleUpdateMapping = (csvCol: string, targetField: string) => {
     setFieldMapping((prev) => ({ ...prev, [csvCol]: targetField }));
