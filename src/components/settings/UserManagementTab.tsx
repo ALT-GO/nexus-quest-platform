@@ -114,16 +114,21 @@ export function UserManagementTab() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("user_invites").insert({
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data: inserted, error } = await supabase.from("user_invites").insert({
       email: inviteEmail.toLowerCase().trim(),
       role: inviteRole as any,
-    });
+      invited_by: user?.id ?? null,
+    }).select();
     setSaving(false);
-    if (error) {
-      if (error.code === "23505") {
+    console.log("Invite insert result:", { inserted, error });
+    if (error || !inserted?.length) {
+      if (error?.code === "23505") {
         toast.error("Este e-mail já possui um convite.");
       } else {
-        toast.error(error.message);
+        toast.error(error?.message || "Erro ao criar convite. Verifique suas permissões.");
       }
       return;
     }

@@ -29,13 +29,17 @@ export default function Signup() {
     setLoading(true);
 
     // Validate invite
+    const normalizedEmail = email.toLowerCase().trim();
     const { data: invite, error: inviteError } = await supabase
       .from("user_invites")
       .select("id, accepted_at")
-      .eq("email", email.toLowerCase().trim())
+      .eq("email", normalizedEmail)
+      .is("accepted_at", null)
       .maybeSingle();
 
-    if (inviteError || !invite || invite.accepted_at) {
+    console.log("Invite check:", { normalizedEmail, invite, inviteError });
+
+    if (inviteError || !invite) {
       setLoading(false);
       toast.error("Acesso negado. Este e-mail não possui um convite ativo.");
       return;
