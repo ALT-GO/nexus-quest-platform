@@ -13,7 +13,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { diceSimilarity } from "@/lib/name-similarity";
-import { DuplicateResolverDialog, type DuplicateResolution } from "./DuplicateResolverDialog";
+import {
+  DuplicateResolverDialog,
+  type DuplicateResolution,
+  type DuplicateMatch,
+  type DuplicateAction,
+} from "./DuplicateResolverDialog";
 
 type ImportCategory = "notebooks" | "celulares" | "linhas" | "licencas" | "colaborador";
 
@@ -167,7 +172,6 @@ function compareName(csvName: string, dbName: string): FuzzyResult {
   const b = norm(dbName);
   if (a === b) return { exact: true, firstLastMatch: true, score: 1 };
 
-  // Check first + last name match
   const partsA = a.split(/\s+/).filter(Boolean);
   const partsB = b.split(/\s+/).filter(Boolean);
   const firstLastMatch =
@@ -303,16 +307,9 @@ export function CsvImportTab() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Duplicate resolution state — now per-row interactive
-  const [pendingRow, setPendingRow] = useState<{
-    rowIndex: number;
-    csvName: string;
-    dbName: string;
-    score: number;
-  } | null>(null);
+  // Pre-scan duplicate state
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
   const [resolvedRows, setResolvedRows] = useState<Map<number, DuplicateResolution>>(new Map());
-  // We store the import continuation callback
-  const [importContinuation, setImportContinuation] = useState<(() => void) | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -374,7 +371,6 @@ export function CsvImportTab() {
   /*  Fetch helpers                                                    */
   /* ---------------------------------------------------------------- */
 
-  /** Returns Map<NORMALIZED_NAME, originalName> for all collaborators */
   const getExistingCollaboratorsMap = async (): Promise<Map<string, string>> => {
     const { data } = await supabase
       .from("inventory")
@@ -391,7 +387,24 @@ export function CsvImportTab() {
     return map;
   };
 
-  /** Returns Map<NORMALIZED_identifier_value, row_id> for service_tag + imei1 */
+  const getExistingCollaboratorCategories = async (): Promise<Map<string, string[]>> => {
+    const { data } = await supabase
+      .from("inventory")
+      .select("collaborator, category")
+      .neq("collaborator", "")
+      .not("collaborator", "is", null);
+    const map = new Map<string, string[]>();
+    data?.forEach((r: any) => {
+      if (r.collaborator) {
+        const key = norm(r.collaborator);
+        const cats = map.get(key) || [];
+        if (!cats.includes(r.category)) cats.push(r.category);
+        map.set(key, cats);
+      }
+    });
+    return map;
+  };
+
   const getExistingIdentifiers = async (
     cat: string
   ): Promise<{ byServiceTag: Map<string, string>; byImei1: Map<string, string> }> => {
@@ -414,10 +427,101 @@ export function CsvImportTab() {
   };
 
   /* ---------------------------------------------------------------- */
-  /*  Run import — pre-scan for fuzzy name conflicts, then execute    */
+  /*  Pre-scan: find ALL duplicates before importing                   */
   /* ---------------------------------------------------------------- */
 
-  const runImport = async () => {
+  const preScanDuplicates = async () => {
+    if (!category) return;
+    setStep("resolving");
+
+    const existingMap = await getExistingCollaboratorsMap();
+    const existingCats = await getExistingCollaboratorCategories();
+    const nameCol = category === "colaborador" ? "name" : "collaborator";
+
+    const matches: DuplicateMatch[] = [];
+    const seenPairs = new Set<string>(); // avoid showing same pair twice
+
+    for (let i = 0; i < csvData.rows.length; i++) {
+      const row = csvData.rows[i];
+      const record: Record<string, string> = {};
+      mapping.forEach((m, idx) => {
+        if (m.dbColumn && row[idx] !== undefined) record[m.dbColumn] = row[idx].trim();
+      });
+
+      const csvName = record[nameCol];
+      if (!csvName) continue;
+
+      const csvKey = norm(csvName);
+
+      // Skip exact matches — they'll be auto-updated
+      if (existingMap.has(csvKey)) continue;
+
+      let bestScore = 0;
+      let bestOriginal = "";
+      let bestKey = "";
+
+      for (const [ek, original] of existingMap) {
+        const cmp = compareName(csvName, original);
+        if (cmp.exact) { bestScore = 1; bestOriginal = original; bestKey = ek; break; }
+        if (cmp.firstLastMatch && cmp.score > bestScore) {
+          bestScore = Math.max(cmp.score, 0.90);
+          bestOriginal = original;
+          bestKey = ek;
+        } else if (cmp.score > bestScore) {
+          bestScore = cmp.score;
+          bestOriginal = original;
+          bestKey = ek;
+        }
+      }
+
+      if (bestScore >= 0.45 && bestScore < 1 && bestOriginal) {
+        const pairKey = `${csvKey}|${norm(bestOriginal)}`;
+        if (!seenPairs.has(pairKey)) {
+          seenPairs.add(pairKey);
+          matches.push({
+            csvName,
+            existingName: bestOriginal,
+            score: bestScore,
+            csvRowIndex: i,
+            existingCategories: existingCats.get(bestKey) || [],
+            csvCategories: category !== "colaborador" ? [category] : [],
+          });
+        }
+      }
+    }
+
+    if (matches.length === 0) {
+      // No duplicates — proceed directly to import
+      setDuplicateMatches([]);
+      await executeImport(new Map());
+    } else {
+      setDuplicateMatches(matches);
+      // Dialog will show — user resolves, then we import
+    }
+  };
+
+  /* ---------------------------------------------------------------- */
+  /*  Handle duplicate resolution complete                             */
+  /* ---------------------------------------------------------------- */
+
+  const handleDuplicateResolved = async (resolutions: DuplicateResolution[]) => {
+    const map = new Map<number, DuplicateResolution>();
+    resolutions.forEach((r) => map.set(r.csvRowIndex, r));
+    setResolvedRows(map);
+    setDuplicateMatches([]);
+    await executeImport(map);
+  };
+
+  const handleDuplicateCancelled = () => {
+    setDuplicateMatches([]);
+    setStep("mapping");
+  };
+
+  /* ---------------------------------------------------------------- */
+  /*  Execute import with resolved duplicates                          */
+  /* ---------------------------------------------------------------- */
+
+  const executeImport = async (resolved: Map<number, DuplicateResolution>) => {
     if (!category) return;
     setStep("importing");
     setProgress(0);
@@ -426,9 +530,9 @@ export function CsvImportTab() {
     const total = csvData.rows.length;
 
     if (category === "colaborador") {
-      await importCollaborators(res, total);
+      await importCollaborators(res, total, resolved);
     } else {
-      await importInventory(res, total);
+      await importInventory(res, total, resolved);
     }
 
     setResult(res);
@@ -439,7 +543,11 @@ export function CsvImportTab() {
   /*  Import collaborators                                             */
   /* ---------------------------------------------------------------- */
 
-  const importCollaborators = async (res: ImportResult, total: number) => {
+  const importCollaborators = async (
+    res: ImportResult,
+    total: number,
+    resolved: Map<number, DuplicateResolution>,
+  ) => {
     const existingMap = await getExistingCollaboratorsMap();
 
     for (let i = 0; i < csvData.rows.length; i++) {
@@ -457,62 +565,38 @@ export function CsvImportTab() {
       }
 
       const nameKey = norm(name);
-
-      // Check if already resolved by user
-      const resolved = resolvedRows.get(i);
+      const userDecision = resolved.get(i);
       let matchedKey: string | null = null;
 
-      if (resolved) {
-        if (resolved.action === "link") {
-          matchedKey = norm(resolved.resolvedName);
+      if (userDecision) {
+        if (userDecision.action === "merge" || userDecision.action === "replace") {
+          matchedKey = norm(userDecision.resolvedName);
         }
-        // action === "create" → matchedKey stays null → insert new
+        // "ignore" → create new collaborator
       } else {
-        // Exact match (normalized)
+        // Exact match
         if (existingMap.has(nameKey)) {
           matchedKey = nameKey;
-        } else {
-          // Smart fuzzy check against all existing names
-          let bestScore = 0;
-          let bestKey = "";
-          for (const [ek, _original] of existingMap) {
-            const cmp = compareName(name, _original);
-            if (cmp.exact) { bestScore = 1; bestKey = ek; break; }
-            if (cmp.firstLastMatch && cmp.score > bestScore) {
-              bestScore = Math.max(cmp.score, 0.90);
-              bestKey = ek;
-            } else if (cmp.score > bestScore) {
-              bestScore = cmp.score;
-              bestKey = ek;
-            }
-          }
-
-          if (bestScore >= 0.80 && bestScore < 1) {
-            // PAUSE: ask user
-            const dbOriginal = existingMap.get(bestKey) || bestKey;
-            await new Promise<void>((resolve) => {
-              setPendingRow({ rowIndex: i, csvName: name, dbName: dbOriginal, score: bestScore });
-              setImportContinuation(() => resolve);
-            });
-            // After resolution, check what user decided
-            const userDecision = resolvedRows.get(i);
-            if (userDecision?.action === "link") {
-              matchedKey = norm(userDecision.resolvedName);
-            }
-            // else: create new
-          } else if (bestScore >= 1) {
-            matchedKey = bestKey;
-          }
         }
       }
 
       if (matchedKey && existingMap.has(matchedKey)) {
         const originalName = existingMap.get(matchedKey)!;
         const updates: Record<string, string> = {};
-        if (record.cargo) updates.cargo = record.cargo;
-        if (record.sector) updates.sector = record.sector;
-        if (record.gestor) updates.gestor = record.gestor;
-        if (record.email) updates.email_address = record.email;
+
+        if (userDecision?.action === "replace") {
+          // Replace: overwrite all fields
+          if (record.cargo) updates.cargo = record.cargo;
+          if (record.sector) updates.sector = record.sector;
+          if (record.gestor) updates.gestor = record.gestor;
+          if (record.email) updates.email_address = record.email;
+        } else {
+          // Merge or exact match: only fill empty fields
+          if (record.cargo) updates.cargo = record.cargo;
+          if (record.sector) updates.sector = record.sector;
+          if (record.gestor) updates.gestor = record.gestor;
+          if (record.email) updates.email_address = record.email;
+        }
 
         if (Object.keys(updates).length > 0) {
           await supabase.from("inventory").update(updates).eq("collaborator", originalName);
@@ -542,10 +626,13 @@ export function CsvImportTab() {
   /*  Import inventory — with identifier blocking                      */
   /* ---------------------------------------------------------------- */
 
-  const importInventory = async (res: ImportResult, total: number) => {
+  const importInventory = async (
+    res: ImportResult,
+    total: number,
+    resolved: Map<number, DuplicateResolution>,
+  ) => {
     const { byServiceTag, byImei1 } = await getExistingIdentifiers(category as string);
 
-    // Also fetch numero map for linhas
     let byNumero = new Map<string, string>();
     if (category === "linhas") {
       const { data } = await supabase
@@ -571,43 +658,15 @@ export function CsvImportTab() {
       const collabName = record.collaborator;
       if (collabName) {
         const collabKey = norm(collabName);
+        const userDecision = resolved.get(i);
 
-        // Check resolved cache first
-        const resolved = resolvedRows.get(i);
-        if (resolved) {
-          if (resolved.action === "link") {
-            record.collaborator = resolved.resolvedName;
+        if (userDecision) {
+          if (userDecision.action === "merge" || userDecision.action === "replace") {
+            record.collaborator = userDecision.resolvedName;
           }
+          // "ignore" → keep CSV name as-is (create new)
         } else if (!existingCollabs.has(collabKey)) {
-          // Fuzzy check
-          let bestScore = 0;
-          let bestOriginal = "";
-          for (const [ek, original] of existingCollabs) {
-            const cmp = compareName(collabName, original);
-            if (cmp.exact) { bestScore = 1; bestOriginal = original; break; }
-            if (cmp.firstLastMatch && cmp.score > bestScore) {
-              bestScore = Math.max(cmp.score, 0.90);
-              bestOriginal = original;
-            } else if (cmp.score > bestScore) {
-              bestScore = cmp.score;
-              bestOriginal = original;
-            }
-          }
-
-          if (bestScore >= 0.80 && bestScore < 1) {
-            // PAUSE: ask user
-            await new Promise<void>((resolve) => {
-              setPendingRow({ rowIndex: i, csvName: collabName, dbName: bestOriginal, score: bestScore });
-              setImportContinuation(() => resolve);
-            });
-            const userDecision = resolvedRows.get(i);
-            if (userDecision?.action === "link") {
-              record.collaborator = userDecision.resolvedName;
-            }
-          } else if (bestScore >= 1) {
-            record.collaborator = bestOriginal;
-          }
-
+          // No fuzzy match hit threshold or it was exact → keep as-is
           // Track new collab
           if (!existingCollabs.has(norm(record.collaborator))) {
             existingCollabs.set(norm(record.collaborator), record.collaborator);
@@ -643,12 +702,10 @@ export function CsvImportTab() {
       };
       delete payload.dbColumn;
 
-      // Normalize category if present in CSV data
       if (payload.category && typeof payload.category === "string") {
         payload.category = normalizeCategory(payload.category);
       }
 
-      // Normalize status abbreviations
       if (payload.status) {
         const statusMap: Record<string, string> = {
           "DISPONIVEL": "Disponível",
@@ -674,7 +731,6 @@ export function CsvImportTab() {
 
       try {
         if (existingId) {
-          // UPDATE existing — blocked from creating new
           const updatePayload = { ...payload };
           delete updatePayload.category;
           updatePayload.updated_at = new Date().toISOString();
@@ -686,7 +742,6 @@ export function CsvImportTab() {
             res.updated++;
           }
         } else {
-          // INSERT new
           payload.asset_code = "TEMP";
           const { error } = await supabase.from("inventory").insert(payload as any);
           if (error) {
@@ -695,7 +750,6 @@ export function CsvImportTab() {
           } else {
             res.inserted++;
           }
-          // Track new identifiers
           if (!isBlank(record.service_tag)) byServiceTag.set(stVal, "new");
           if (!isBlank(record.imei1)) byImei1.set(norm(record.imei1), "new");
           if (category === "linhas" && !isBlank(record.numero)) byNumero.set(norm(record.numero), "new");
@@ -710,37 +764,6 @@ export function CsvImportTab() {
   };
 
   /* ---------------------------------------------------------------- */
-  /*  Duplicate resolution handlers (interactive per-row)              */
-  /* ---------------------------------------------------------------- */
-
-  const handleRowResolution = (action: "link" | "create") => {
-    if (!pendingRow) return;
-    const resolution: DuplicateResolution = {
-      csvName: pendingRow.csvName,
-      csvRowIndex: pendingRow.rowIndex,
-      action,
-      resolvedName: action === "link" ? pendingRow.dbName : pendingRow.csvName,
-    };
-    setResolvedRows((prev) => {
-      const next = new Map(prev);
-      next.set(pendingRow.rowIndex, resolution);
-      return next;
-    });
-    setPendingRow(null);
-    // Resume import
-    if (importContinuation) {
-      const cont = importContinuation;
-      setImportContinuation(null);
-      cont();
-    }
-  };
-
-  const handleRowResolutionCancel = () => {
-    // Treat cancel as "create new"
-    handleRowResolution("create");
-  };
-
-  /* ---------------------------------------------------------------- */
   /*  Reset                                                            */
   /* ---------------------------------------------------------------- */
 
@@ -752,9 +775,8 @@ export function CsvImportTab() {
     setMapping([]);
     setProgress(0);
     setResult(null);
-    setPendingRow(null);
+    setDuplicateMatches([]);
     setResolvedRows(new Map());
-    setImportContinuation(null);
   };
 
   const columnOptions = category === "colaborador" ? collaboratorColumns : inventoryColumns;
@@ -768,25 +790,12 @@ export function CsvImportTab() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Inline duplicate resolver dialog */}
-        {pendingRow && (
+        {/* Duplicate resolver dialog — shows all at once */}
+        {duplicateMatches.length > 0 && (
           <DuplicateResolverDialog
-            matches={[
-              {
-                csvName: pendingRow.csvName,
-                existingName: pendingRow.dbName,
-                score: pendingRow.score,
-                csvRowIndex: pendingRow.rowIndex,
-              },
-            ]}
-            onComplete={(resolutions) => {
-              if (resolutions[0]?.action === "link") {
-                handleRowResolution("link");
-              } else {
-                handleRowResolution("create");
-              }
-            }}
-            onCancel={handleRowResolutionCancel}
+            matches={duplicateMatches}
+            onComplete={handleDuplicateResolved}
+            onCancel={handleDuplicateCancelled}
           />
         )}
 
@@ -888,7 +897,7 @@ export function CsvImportTab() {
               <p className="text-sm text-muted-foreground">
                 {mapping.filter((m) => m.dbColumn && m.dbColumn !== "_ignore").length} de {mapping.length} colunas mapeadas
               </p>
-              <Button onClick={runImport} disabled={!mapping.some((m) => m.dbColumn && m.dbColumn !== "_ignore")}>
+              <Button onClick={preScanDuplicates} disabled={!mapping.some((m) => m.dbColumn && m.dbColumn !== "_ignore")}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar {csvData.rows.length} registros
               </Button>
@@ -896,13 +905,22 @@ export function CsvImportTab() {
           </div>
         )}
 
+        {/* Step: Resolving (loading state while scanning) */}
+        {step === "resolving" && duplicateMatches.length === 0 && (
+          <div className="space-y-4 py-8">
+            <div className="text-center">
+              <p className="font-medium mb-2">Analisando duplicatas...</p>
+              <p className="text-sm text-muted-foreground">Comparando nomes do CSV com o banco de dados</p>
+            </div>
+            <Progress value={30} className="h-3 animate-pulse" />
+          </div>
+        )}
+
         {/* Step 4: Progress */}
         {step === "importing" && (
           <div className="space-y-4 py-8">
             <div className="text-center">
-              <p className="font-medium mb-2">
-                {pendingRow ? "Aguardando resolução de duplicado..." : "Importando dados..."}
-              </p>
+              <p className="font-medium mb-2">Importando dados...</p>
               <p className="text-sm text-muted-foreground">{progress}% concluído</p>
             </div>
             <Progress value={progress} className="h-3" />
