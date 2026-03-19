@@ -9,6 +9,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,6 +22,7 @@ import { StatusSelectCell } from "./StatusSelectCell";
 import { StockFilters, getFiltersForCategory } from "./StockFilters";
 import { AddStockItemDialog } from "./AddStockItemDialog";
 import { SortDropdown, usePersistentSort, applySorting, SortOption } from "@/components/ui/sort-dropdown";
+import { cn } from "@/lib/utils";
 
 /* ── Condition labels ───────────────────────────────────────── */
 const conditionOptions = [
