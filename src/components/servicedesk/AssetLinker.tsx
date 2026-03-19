@@ -24,6 +24,14 @@ import {
 } from "@/components/ui/table";
 import { AlertCircle, Link2, Package, CheckCircle2, Laptop, User } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const conditionLabels: Record<string, { label: string; color: string }> = {
+  ready: { label: "Pronto para uso", color: "bg-success/15 text-success" },
+  maintenance: { label: "Em manutenção", color: "bg-warning/15 text-warning" },
+  blocked: { label: "Bloqueado", color: "bg-destructive/15 text-destructive" },
+  scrap: { label: "Sucata", color: "bg-muted text-muted-foreground" },
+};
 
 interface AssetLinkerProps {
   ticketId: string;
