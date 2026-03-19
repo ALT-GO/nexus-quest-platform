@@ -13,6 +13,7 @@ export interface HardwareAsset {
   serviceTag: string;
   notes: string;
   status: HardwareStatus;
+  condition: string;
   reservedByTicketId?: string;
   deliveredAt?: string;
   category: string;
