@@ -58,6 +58,7 @@ function mapDbToAsset(row: any): HardwareAsset {
     serviceTag: row.service_tag || "",
     notes: row.notes || "",
     status: row.status as HardwareStatus,
+    condition: row.condition || "ready",
     reservedByTicketId: row.reserved_by_ticket_id || undefined,
     deliveredAt: row.delivered_at || undefined,
     category: row.category,
