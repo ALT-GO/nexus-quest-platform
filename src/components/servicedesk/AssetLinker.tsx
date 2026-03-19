@@ -173,33 +173,42 @@ export function AssetLinker({
                       <TableHead>Id</TableHead>
                       <TableHead>Modelo</TableHead>
                       <TableHead>Service tag</TableHead>
+                      <TableHead>Condição</TableHead>
                       <TableHead className="text-right">Ação</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {availableAssets.map((asset) => (
-                      <TableRow key={asset.id}>
-                        <TableCell className="font-mono text-sm">{asset.assetCode || asset.id}</TableCell>
-                        <TableCell className="font-medium">{asset.model}</TableCell>
-                        <TableCell className="font-mono text-sm">{asset.serviceTag || "—"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              onLink(asset.id);
-                              setOpen(false);
-                              toast.success(
-                                `Ativo ${asset.assetCode || asset.id} vinculado ao chamado ${ticketId}`,
-                                { description: "Status alterado para Reservado" }
-                              );
-                            }}
-                          >
-                            <Link2 className="mr-1 h-3.5 w-3.5" />
-                            Vincular
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {availableAssets.map((asset) => {
+                      const cond = conditionLabels[(asset as any).condition || "ready"] || conditionLabels.ready;
+                      return (
+                        <TableRow key={asset.id}>
+                          <TableCell className="font-mono text-sm">{asset.assetCode || asset.id}</TableCell>
+                          <TableCell className="font-medium">{asset.model}</TableCell>
+                          <TableCell className="font-mono text-sm">{asset.serviceTag || "—"}</TableCell>
+                          <TableCell>
+                            <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", cond.color)}>
+                              {cond.label}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                onLink(asset.id);
+                                setOpen(false);
+                                toast.success(
+                                  `Ativo ${asset.assetCode || asset.id} vinculado ao chamado ${ticketId}`,
+                                  { description: "Status alterado para Reservado" }
+                                );
+                              }}
+                            >
+                              <Link2 className="mr-1 h-3.5 w-3.5" />
+                              Vincular
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </DialogContent>
