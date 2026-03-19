@@ -174,6 +174,7 @@ interface ColDef {
 }
 
 const notebookCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
@@ -185,6 +186,7 @@ const notebookCols: ColDef[] = [
 ];
 
 const celularCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
