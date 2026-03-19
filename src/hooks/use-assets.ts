@@ -44,6 +44,7 @@ export function getAssetTypeForCategory(category: string): string | null {
     "Solicitação de novo Computador/Notebook": "Notebook",
     "Solicitação de novo Celular": "Celular",
     "Solicitação de Tablet": "Tablet",
+    "Solicitação de nova Linha": "Linha",
   };
   return map[category] ?? null;
 }

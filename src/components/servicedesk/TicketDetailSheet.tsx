@@ -181,6 +181,7 @@ const categories = [
   "Solicitação de novo Computador/Notebook",
   "Solicitação de novo Celular",
   "Solicitação de Tablet",
+  "Solicitação de nova Linha",
   "Gerais/Outros",
 ];
 
