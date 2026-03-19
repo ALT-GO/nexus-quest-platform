@@ -16,6 +16,7 @@ export interface CollaboratorAsset {
   asset_code: string;
   category: string;
   status: string;
+  condition: string;
   model: string;
   asset_type: string;
   service_tag: string;
