@@ -34,6 +34,7 @@ const categoryToInventoryCategory: Record<string, string> = {
   "Solicitação de novo Computador/Notebook": "notebooks",
   "Solicitação de novo Celular": "celulares",
   "Solicitação de Tablet": "notebooks",
+  "Solicitação de nova Linha": "linhas",
 };
 
 export const assetRequestCategories = Object.keys(categoryToInventoryCategory);
