@@ -9,6 +9,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,12 +22,87 @@ import { StatusSelectCell } from "./StatusSelectCell";
 import { StockFilters, getFiltersForCategory } from "./StockFilters";
 import { AddStockItemDialog } from "./AddStockItemDialog";
 import { SortDropdown, usePersistentSort, applySorting, SortOption } from "@/components/ui/sort-dropdown";
+import { cn } from "@/lib/utils";
+
+/* ── Condition labels ───────────────────────────────────────── */
+const conditionOptions = [
+  { value: "ready", label: "Pronto para uso", color: "bg-success/15 text-success" },
+  { value: "maintenance", label: "Em manutenção", color: "bg-warning/15 text-warning" },
+  { value: "blocked", label: "Bloqueado", color: "bg-destructive/15 text-destructive" },
+  { value: "scrap", label: "Sucata", color: "bg-muted text-muted-foreground" },
+];
+
+export function getConditionLabel(value: string) {
+  return conditionOptions.find((o) => o.value === value) || conditionOptions[0];
+}
+
+/* ── Condition Select Cell ─────────────────────────────────── */
+function ConditionSelectCell({ value, onSave }: { value: string; onSave: (v: string) => Promise<void> }) {
+  const current = getConditionLabel(value);
+  return (
+    <Select value={value || "ready"} onValueChange={(v) => onSave(v)}>
+      <SelectTrigger className="h-7 text-xs border-0 shadow-none px-1.5 w-[140px]">
+        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", current.color)}>
+          {current.label}
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {conditionOptions.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", opt.color)}>
+              {opt.label}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 /* ── Assign dialog ─────────────────────────────────────────── */
 function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssigned: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [allCollaborators, setAllCollaborators] = useState<string[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("inventory")
+        .select("collaborator")
+        .neq("collaborator", "")
+        .not("collaborator", "is", null);
+      if (data) {
+        const unique = [...new Set(data.map((d: any) => d.collaborator as string).filter(Boolean))].sort();
+        setAllCollaborators(unique);
+      }
+    };
+    fetch();
+  }, [open]);
+
+  useEffect(() => {
+    if (!name.trim() || name.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const q = name.toLowerCase();
+    setSuggestions(allCollaborators.filter((c) => c.toLowerCase().includes(q)).slice(0, 8));
+  }, [name, allCollaborators]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleAssign = async () => {
     if (!name.trim()) return;
@@ -52,7 +130,29 @@ function AssignDialog({ asset, onAssigned }: { asset: CollaboratorAsset; onAssig
         <DialogHeader><DialogTitle>Vincular ativo a colaborador</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{asset.asset_code} — {asset.model || asset.licenca || asset.numero || "Sem nome"}</p>
         <div className="space-y-3 pt-2">
-          <Input placeholder="Nome do colaborador" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="relative" ref={dropdownRef}>
+            <Input
+              placeholder="Nome do colaborador"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAssign()}
+              autoComplete="off"
+            />
+            {suggestions.length > 0 && (
+              <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                    onClick={() => { setName(s); setSuggestions([]); }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={handleAssign} disabled={saving || !name.trim()}>
@@ -74,6 +174,7 @@ interface ColDef {
 }
 
 const notebookCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
@@ -85,6 +186,7 @@ const notebookCols: ColDef[] = [
 ];
 
 const celularCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
   { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
   { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
   { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
@@ -299,7 +401,12 @@ function CategoryStockTable({
                 <TableRow key={item.id}>
                   {columns.map((col) => (
                     <TableCell key={col.id} className="whitespace-nowrap p-1.5">
-                      {col.id === "status" && category === "licencas" ? (
+                      {col.id === "condition" ? (
+                        <ConditionSelectCell
+                          value={col.accessor(item)}
+                          onSave={(v) => onCellSave(item.id, "condition", v)}
+                        />
+                      ) : col.id === "status" && category === "licencas" ? (
                         <StatusSelectCell
                           value={col.accessor(item)}
                           onSave={(v) => onCellSave(item.id, "status", v)}

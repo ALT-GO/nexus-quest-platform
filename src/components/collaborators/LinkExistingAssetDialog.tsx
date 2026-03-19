@@ -4,13 +4,12 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link2, Loader2, Search } from "lucide-react";
 import { CollaboratorAsset } from "@/hooks/use-collaborators";
+import { getConditionLabel } from "@/components/collaborators/StockTab";
+import { cn } from "@/lib/utils";
 
 const categoryOptions = [
   { value: "notebooks", label: "Notebook" },
@@ -18,18 +17,6 @@ const categoryOptions = [
   { value: "linhas", label: "Linha" },
   { value: "licencas", label: "Licença" },
 ];
-
-function assetLabel(item: CollaboratorAsset): string {
-  const parts: string[] = [];
-  if (item.marca) parts.push(item.marca);
-  if (item.model) parts.push(item.model);
-  if (item.service_tag) parts.push(`ST: ${item.service_tag}`);
-  if (item.imei1) parts.push(`IMEI: ${item.imei1}`);
-  if (item.numero) parts.push(item.numero);
-  if (item.licenca) parts.push(item.licenca);
-  if (parts.length === 0) parts.push(item.asset_code);
-  return `${item.asset_code} — ${parts.join(" · ")}`;
-}
 
 interface Props {
   collaboratorName: string;
@@ -67,7 +54,9 @@ export function LinkExistingAssetDialog({ collaboratorName, category, onLinked }
   const filtered = available.filter((item) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return assetLabel(item).toLowerCase().includes(q);
+    const searchable = [item.asset_code, item.marca, item.model, item.service_tag, item.numero, item.licenca]
+      .filter(Boolean).join(" ").toLowerCase();
+    return searchable.includes(q);
   });
 
   const handleLink = async () => {
@@ -93,6 +82,8 @@ export function LinkExistingAssetDialog({ collaboratorName, category, onLinked }
     setSaving(false);
   };
 
+  const isNotebookOrCelular = category === "notebooks" || category === "celulares";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -101,7 +92,7 @@ export function LinkExistingAssetDialog({ collaboratorName, category, onLinked }
           Vincular ativo existente
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Vincular ativo existente</DialogTitle>
         </DialogHeader>
@@ -129,21 +120,70 @@ export function LinkExistingAssetDialog({ collaboratorName, category, onLinked }
               Nenhum item disponível nesta categoria.
             </p>
           ) : (
-            <div className="max-h-[240px] overflow-y-auto rounded-md border divide-y">
-              {filtered.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedId(item.id)}
-                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent ${
-                    selectedId === item.id
-                      ? "bg-primary/10 border-l-2 border-l-primary font-medium"
-                      : ""
-                  }`}
-                >
-                  {assetLabel(item)}
-                </button>
-              ))}
+            <div className="max-h-[300px] overflow-y-auto rounded-md border divide-y">
+              {filtered.map((item) => {
+                const cond = getConditionLabel((item as any).condition || "ready");
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedId(item.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-3 text-sm transition-colors hover:bg-accent",
+                      selectedId === item.id
+                        ? "bg-primary/10 border-l-2 border-l-primary"
+                        : ""
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-xs text-muted-foreground">{item.asset_code}</span>
+                      {isNotebookOrCelular && (
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", cond.color)}>
+                          {cond.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                      {item.marca && (
+                        <div>
+                          <span className="text-muted-foreground">Marca: </span>
+                          <span className="font-medium">{item.marca}</span>
+                        </div>
+                      )}
+                      {item.model && (
+                        <div>
+                          <span className="text-muted-foreground">Modelo: </span>
+                          <span className="font-medium">{item.model}</span>
+                        </div>
+                      )}
+                      {item.service_tag && (
+                        <div>
+                          <span className="text-muted-foreground">ST: </span>
+                          <span className="font-medium">{item.service_tag}</span>
+                        </div>
+                      )}
+                      {item.numero && (
+                        <div>
+                          <span className="text-muted-foreground">Número: </span>
+                          <span className="font-medium">{item.numero}</span>
+                        </div>
+                      )}
+                      {item.licenca && (
+                        <div>
+                          <span className="text-muted-foreground">Licença: </span>
+                          <span className="font-medium">{item.licenca}</span>
+                        </div>
+                      )}
+                      {item.contrato && (
+                        <div>
+                          <span className="text-muted-foreground">Contrato: </span>
+                          <span className="font-medium">{item.contrato}</span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 

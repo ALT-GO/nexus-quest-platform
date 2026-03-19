@@ -92,6 +92,7 @@ export function KanbanBoard({
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
       {statuses.map((status) => {
+
         const columnTickets = tickets
           .filter((t) => t.statusId === status.id)
           .sort((a, b) => {
@@ -111,7 +112,7 @@ export function KanbanBoard({
             {/* Column Header */}
             <div
               className={cn(
-                "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors",
+                "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors sticky top-0 z-10",
                 dragOverColumn === status.id ? "ring-2 ring-ring ring-offset-2" : ""
               )}
               style={{
@@ -126,8 +127,8 @@ export function KanbanBoard({
                   <span className={cn(
                     "text-[10px] rounded px-1.5 py-0.5 font-medium",
                     status.statusType === "todo" ? "bg-muted text-muted-foreground" :
-                    status.statusType === "in_progress" ? "bg-blue-500/15 text-blue-600" :
-                    "bg-emerald-500/15 text-emerald-600"
+                    status.statusType === "in_progress" ? "bg-primary/15 text-primary" :
+                    "bg-success/15 text-success"
                   )}>
                     {status.statusType === "todo" ? "To Do" : status.statusType === "in_progress" ? "In Progress" : "Done"}
                   </span>

@@ -13,6 +13,7 @@ export interface HardwareAsset {
   serviceTag: string;
   notes: string;
   status: HardwareStatus;
+  condition: string;
   reservedByTicketId?: string;
   deliveredAt?: string;
   category: string;
@@ -33,6 +34,7 @@ const categoryToInventoryCategory: Record<string, string> = {
   "Solicitação de novo Computador/Notebook": "notebooks",
   "Solicitação de novo Celular": "celulares",
   "Solicitação de Tablet": "notebooks",
+  "Solicitação de nova Linha": "linhas",
 };
 
 export const assetRequestCategories = Object.keys(categoryToInventoryCategory);
@@ -42,6 +44,7 @@ export function getAssetTypeForCategory(category: string): string | null {
     "Solicitação de novo Computador/Notebook": "Notebook",
     "Solicitação de novo Celular": "Celular",
     "Solicitação de Tablet": "Tablet",
+    "Solicitação de nova Linha": "Linha",
   };
   return map[category] ?? null;
 }
@@ -57,6 +60,7 @@ function mapDbToAsset(row: any): HardwareAsset {
     serviceTag: row.service_tag || "",
     notes: row.notes || "",
     status: row.status as HardwareStatus,
+    condition: row.condition || "ready",
     reservedByTicketId: row.reserved_by_ticket_id || undefined,
     deliveredAt: row.delivered_at || undefined,
     category: row.category,

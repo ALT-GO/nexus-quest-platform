@@ -181,10 +181,11 @@ const categories = [
   "Solicitação de novo Computador/Notebook",
   "Solicitação de novo Celular",
   "Solicitação de Tablet",
+  "Solicitação de nova Linha",
   "Gerais/Outros",
 ];
 
-const technicians = ["Alvaro", "Carlos", "Mariana", "Pedro", "Julia"];
+// Will be fetched dynamically from profiles
 
 interface TicketDetailSheetProps {
   ticket: Ticket | null;
@@ -223,10 +224,22 @@ export function TicketDetailSheet({
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const [technicians, setTechnicians] = useState<string[]>([]);
 
   const { comments, loading: commentsLoading, addComment } = useTicketComments(ticket?.id ?? null);
   const { history, loading: historyLoading, logHistory } = useTicketHistory(ticket?.id ?? null);
   const { running: timerRunning, totalSeconds, start: startTimer, pause: pauseTimer, stop: stopTimer } = useTimesheet(ticket?.id ?? null);
+
+  // Fetch real users from profiles
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data } = await supabase.from("profiles").select("full_name");
+      if (data) {
+        setTechnicians(data.map((p) => p.full_name).filter(Boolean).sort());
+      }
+    };
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     if (ticket) {
