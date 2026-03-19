@@ -66,7 +66,7 @@ function RequesterAssetsSection({ requesterName }: { requesterName: string }) {
       setLoading(true);
       const { data } = await supabase
         .from("inventory")
-        .select("id, asset_code, category, model, service_tag, status, marca, licenca, numero")
+        .select("id, asset_code, category, model, service_tag, status, condition, marca, licenca, numero")
         .eq("collaborator", requesterName);
       if (data) setAssets(data as RequesterAsset[]);
       setLoading(false);
