@@ -50,6 +50,7 @@ interface RequesterAsset {
   model: string;
   service_tag: string;
   status: string;
+  condition: string;
   marca: string;
   licenca: string;
   numero: string;
