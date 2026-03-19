@@ -147,6 +147,7 @@ export type Database = {
           cargo: string | null
           category: string
           collaborator: string | null
+          condition: string
           contrato: string | null
           cost_center: string | null
           cost_center_eng: string | null
@@ -180,6 +181,7 @@ export type Database = {
           cargo?: string | null
           category?: string
           collaborator?: string | null
+          condition?: string
           contrato?: string | null
           cost_center?: string | null
           cost_center_eng?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           cargo?: string | null
           category?: string
           collaborator?: string | null
+          condition?: string
           contrato?: string | null
           cost_center?: string | null
           cost_center_eng?: string | null
