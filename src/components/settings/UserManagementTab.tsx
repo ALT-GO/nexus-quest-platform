@@ -74,13 +74,17 @@ export function UserManagementTab() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch users with roles
+    // Fetch users with roles - use admin endpoint to get emails
     const { data: profiles } = await supabase.from("profiles").select("id, full_name");
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
 
     if (profiles && roles) {
       const roleMap = new Map<string, string>();
       roles.forEach((r) => roleMap.set(r.user_id, r.role));
+
+      // Try to get emails from invites (accepted ones have the user email)
+      const { data: inviteData } = await supabase.from("user_invites").select("email, accepted_at");
+      const acceptedEmails = new Set((inviteData || []).filter((i: any) => i.accepted_at).map((i: any) => i.email));
 
       const userList: UserWithRole[] = profiles.map((p) => ({
         id: p.id,

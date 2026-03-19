@@ -184,7 +184,7 @@ const categories = [
   "Gerais/Outros",
 ];
 
-const technicians = ["Alvaro", "Carlos", "Mariana", "Pedro", "Julia"];
+// Will be fetched dynamically from profiles
 
 interface TicketDetailSheetProps {
   ticket: Ticket | null;

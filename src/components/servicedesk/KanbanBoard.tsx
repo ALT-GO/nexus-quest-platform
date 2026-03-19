@@ -92,6 +92,7 @@ export function KanbanBoard({
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
       {statuses.map((status) => {
+
         const columnTickets = tickets
           .filter((t) => t.statusId === status.id)
           .sort((a, b) => {
