@@ -401,7 +401,12 @@ function CategoryStockTable({
                 <TableRow key={item.id}>
                   {columns.map((col) => (
                     <TableCell key={col.id} className="whitespace-nowrap p-1.5">
-                      {col.id === "status" && category === "licencas" ? (
+                      {col.id === "condition" ? (
+                        <ConditionSelectCell
+                          value={col.accessor(item)}
+                          onSave={(v) => onCellSave(item.id, "condition", v)}
+                        />
+                      ) : col.id === "status" && category === "licencas" ? (
                         <StatusSelectCell
                           value={col.accessor(item)}
                           onSave={(v) => onCellSave(item.id, "status", v)}
