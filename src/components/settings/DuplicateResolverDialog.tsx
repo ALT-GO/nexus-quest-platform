@@ -240,7 +240,7 @@ export function DuplicateResolverDialog({ matches, onComplete, onCancel }: Props
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Summary */}
         <div className="flex items-center gap-4 text-sm border rounded-lg p-3 bg-muted/20">
