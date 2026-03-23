@@ -354,8 +354,8 @@ export function TicketImportTab() {
 
         {/* Mapping */}
         {step === "mapping" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 shrink-0">
               <div className="text-sm">
                 <span className="font-medium">{csvRows.length}</span> linhas encontradas •{" "}
                 <span className="font-medium">{mappedCount}</span> de {csvHeaders.length} colunas mapeadas
