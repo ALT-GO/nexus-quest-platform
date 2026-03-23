@@ -870,15 +870,15 @@ export function CsvImportTab() {
               <Button variant="ghost" size="sm" onClick={reset}>Cancelar</Button>
             </div>
 
-            <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
+            <div className="rounded-lg border divide-y max-h-[50vh] overflow-y-auto">
               {mapping.map((m, i) => (
-                <div key={i} className="flex items-center gap-3 p-3">
-                  <span className="flex-1 text-sm font-mono truncate" title={m.csvHeader}>
+                <div key={i} className="flex items-center gap-2 sm:gap-3 px-3 py-2">
+                  <span className="flex-1 text-sm font-mono truncate min-w-0" title={m.csvHeader}>
                     {m.csvHeader}
                   </span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
                   <Select value={m.dbColumn} onValueChange={(v) => updateMapping(i, v)}>
-                    <SelectTrigger className={cn("w-[180px]", m.dbColumn ? "" : "text-muted-foreground")}>
+                    <SelectTrigger className={cn("w-full sm:w-[180px]", m.dbColumn ? "" : "text-muted-foreground")}>
                       <SelectValue placeholder="(Ignorar)" />
                     </SelectTrigger>
                     <SelectContent>

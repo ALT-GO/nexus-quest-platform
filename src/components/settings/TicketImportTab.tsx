@@ -366,18 +366,18 @@ export function TicketImportTab() {
               </div>
             </div>
 
-            <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
+            <div className="rounded-lg border divide-y max-h-[50vh] overflow-y-auto">
               {csvHeaders.map((header) => (
-                <div key={header} className="flex items-center gap-3 px-4 py-3">
+                <div key={header} className="flex items-center gap-2 sm:gap-3 px-3 py-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{header}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       Ex: {previewRows.map(r => r[header]).filter(Boolean).slice(0, 2).join(" | ") || "—"}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 hidden sm:block" />
                   <Select value={fieldMapping[header] || "__ignore__"} onValueChange={(v) => setFieldMapping(prev => ({ ...prev, [header]: v }))}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
