@@ -116,7 +116,7 @@ export function DuplicateResolverDialog({ matches, onComplete, onCancel }: Props
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-4 sm:p-6 gap-3">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
@@ -145,7 +145,7 @@ export function DuplicateResolverDialog({ matches, onComplete, onCancel }: Props
         </div>
 
         {/* Scrollable list */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[45vh] border rounded-lg">
+        <div className="flex-1 min-h-0 max-h-[400px] border rounded-lg overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           <div className="divide-y">
             {matches.map((m) => {
               const pct = Math.round(m.score * 100);
@@ -240,7 +240,7 @@ export function DuplicateResolverDialog({ matches, onComplete, onCancel }: Props
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Summary */}
         <div className="flex items-center gap-4 text-sm border rounded-lg p-3 bg-muted/20">
