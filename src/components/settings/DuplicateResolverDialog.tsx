@@ -145,7 +145,7 @@ export function DuplicateResolverDialog({ matches, onComplete, onCancel }: Props
         </div>
 
         {/* Scrollable list */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[45vh] border rounded-lg">
+        <div className="flex-1 min-h-0 max-h-[400px] border rounded-lg overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           <div className="divide-y">
             {matches.map((m) => {
               const pct = Math.round(m.score * 100);
