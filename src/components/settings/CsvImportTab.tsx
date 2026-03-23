@@ -861,8 +861,8 @@ export function CsvImportTab() {
 
         {/* Step 3: Column mapping */}
         {step === "mapping" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 shrink-0">
               <div>
                 <p className="font-medium">Mapeamento de Colunas</p>
                 <p className="text-sm text-muted-foreground">Verifique o mapeamento automático e ajuste se necessário</p>
