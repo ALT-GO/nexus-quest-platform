@@ -861,8 +861,8 @@ export function CsvImportTab() {
 
         {/* Step 3: Column mapping */}
         {step === "mapping" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 shrink-0">
               <div>
                 <p className="font-medium">Mapeamento de Colunas</p>
                 <p className="text-sm text-muted-foreground">Verifique o mapeamento automático e ajuste se necessário</p>
@@ -870,15 +870,15 @@ export function CsvImportTab() {
               <Button variant="ghost" size="sm" onClick={reset}>Cancelar</Button>
             </div>
 
-            <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
+            <div className="rounded-lg border divide-y max-h-[50vh] overflow-y-auto">
               {mapping.map((m, i) => (
-                <div key={i} className="flex items-center gap-3 p-3">
-                  <span className="flex-1 text-sm font-mono truncate" title={m.csvHeader}>
+                <div key={i} className="flex items-center gap-2 sm:gap-3 px-3 py-2">
+                  <span className="flex-1 text-sm font-mono truncate min-w-0" title={m.csvHeader}>
                     {m.csvHeader}
                   </span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
                   <Select value={m.dbColumn} onValueChange={(v) => updateMapping(i, v)}>
-                    <SelectTrigger className={cn("w-[180px]", m.dbColumn ? "" : "text-muted-foreground")}>
+                    <SelectTrigger className={cn("w-full sm:w-[180px]", m.dbColumn ? "" : "text-muted-foreground")}>
                       <SelectValue placeholder="(Ignorar)" />
                     </SelectTrigger>
                     <SelectContent>
@@ -894,7 +894,7 @@ export function CsvImportTab() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-3 shrink-0">
               <p className="text-sm text-muted-foreground">
                 {mapping.filter((m) => m.dbColumn && m.dbColumn !== "_ignore").length} de {mapping.length} colunas mapeadas
               </p>

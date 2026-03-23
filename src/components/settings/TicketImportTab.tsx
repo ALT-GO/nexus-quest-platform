@@ -354,8 +354,8 @@ export function TicketImportTab() {
 
         {/* Mapping */}
         {step === "mapping" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 shrink-0">
               <div className="text-sm">
                 <span className="font-medium">{csvRows.length}</span> linhas encontradas •{" "}
                 <span className="font-medium">{mappedCount}</span> de {csvHeaders.length} colunas mapeadas
@@ -366,18 +366,18 @@ export function TicketImportTab() {
               </div>
             </div>
 
-            <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
+            <div className="rounded-lg border divide-y max-h-[50vh] overflow-y-auto">
               {csvHeaders.map((header) => (
-                <div key={header} className="flex items-center gap-3 px-4 py-3">
+                <div key={header} className="flex items-center gap-2 sm:gap-3 px-3 py-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{header}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       Ex: {previewRows.map(r => r[header]).filter(Boolean).slice(0, 2).join(" | ") || "—"}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 hidden sm:block" />
                   <Select value={fieldMapping[header] || "__ignore__"} onValueChange={(v) => setFieldMapping(prev => ({ ...prev, [header]: v }))}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -395,7 +395,7 @@ export function TicketImportTab() {
 
             {/* Preview */}
             {previewRows.length > 0 && (
-              <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="rounded-lg border bg-muted/30 p-3 mt-3 shrink-0">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização (primeiras {previewRows.length} linhas)</p>
                 <div className="space-y-2">
                   {previewRows.map((row, idx) => (
@@ -410,7 +410,7 @@ export function TicketImportTab() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-3 shrink-0">
               <p className="text-sm text-muted-foreground">
                 {mappedCount} de {csvHeaders.length} colunas mapeadas
               </p>
