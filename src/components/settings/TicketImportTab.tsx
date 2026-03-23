@@ -395,7 +395,7 @@ export function TicketImportTab() {
 
             {/* Preview */}
             {previewRows.length > 0 && (
-              <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="rounded-lg border bg-muted/30 p-3 mt-3 shrink-0">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização (primeiras {previewRows.length} linhas)</p>
                 <div className="space-y-2">
                   {previewRows.map((row, idx) => (
@@ -410,7 +410,7 @@ export function TicketImportTab() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-3 shrink-0">
               <p className="text-sm text-muted-foreground">
                 {mappedCount} de {csvHeaders.length} colunas mapeadas
               </p>

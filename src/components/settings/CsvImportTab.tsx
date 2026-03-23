@@ -894,7 +894,7 @@ export function CsvImportTab() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-3 shrink-0">
               <p className="text-sm text-muted-foreground">
                 {mapping.filter((m) => m.dbColumn && m.dbColumn !== "_ignore").length} de {mapping.length} colunas mapeadas
               </p>
