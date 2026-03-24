@@ -339,8 +339,13 @@ export function NewTicketDialog() {
 
     setSubmitting(true);
 
+    // For Contratação/Desligamento, use collaborator name as title
+    const isNamedCategory = category === "Contratação" || category === "Desligamento";
+    const collaboratorName = isContratacao ? contratacao.colaborador : isDesligamento ? desligamento.colaborador : "";
+    const ticketTitle = isNamedCategory && collaboratorName ? collaboratorName : category;
+
     const result = await createTicket({
-      title: category,
+      title: ticketTitle,
       category,
       description: finalDescription,
       requester: finalRequester,
