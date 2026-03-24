@@ -17,6 +17,7 @@ import {
   LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { DeleteCollaboratorDialog } from "@/components/collaborators/DeleteCollaboratorDialog";
 import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaboratorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
