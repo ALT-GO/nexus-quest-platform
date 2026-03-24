@@ -852,7 +852,9 @@ export function TicketDetailSheet({
                   collaboratorName={ticket.requester}
                 />
               </div>
-            )
+            )}
+
+            {/* Subtask Assets (Contratação) */}
             {ticket.category === "Contratação" && subtasks.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
