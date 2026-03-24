@@ -224,6 +224,7 @@ export function TicketDetailSheet({
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
+  const [showDevolutionChecklist, setShowDevolutionChecklist] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [technicians, setTechnicians] = useState<string[]>([]);
 
