@@ -114,6 +114,7 @@ function AssetSection({
   collaboratorName,
   onUpdate,
   onDelete,
+  onUnlink,
   onRefetch,
 }: {
   category: string;
@@ -121,6 +122,7 @@ function AssetSection({
   collaboratorName: string;
   onUpdate: (id: string, updates: Partial<CollaboratorAsset>) => void;
   onDelete: (id: string) => void;
+  onUnlink: (id: string) => void;
   onRefetch: () => void;
 }) {
   const config = categoryConfig[category];
