@@ -41,6 +41,8 @@ function getFieldsForCategory(category: string): EditableField[] {
       { label: "Tipo", key: "asset_type" },
       { label: "Centro de Custo", key: "cost_center" },
       { label: "Contrato", key: "contrato" },
+      { label: "Valor Pago (R$)", key: "valor_pago" },
+      { label: "Data de Aquisição", key: "data_aquisicao" },
     );
   } else if (category === "celulares") {
     base.push(
@@ -51,6 +53,8 @@ function getFieldsForCategory(category: string): EditableField[] {
       { label: "IMEI 2", key: "imei2" },
       { label: "Centro de Custo", key: "cost_center" },
       { label: "Contrato", key: "contrato" },
+      { label: "Valor Pago (R$)", key: "valor_pago" },
+      { label: "Data de Aquisição", key: "data_aquisicao" },
     );
   } else if (category === "linhas" || category === "telecom") {
     base.push(
@@ -92,8 +96,10 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
         const raw = (asset as any)[f.key];
         if (f.key === "created_at" && raw) {
           data[f.key] = format(new Date(raw), "dd/MM/yyyy HH:mm");
-        } else if (f.key === "data_bloqueio" && raw) {
+      } else if ((f.key === "data_bloqueio" || f.key === "data_aquisicao") && raw) {
           data[f.key] = format(new Date(raw), "yyyy-MM-dd");
+        } else if (f.key === "valor_pago") {
+          data[f.key] = raw != null ? String(raw) : "";
         } else {
           data[f.key] = raw ?? "";
         }
@@ -115,7 +121,11 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
     for (const f of fields) {
       if (f.readOnly) continue;
       const val = formData[f.key] ?? "";
-      updates[f.key] = val || null;
+      if (f.key === "valor_pago") {
+        updates[f.key] = val ? parseFloat(val) : null;
+      } else {
+        updates[f.key] = val || null;
+      }
     }
     updates.notes = formData.notes || "";
     updates.comments = formData.notes || "";
@@ -170,7 +180,17 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
                     <p className="text-sm py-1.5 px-2 bg-muted/50 rounded-md">
                       {formData[f.key] || "—"}
                     </p>
-                  ) : f.key === "data_bloqueio" ? (
+                  ) : f.key === "valor_pago" ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData[f.key] || ""}
+                      onChange={(e) => handleChange(f.key, e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder="0.00"
+                    />
+                  ) : (f.key === "data_bloqueio" || f.key === "data_aquisicao") ? (
                     <Input
                       type="date"
                       value={formData[f.key] || ""}

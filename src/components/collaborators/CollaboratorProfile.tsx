@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
 import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
-import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp } from "lucide-react";
+import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp, Eye } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Unlink } from "lucide-react";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
+import { StockDetailDialog } from "@/components/collaborators/StockDetailDialog";
 
 interface Props {
   name: string;
@@ -63,6 +64,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo", type: "select", options: tipoNotebook },
+    { key: "valor_pago", label: "Valor Pago (R$)" },
     { key: "notes", label: "Notas" },
     { key: "service_tag_2", label: "Service tag 2" },
   ],
@@ -74,6 +76,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center", label: "Centro de custo" },
     { key: "contrato", label: "Contrato" },
     { key: "asset_type", label: "Tipo" },
+    { key: "valor_pago", label: "Valor Pago (R$)" },
     { key: "notes", label: "Notas" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
@@ -162,6 +165,17 @@ function AssetSection({
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-xs">{item.asset_code}</TableCell>
                   {columns.map((col) => {
+                    if (col.key === "valor_pago") {
+                      const val = (item as any).valor_pago;
+                      return (
+                        <TableCell key={col.key}>
+                          <InlineCellEditor
+                            value={val != null ? String(val) : ""}
+                            onSave={(v) => onUpdate(item.id, { valor_pago: v ? parseFloat(v) : null } as any)}
+                          />
+                        </TableCell>
+                      );
+                    }
                     if (col.readOnly) {
                       const val = col.key === "created_at"
                         ? new Date(item.created_at).toLocaleDateString("pt-BR")
@@ -214,6 +228,7 @@ function AssetSection({
                   })}
                   <TableCell>
                     <div className="flex items-center gap-1">
+                      <StockDetailDialog asset={item} onUpdated={onRefetch} />
                       <Button
                         variant="ghost"
                         size="sm"
