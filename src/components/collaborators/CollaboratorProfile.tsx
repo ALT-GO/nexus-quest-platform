@@ -249,6 +249,16 @@ export function CollaboratorProfile({ name, onBack }: Props) {
     toast.success("Ativo excluído");
   };
 
+  const handleUnlink = async (id: string) => {
+    await supabase.from("inventory").update({
+      collaborator: "",
+      status: "Disponível",
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
+    toast.success("Ativo desvinculado e devolvido ao estoque");
+    refetch();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
