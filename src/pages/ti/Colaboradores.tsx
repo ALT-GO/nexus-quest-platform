@@ -328,9 +328,9 @@ export default function Colaboradores() {
                             <CategoryBadges categories={c.categories} />
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <ConfirmDeleteDialog
-                              description={`Tem certeza que deseja excluir "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
-                              onConfirm={() => deleteCollaborator(c.name, refetch)}
+                            <DeleteCollaboratorDialog
+                              collaboratorName={c.name}
+                              onDone={refetch}
                             />
                           </TableCell>
                         </TableRow>
