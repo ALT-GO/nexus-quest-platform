@@ -147,6 +147,7 @@ export type Database = {
           cargo: string | null
           category: string
           collaborator: string | null
+          comments: string | null
           condition: string
           contrato: string | null
           cost_center: string | null
@@ -154,6 +155,7 @@ export type Database = {
           cost_center_man: string | null
           created_at: string
           data_aquisicao: string | null
+          data_bloqueio: string | null
           delivered_at: string | null
           email_address: string | null
           gestor: string | null
@@ -181,6 +183,7 @@ export type Database = {
           cargo?: string | null
           category?: string
           collaborator?: string | null
+          comments?: string | null
           condition?: string
           contrato?: string | null
           cost_center?: string | null
@@ -188,6 +191,7 @@ export type Database = {
           cost_center_man?: string | null
           created_at?: string
           data_aquisicao?: string | null
+          data_bloqueio?: string | null
           delivered_at?: string | null
           email_address?: string | null
           gestor?: string | null
@@ -215,6 +219,7 @@ export type Database = {
           cargo?: string | null
           category?: string
           collaborator?: string | null
+          comments?: string | null
           condition?: string
           contrato?: string | null
           cost_center?: string | null
@@ -222,6 +227,7 @@ export type Database = {
           cost_center_man?: string | null
           created_at?: string
           data_aquisicao?: string | null
+          data_bloqueio?: string | null
           delivered_at?: string | null
           email_address?: string | null
           gestor?: string | null
