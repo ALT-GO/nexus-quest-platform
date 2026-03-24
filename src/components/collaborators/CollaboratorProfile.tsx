@@ -9,6 +9,7 @@ import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
 import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
 import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Unlink } from "lucide-react";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
 import { LinkExistingAssetDialog } from "@/components/collaborators/LinkExistingAssetDialog";
 import { cn } from "@/lib/utils";
