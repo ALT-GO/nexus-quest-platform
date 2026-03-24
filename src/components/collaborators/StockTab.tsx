@@ -424,7 +424,10 @@ function CategoryStockTable({
                     </TableCell>
                   ))}
                   <TableCell>
-                    <AssignDialog asset={item} onAssigned={onAssigned} />
+                    <div className="flex items-center gap-1">
+                      <StockDetailDialog asset={item} onUpdated={onAssigned} />
+                      <AssignDialog asset={item} onAssigned={onAssigned} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
