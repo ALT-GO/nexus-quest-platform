@@ -314,10 +314,10 @@ export function CollaboratorProfile({ name, onBack }: Props) {
       ) : null}
 
       <div className="space-y-6">
-        <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
       </div>
 
       <PrintableTermDialog 
