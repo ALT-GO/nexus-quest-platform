@@ -835,7 +835,24 @@ export function TicketDetailSheet({
               />
             </div>
 
-            {/* Subtask Assets (Contratação) */}
+            {/* Devolution Term button for Desligamento */}
+            {ticket.category === "Desligamento" && (
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setShowDevolutionChecklist(true)}
+                >
+                  <FileText className="h-4 w-4" />
+                  Gerar Termo de Devolução
+                </Button>
+                <DevolutionChecklistDialog
+                  open={showDevolutionChecklist}
+                  onOpenChange={setShowDevolutionChecklist}
+                  collaboratorName={ticket.requester}
+                />
+              </div>
+            )
             {ticket.category === "Contratação" && subtasks.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
