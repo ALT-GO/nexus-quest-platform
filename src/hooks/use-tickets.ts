@@ -131,6 +131,61 @@ export function useTickets() {
   return { tickets, loading, fetchTickets, updateTicket, deleteTicket };
 }
 
+// Category → Kanban column mapping
+const categoryToColumnMap: Record<string, string> = {
+  "Solicitação de novo Computador/Notebook": "Solicitações de Notebook",
+  "Solicitação de novo Celular": "Solicitação de Celular",
+  "Solicitação de nova Linha": "Solicitação de Linhas",
+  "Solicitação de Tablet": "Solicitação de Tablet",
+  "Contratação": "Contratações",
+  "Desligamento": "Desligamentos",
+};
+
+const defaultColumnName = "Novos Chamados";
+
+async function resolveStatusId(category: string): Promise<string> {
+  const targetColumn = categoryToColumnMap[category] || defaultColumnName;
+
+  // Check if the status column already exists
+  const { data: existing } = await supabase
+    .from("status_config")
+    .select("id")
+    .eq("nome", targetColumn)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return existing[0].id;
+  }
+
+  // Create the status column
+  const id = `auto_${targetColumn.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+  const { data: allStatuses } = await supabase
+    .from("status_config")
+    .select("ordem")
+    .order("ordem", { ascending: false })
+    .limit(1);
+
+  const maxOrdem = allStatuses && allStatuses.length > 0 ? (allStatuses[0] as any).ordem : 0;
+
+  const { error } = await supabase.from("status_config").insert({
+    id,
+    nome: targetColumn,
+    cor: "221 83% 53%",
+    ordem: maxOrdem + 1,
+    ativo: true,
+    is_final: false,
+    status_type: "todo",
+  } as any);
+
+  if (error) {
+    console.error("Error creating status column:", error);
+    return "pending";
+  }
+
+  console.log(`[TRIAGEM] Coluna "${targetColumn}" criada automaticamente.`);
+  return id;
+}
+
 export async function createTicket(data: {
   title: string;
   category: string;
@@ -145,6 +200,9 @@ export async function createTicket(data: {
   const now = new Date();
   const slaDeadline = new Date(now.getTime() + slaHours * 3600000);
 
+  // Resolve the correct Kanban column based on category
+  const statusId = await resolveStatusId(data.category);
+
   const { data: result, error } = await supabase
     .from("tickets")
     .insert({
@@ -155,7 +213,7 @@ export async function createTicket(data: {
       email: data.email,
       department: data.department || null,
       priority: data.priority || "medium",
-      status_id: "pending",
+      status_id: statusId,
       sla_hours: slaHours,
       sla_deadline: slaDeadline.toISOString(),
       ticket_number: "",
