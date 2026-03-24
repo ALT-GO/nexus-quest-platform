@@ -93,6 +93,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cargo", label: "Cargo" },
     { key: "email_address", label: "E-mail" },
     { key: "created_at", label: "Data criação", readOnly: true },
+    { key: "data_bloqueio", label: "Data de Bloqueio", type: "date" },
     { key: "licenca", label: "Licença" },
     { key: "gestor", label: "Gestor" },
     { key: "contrato", label: "Contrato" },
