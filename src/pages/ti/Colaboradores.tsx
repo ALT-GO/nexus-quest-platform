@@ -272,9 +272,9 @@ export default function Colaboradores() {
                           </div>
                         </div>
                         <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <ConfirmDeleteDialog
-                            description={`Tem certeza que deseja excluir o colaborador "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
-                            onConfirm={() => deleteCollaborator(c.name, refetch)}
+                          <DeleteCollaboratorDialog
+                            collaboratorName={c.name}
+                            onDone={refetch}
                           />
                         </div>
                       </div>
