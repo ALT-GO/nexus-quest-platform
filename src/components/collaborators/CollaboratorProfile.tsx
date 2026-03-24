@@ -210,7 +210,18 @@ function AssetSection({
                     );
                   })}
                   <TableCell>
-                    <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-orange-600"
+                        title="Desvincular"
+                        onClick={() => onUnlink(item.id)}
+                      >
+                        <Unlink className="h-3.5 w-3.5" />
+                      </Button>
+                      <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
