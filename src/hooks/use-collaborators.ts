@@ -39,6 +39,8 @@ export interface CollaboratorAsset {
   imei1: string;
   imei2: string;
   licenca: string;
+  data_bloqueio: string | null;
+  comments: string;
 }
 
 export function useCollaborators() {
