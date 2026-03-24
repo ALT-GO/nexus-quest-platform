@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { DevolutionChecklistDialog } from "@/components/servicedesk/DevolutionChecklistDialog";
 import {
   Sheet,
   SheetContent,
@@ -50,6 +51,7 @@ import {
   Circle,
   Trash2,
   Pencil,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -223,6 +225,7 @@ export function TicketDetailSheet({
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
+  const [showDevolutionChecklist, setShowDevolutionChecklist] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [technicians, setTechnicians] = useState<string[]>([]);
 
@@ -832,6 +835,25 @@ export function TicketDetailSheet({
                 requesterName={ticket.requester}
               />
             </div>
+
+            {/* Devolution Term button for Desligamento */}
+            {ticket.category === "Desligamento" && (
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setShowDevolutionChecklist(true)}
+                >
+                  <FileText className="h-4 w-4" />
+                  Gerar Termo de Devolução
+                </Button>
+                <DevolutionChecklistDialog
+                  open={showDevolutionChecklist}
+                  onOpenChange={setShowDevolutionChecklist}
+                  collaboratorName={ticket.requester}
+                />
+              </div>
+            )}
 
             {/* Subtask Assets (Contratação) */}
             {ticket.category === "Contratação" && subtasks.length > 0 && (
