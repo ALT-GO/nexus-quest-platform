@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { Eye, Save } from "lucide-react";
 import { CollaboratorAsset } from "@/hooks/use-collaborators";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,83 +18,123 @@ interface Props {
   onUpdated: () => void;
 }
 
-interface DetailRow {
+interface EditableField {
   label: string;
-  value: string | null | undefined;
+  key: string;
+  readOnly?: boolean;
 }
 
-function getDetails(a: CollaboratorAsset): DetailRow[] {
-  const base: DetailRow[] = [
-    { label: "Código", value: a.asset_code },
-    { label: "Categoria", value: a.category },
-    { label: "Status", value: a.status },
-    { label: "Colaborador", value: a.collaborator },
+function getFieldsForCategory(category: string): EditableField[] {
+  const base: EditableField[] = [
+    { label: "Código", key: "asset_code", readOnly: true },
+    { label: "Categoria", key: "category", readOnly: true },
+    { label: "Status", key: "status" },
+    { label: "Colaborador", key: "collaborator" },
   ];
 
-  if (a.category === "notebooks" || a.category === "hardware") {
+  if (category === "notebooks" || category === "hardware") {
     base.push(
-      { label: "Marca", value: a.marca },
-      { label: "Modelo", value: a.model },
-      { label: "Service Tag", value: a.service_tag },
-      { label: "Service Tag 2", value: a.service_tag_2 },
-      { label: "Tipo", value: a.asset_type },
-      { label: "Centro de Custo", value: a.cost_center },
-      { label: "Contrato", value: a.contrato },
+      { label: "Marca", key: "marca" },
+      { label: "Modelo", key: "model" },
+      { label: "Service Tag", key: "service_tag" },
+      { label: "Service Tag 2", key: "service_tag_2" },
+      { label: "Tipo", key: "asset_type" },
+      { label: "Centro de Custo", key: "cost_center" },
+      { label: "Contrato", key: "contrato" },
     );
-  } else if (a.category === "celulares") {
+  } else if (category === "celulares") {
     base.push(
-      { label: "Marca", value: a.marca },
-      { label: "Modelo", value: a.model },
-      { label: "Service Tag", value: a.service_tag },
-      { label: "IMEI 1", value: a.imei1 },
-      { label: "IMEI 2", value: a.imei2 },
-      { label: "Centro de Custo", value: a.cost_center },
-      { label: "Contrato", value: a.contrato },
+      { label: "Marca", key: "marca" },
+      { label: "Modelo", key: "model" },
+      { label: "Service Tag", key: "service_tag" },
+      { label: "IMEI 1", key: "imei1" },
+      { label: "IMEI 2", key: "imei2" },
+      { label: "Centro de Custo", key: "cost_center" },
+      { label: "Contrato", key: "contrato" },
     );
-  } else if (a.category === "linhas" || a.category === "telecom") {
+  } else if (category === "linhas" || category === "telecom") {
     base.push(
-      { label: "Número", value: a.numero },
-      { label: "Operadora", value: a.operadora },
-      { label: "Gestor", value: a.gestor },
-      { label: "CC Eng", value: a.cost_center_eng },
-      { label: "CC Man", value: a.cost_center_man },
-      { label: "Contrato", value: a.contrato },
+      { label: "Número", key: "numero" },
+      { label: "Operadora", key: "operadora" },
+      { label: "Gestor", key: "gestor" },
+      { label: "CC Eng", key: "cost_center_eng" },
+      { label: "CC Man", key: "cost_center_man" },
+      { label: "Contrato", key: "contrato" },
     );
-  } else if (a.category === "licencas" || a.category === "licenses") {
+  } else if (category === "licencas" || category === "licenses") {
     base.push(
-      { label: "E-mail", value: a.email_address },
-      { label: "Licença", value: a.licenca },
-      { label: "Gestor", value: a.gestor },
-      { label: "CC Eng", value: a.cost_center_eng },
-      { label: "CC Man", value: a.cost_center_man },
-      { label: "Contrato", value: a.contrato },
-      { label: "Data de Bloqueio", value: (a as any).data_bloqueio ? format(new Date((a as any).data_bloqueio), "dd/MM/yyyy") : "" },
+      { label: "E-mail", key: "email_address" },
+      { label: "Licença", key: "licenca" },
+      { label: "Gestor", key: "gestor" },
+      { label: "CC Eng", key: "cost_center_eng" },
+      { label: "CC Man", key: "cost_center_man" },
+      { label: "Contrato", key: "contrato" },
+      { label: "Data de Bloqueio", key: "data_bloqueio" },
     );
   }
 
-  base.push({ label: "Criado em", value: a.created_at ? format(new Date(a.created_at), "dd/MM/yyyy HH:mm") : "" });
+  base.push({ label: "Criado em", key: "created_at", readOnly: true });
 
   return base;
 }
 
 export function StockDetailDialog({ asset, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
-  const [comments, setComments] = useState(asset.notes || (asset as any).comments || "");
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const handleSaveComments = async () => {
-    setSaving(true);
-    await supabase.from("inventory").update({
-      notes: comments,
-      comments,
-      updated_at: new Date().toISOString(),
-    } as any).eq("id", asset.id);
-    toast.success("Comentários salvos");
-    setSaving(false);
-    onUpdated();
+  // Initialize form data when dialog opens or asset changes
+  useEffect(() => {
+    if (open) {
+      const fields = getFieldsForCategory(asset.category);
+      const data: Record<string, string> = {};
+      for (const f of fields) {
+        const raw = (asset as any)[f.key];
+        if (f.key === "created_at" && raw) {
+          data[f.key] = format(new Date(raw), "dd/MM/yyyy HH:mm");
+        } else if (f.key === "data_bloqueio" && raw) {
+          data[f.key] = format(new Date(raw), "yyyy-MM-dd");
+        } else {
+          data[f.key] = raw ?? "";
+        }
+      }
+      data.notes = asset.notes || (asset as any).comments || "";
+      setFormData(data);
+    }
+  }, [open, asset]);
+
+  const handleChange = (key: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const details = getDetails(asset);
+  const handleSave = async () => {
+    setSaving(true);
+    const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+    const fields = getFieldsForCategory(asset.category);
+
+    for (const f of fields) {
+      if (f.readOnly) continue;
+      const val = formData[f.key] ?? "";
+      updates[f.key] = val || null;
+    }
+    updates.notes = formData.notes || "";
+    updates.comments = formData.notes || "";
+
+    const { error } = await supabase
+      .from("inventory")
+      .update(updates as any)
+      .eq("id", asset.id);
+
+    if (error) {
+      toast.error("Erro ao salvar: " + error.message);
+    } else {
+      toast.success("Alterações salvas com sucesso");
+      onUpdated();
+    }
+    setSaving(false);
+  };
+
+  const fields = getFieldsForCategory(asset.category);
   const condition = getConditionLabel(asset.condition || "ready");
 
   return (
@@ -109,7 +149,7 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {asset.asset_code}
@@ -119,28 +159,52 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {details.map((d) => (
-              <div key={d.label}>
-                <p className="text-[11px] text-muted-foreground font-medium">{d.label}</p>
-                <p className="text-sm">{d.value || "—"}</p>
-              </div>
-            ))}
+          <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {fields.map((f) => (
+                <div key={f.key}>
+                  <label className="text-[11px] text-muted-foreground font-medium mb-1 block">
+                    {f.label}
+                  </label>
+                  {f.readOnly ? (
+                    <p className="text-sm py-1.5 px-2 bg-muted/50 rounded-md">
+                      {formData[f.key] || "—"}
+                    </p>
+                  ) : f.key === "data_bloqueio" ? (
+                    <Input
+                      type="date"
+                      value={formData[f.key] || ""}
+                      onChange={(e) => handleChange(f.key, e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  ) : (
+                    <Input
+                      value={formData[f.key] || ""}
+                      onChange={(e) => handleChange(f.key, e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={`Preencher ${f.label.toLowerCase()}`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <label className="text-[11px] text-muted-foreground font-medium block">Notas</label>
+              <Textarea
+                value={formData.notes || ""}
+                onChange={(e) => handleChange("notes", e.target.value)}
+                placeholder="Adicione notas sobre este item..."
+                rows={3}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2 pt-2 border-t">
-            <p className="text-sm font-medium">Comentários</p>
-            <Textarea
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="Adicione comentários sobre este item..."
-              rows={3}
-            />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleSaveComments} disabled={saving}>
-                {saving ? "Salvando..." : "Salvar comentários"}
-              </Button>
-            </div>
+          <div className="flex justify-end pt-3 border-t">
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              <Save className="h-4 w-4" />
+              {saving ? "Salvando..." : "Salvar alterações"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
