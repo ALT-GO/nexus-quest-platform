@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
+import { StockDetailDialog } from "./StockDetailDialog";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
 import { StatusSelectCell } from "./StatusSelectCell";
