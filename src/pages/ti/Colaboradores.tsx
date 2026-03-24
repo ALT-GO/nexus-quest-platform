@@ -110,21 +110,8 @@ function CategoryBadges({ categories }: { categories: string[] }) {
   );
 }
 
-async function deleteCollaborator(name: string, refetch: () => void) {
-  try {
-    // Hardware/telecom: return to stock
-    await supabase.from("inventory").update({
-      collaborator: "", status: "Disponível", updated_at: new Date().toISOString(),
-    }).eq("collaborator", name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
-    // Licenses: keep record, set status to Inativo (retain collaborator name)
-    await supabase.from("inventory").update({
-      status: "Inativo", updated_at: new Date().toISOString(),
-    }).eq("collaborator", name).in("category", ["licencas", "licenses"]);
-    toast.success(`Colaborador "${name}" removido. Ativos devolvidos ao estoque. Licenças marcadas como Inativo.`);
-    refetch();
-  } catch {
-    toast.error("Erro ao excluir colaborador");
-  }
+async function deleteCollaborator(_name: string, _refetch: () => void) {
+  // Legacy - now handled by DeleteCollaboratorDialog
 }
 
 async function renameCollaborator(oldName: string, newName: string, refetch: () => void) {
