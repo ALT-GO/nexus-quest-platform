@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
+import { StockDetailDialog } from "./StockDetailDialog";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
 import { StatusSelectCell } from "./StatusSelectCell";
@@ -214,6 +215,7 @@ const licencaCols: ColDef[] = [
   { id: "cargo", header: "Cargo", field: "cargo", accessor: (i) => i.cargo || "" },
   { id: "email_address", header: "E-mail", field: "email_address", accessor: (i) => i.email_address || "" },
   { id: "created_at", header: "Data criação", field: null, accessor: (i) => i.created_at ? format(new Date(i.created_at), "dd/MM/yyyy") : "" },
+  { id: "data_bloqueio", header: "Data de Bloqueio", field: "data_bloqueio" as any, accessor: (i) => (i as any).data_bloqueio ? format(new Date((i as any).data_bloqueio), "dd/MM/yyyy") : "" },
   { id: "licenca", header: "Licença", field: "licenca", accessor: (i) => i.licenca || "" },
   { id: "gestor", header: "Gestor", field: "gestor", accessor: (i) => i.gestor || "" },
   { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
@@ -422,7 +424,10 @@ function CategoryStockTable({
                     </TableCell>
                   ))}
                   <TableCell>
-                    <AssignDialog asset={item} onAssigned={onAssigned} />
+                    <div className="flex items-center gap-1">
+                      <StockDetailDialog asset={item} onUpdated={onAssigned} />
+                      <AssignDialog asset={item} onAssigned={onAssigned} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

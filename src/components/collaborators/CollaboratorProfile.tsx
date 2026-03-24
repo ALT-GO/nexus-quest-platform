@@ -9,6 +9,7 @@ import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
 import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
 import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Unlink } from "lucide-react";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
 import { LinkExistingAssetDialog } from "@/components/collaborators/LinkExistingAssetDialog";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cargo", label: "Cargo" },
     { key: "email_address", label: "E-mail" },
     { key: "created_at", label: "Data criação", readOnly: true },
+    { key: "data_bloqueio", label: "Data de Bloqueio", type: "date" },
     { key: "licenca", label: "Licença" },
     { key: "gestor", label: "Gestor" },
     { key: "contrato", label: "Contrato" },
@@ -113,6 +115,7 @@ function AssetSection({
   collaboratorName,
   onUpdate,
   onDelete,
+  onUnlink,
   onRefetch,
 }: {
   category: string;
@@ -120,6 +123,7 @@ function AssetSection({
   collaboratorName: string;
   onUpdate: (id: string, updates: Partial<CollaboratorAsset>) => void;
   onDelete: (id: string) => void;
+  onUnlink: (id: string) => void;
   onRefetch: () => void;
 }) {
   const config = categoryConfig[category];
@@ -209,7 +213,18 @@ function AssetSection({
                     );
                   })}
                   <TableCell>
-                    <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-orange-600"
+                        title="Desvincular"
+                        onClick={() => onUnlink(item.id)}
+                      >
+                        <Unlink className="h-3.5 w-3.5" />
+                      </Button>
+                      <ConfirmDeleteDialog onConfirm={() => onDelete(item.id)} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -246,6 +261,16 @@ export function CollaboratorProfile({ name, onBack }: Props) {
   const handleDelete = async (id: string) => {
     await deleteAsset(id);
     toast.success("Ativo excluído");
+  };
+
+  const handleUnlink = async (id: string) => {
+    await supabase.from("inventory").update({
+      collaborator: "",
+      status: "Disponível",
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
+    toast.success("Ativo desvinculado e devolvido ao estoque");
+    refetch();
   };
 
   if (loading) {
@@ -290,10 +315,10 @@ export function CollaboratorProfile({ name, onBack }: Props) {
       ) : null}
 
       <div className="space-y-6">
-        <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
-        <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onRefetch={refetch} />
+        <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
       </div>
 
       <PrintableTermDialog 

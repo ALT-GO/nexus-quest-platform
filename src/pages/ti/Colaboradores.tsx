@@ -17,6 +17,7 @@ import {
   LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { DeleteCollaboratorDialog } from "@/components/collaborators/DeleteCollaboratorDialog";
 import { NewCollaboratorDialog } from "@/components/collaborators/NewCollaboratorDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -109,21 +110,8 @@ function CategoryBadges({ categories }: { categories: string[] }) {
   );
 }
 
-async function deleteCollaborator(name: string, refetch: () => void) {
-  try {
-    // Hardware/telecom: return to stock
-    await supabase.from("inventory").update({
-      collaborator: "", status: "Disponível", updated_at: new Date().toISOString(),
-    }).eq("collaborator", name).in("category", ["notebooks", "celulares", "linhas", "hardware", "telecom"]);
-    // Licenses: keep record, set status to Inativo (retain collaborator name)
-    await supabase.from("inventory").update({
-      status: "Inativo", updated_at: new Date().toISOString(),
-    }).eq("collaborator", name).in("category", ["licencas", "licenses"]);
-    toast.success(`Colaborador "${name}" removido. Ativos devolvidos ao estoque. Licenças marcadas como Inativo.`);
-    refetch();
-  } catch {
-    toast.error("Erro ao excluir colaborador");
-  }
+async function deleteCollaborator(_name: string, _refetch: () => void) {
+  // Legacy - now handled by DeleteCollaboratorDialog
 }
 
 async function renameCollaborator(oldName: string, newName: string, refetch: () => void) {
@@ -284,9 +272,9 @@ export default function Colaboradores() {
                           </div>
                         </div>
                         <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <ConfirmDeleteDialog
-                            description={`Tem certeza que deseja excluir o colaborador "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
-                            onConfirm={() => deleteCollaborator(c.name, refetch)}
+                          <DeleteCollaboratorDialog
+                            collaboratorName={c.name}
+                            onDone={refetch}
                           />
                         </div>
                       </div>
@@ -340,9 +328,9 @@ export default function Colaboradores() {
                             <CategoryBadges categories={c.categories} />
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
-                            <ConfirmDeleteDialog
-                              description={`Tem certeza que deseja excluir "${c.name}"? Notebooks, celulares e linhas voltarão ao estoque. Licenças vinculadas serão excluídas.`}
-                              onConfirm={() => deleteCollaborator(c.name, refetch)}
+                            <DeleteCollaboratorDialog
+                              collaboratorName={c.name}
+                              onDone={refetch}
                             />
                           </TableCell>
                         </TableRow>
