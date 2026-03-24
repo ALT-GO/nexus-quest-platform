@@ -51,6 +51,7 @@ import {
   Circle,
   Trash2,
   Pencil,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
