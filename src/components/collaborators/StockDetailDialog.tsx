@@ -79,12 +79,13 @@ function getDetails(a: CollaboratorAsset): DetailRow[] {
 
 export function StockDetailDialog({ asset, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
-  const [comments, setComments] = useState((asset as any).comments || "");
+  const [comments, setComments] = useState(asset.notes || (asset as any).comments || "");
   const [saving, setSaving] = useState(false);
 
   const handleSaveComments = async () => {
     setSaving(true);
     await supabase.from("inventory").update({
+      notes: comments,
       comments,
       updated_at: new Date().toISOString(),
     } as any).eq("id", asset.id);
