@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, BarChart3, Monitor, Megaphone, Wallet, Building2 } from "lucide-react";
+import { CalendarIcon, Eye, Monitor, Megaphone, Wallet, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +37,7 @@ const financeMonths = [
 export type CostCenterFilter = "all" | "eng" | "man";
 
 export default function CentralInteligencia() {
-  const [activeTab, setActiveTab] = useState("geral");
+  const [activeTab, setActiveTab] = useState("executiva");
   const [period, setPeriod] = useState<PeriodFilter>("30d");
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
@@ -68,8 +68,8 @@ export default function CentralInteligencia() {
     <AppLayout>
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
-          title="Central de Inteligência"
-          description="Visão consolidada de métricas e KPIs"
+          title="Torre de Controle"
+          description="Visão consolidada de métricas, KPIs e inteligência operacional"
         />
 
         {/* Global filters */}
@@ -86,7 +86,7 @@ export default function CentralInteligencia() {
               <SelectItem value="man">Centro de Custo - MAN</SelectItem>
             </SelectContent>
           </Select>
-          {activeTab === "financeiro" ? (
+          {activeTab === "ativos-custos" ? (
             <Select value={financeMonth} onValueChange={setFinanceMonth}>
               <SelectTrigger className="w-[180px]">
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -143,35 +143,35 @@ export default function CentralInteligencia() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
         <TabsList className="h-auto flex-wrap gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="geral" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <BarChart3 className="h-4 w-4" />
-            Geral
+          <TabsTrigger value="executiva" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Eye className="h-4 w-4" />
+            Visão Executiva
           </TabsTrigger>
           <TabsTrigger value="ti" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Monitor className="h-4 w-4" />
-            Operacional T.I
+            Operações de T.I.
+          </TabsTrigger>
+          <TabsTrigger value="ativos-custos" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Wallet className="h-4 w-4" />
+            Ativos & Custos
           </TabsTrigger>
           <TabsTrigger value="marketing" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Megaphone className="h-4 w-4" />
             Marketing
           </TabsTrigger>
-          <TabsTrigger value="financeiro" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Wallet className="h-4 w-4" />
-            Financeiro
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="geral" className="mt-6">
+        <TabsContent value="executiva" className="mt-6">
           <GeralTab costCenter={costCenter} />
         </TabsContent>
         <TabsContent value="ti" className="mt-6">
           <OperacionalTITab dateRange={dateRange} costCenter={costCenter} />
         </TabsContent>
+        <TabsContent value="ativos-custos" className="mt-6">
+          <FinanceiroTab selectedMonth={financeMonth} />
+        </TabsContent>
         <TabsContent value="marketing" className="mt-6">
           <MarketingTab />
-        </TabsContent>
-        <TabsContent value="financeiro" className="mt-6">
-          <FinanceiroTab selectedMonth={financeMonth} />
         </TabsContent>
       </Tabs>
     </AppLayout>

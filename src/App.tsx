@@ -37,8 +37,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, loading } = useAuth();
+function PrivilegedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAdmin, roles, loading } = useAuth();
 
   if (loading) {
     return (
@@ -49,7 +49,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  const hasAccess = isAdmin || roles.includes("ti");
+  if (!hasAccess) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -83,8 +84,12 @@ function AppRoutes() {
       <Route path="/ti/faturas" element={<ProtectedRoute><GestaoFaturas /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
-      {/* Admin-only: Central de Inteligência */}
-      <Route path="/central-inteligencia" element={<AdminRoute><CentralInteligencia /></AdminRoute>} />
+      {/* Torre de Controle: admin + ti only */}
+      <Route path="/central-inteligencia" element={<PrivilegedRoute><CentralInteligencia /></PrivilegedRoute>} />
+
+      {/* Legacy redirects */}
+      <Route path="/ti/dashboard" element={<Navigate to="/central-inteligencia" replace />} />
+      <Route path="/ti/financeiro" element={<Navigate to="/central-inteligencia" replace />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

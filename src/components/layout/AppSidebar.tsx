@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Megaphone,
   Monitor,
-  HardDrive,
   ChevronDown,
   ChevronRight,
   Settings,
@@ -14,11 +13,6 @@ import {
   Menu,
   X,
   Brain,
-  BarChart3,
-  Wallet,
-  Ticket,
-  FileText,
-  ClipboardList,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,8 +21,7 @@ interface NavItem {
   title: string;
   href?: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
-  children?: { title: string; href: string; adminOnly?: boolean }[];
+  children?: { title: string; href: string }[];
 }
 
 export function AppSidebar() {
@@ -37,13 +30,21 @@ export function AppSidebar() {
   const { user, isAdmin, roles, signOut } = useAuth();
 
   const hasAnyRole = (...r: string[]) => r.some((role) => roles.includes(role as any));
+  const isPrivileged = isAdmin || hasAnyRole("ti", "marketing");
 
   const navigation: NavItem[] = [
-    {
+    // Collaborators see Dashboard; privileged users land on Torre de Controle
+    ...(!isPrivileged ? [{
       title: "Dashboard",
       href: "/",
       icon: LayoutDashboard,
-    },
+    } as NavItem] : []),
+    // Torre de Controle visible only for admin and ti roles
+    ...(hasAnyRole("admin", "ti") ? [{
+      title: "Torre de Controle",
+      href: "/central-inteligencia",
+      icon: Brain,
+    } as NavItem] : []),
     ...(hasAnyRole("admin", "marketing") ? [{
       title: "Marketing",
       icon: Megaphone,
@@ -61,15 +62,9 @@ export function AppSidebar() {
         { title: "Gestão de Custos", href: "/ti/faturas" },
       ],
     } as NavItem] : []),
-    ...(isAdmin ? [{
-      title: "Central de Inteligência",
-      href: "/central-inteligencia",
-      icon: Brain,
-      adminOnly: true,
-    } as NavItem] : []),
   ];
 
-  const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI", "Central de Inteligência"]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI"]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const toggleExpanded = (title: string) => {
@@ -86,12 +81,6 @@ export function AppSidebar() {
     await signOut();
     navigate("/login");
   };
-
-  // Filter nav items by role
-  const visibleNav = navigation.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false;
-    return true;
-  });
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
   const userInitial = userName.charAt(0).toUpperCase();
@@ -112,7 +101,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-4 scrollbar-thin">
-        {visibleNav.map((item) => (
+        {navigation.map((item) => (
           <div key={item.title}>
             {item.href ? (
               <Link
@@ -141,11 +130,6 @@ export function AppSidebar() {
                 >
                   <item.icon className="h-5 w-5" />
                   {item.title}
-                  {item.adminOnly && (
-                    <span className="ml-1 rounded bg-sidebar-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary">
-                      ADMIN
-                    </span>
-                  )}
                   <span className="ml-auto">
                     {expandedItems.includes(item.title) ? (
                       <ChevronDown className="h-4 w-4" />
@@ -156,23 +140,21 @@ export function AppSidebar() {
                 </button>
                 {expandedItems.includes(item.title) && item.children && (
                   <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-4">
-                    {item.children
-                      .filter((child) => !child.adminOnly || isAdmin)
-                      .map((child) => (
-                        <Link
-                          key={child.href}
-                          to={child.href}
-                          onClick={() => setIsMobileOpen(false)}
-                          className={cn(
-                            "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
-                            isActive(child.href)
-                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                              : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                          )}
-                        >
-                          {child.title}
-                        </Link>
-                      ))}
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        to={child.href}
+                        onClick={() => setIsMobileOpen(false)}
+                        className={cn(
+                          "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
+                          isActive(child.href)
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        )}
+                      >
+                        {child.title}
+                      </Link>
+                    ))}
                   </div>
                 )}
               </>
