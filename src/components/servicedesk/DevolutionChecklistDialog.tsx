@@ -73,21 +73,36 @@ export function DevolutionChecklistDialog({ open, onOpenChange, collaboratorName
         if (decision === "delete") {
           await supabase.from("inventory").delete().eq("id", asset.id);
         } else {
-          const isLinhaLicenca = ["linhas", "licencas", "telecom", "licenses"].includes(asset.category);
+          const isLinha = ["linhas", "telecom"].includes(asset.category);
+          const isLicenca = ["licencas", "licenses"].includes(asset.category);
           const isNotebookCelular = ["notebooks", "celulares", "hardware"].includes(asset.category);
-          const updates: any = {
-            collaborator: "",
-            status: asset.category === "licencas" || asset.category === "licenses" ? "Inativo" : "Disponível",
-            updated_at: new Date().toISOString(),
-          };
-          if (isNotebookCelular) {
-            updates.cost_center = "9018";
+
+          if (isLicenca) {
+            // Licenças: only clear collaborator
+            await supabase.from("inventory").update({
+              collaborator: "",
+              status: "Inativo",
+              updated_at: new Date().toISOString(),
+            }).eq("id", asset.id);
+          } else {
+            const updates: any = {
+              collaborator: "",
+              status: "Disponível",
+              condition: "ready",
+              updated_at: new Date().toISOString(),
+            };
+            if (isNotebookCelular) {
+              updates.cost_center = "9018";
+            }
+            if (isLinha) {
+              updates.asset_type = "";
+              updates.gestor = "";
+              updates.contrato = "";
+              updates.cost_center_eng = "9018";
+              updates.cost_center_man = "9065";
+            }
+            await supabase.from("inventory").update(updates).eq("id", asset.id);
           }
-          if (isLinhaLicenca) {
-            updates.cost_center_eng = "9018";
-            updates.cost_center_man = "9065";
-          }
-          await supabase.from("inventory").update(updates).eq("id", asset.id);
         }
       }
 

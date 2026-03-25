@@ -279,11 +279,33 @@ export function CollaboratorProfile({ name, onBack }: Props) {
   };
 
   const handleUnlink = async (id: string) => {
-    await supabase.from("inventory").update({
+    const asset = assets.find((a) => a.id === id);
+    const category = asset?.category || "";
+
+    const base: Record<string, any> = {
       collaborator: "",
-      status: "Disponível",
+      status: category === "licencas" || category === "licenses" ? "Inativo" : "Disponível",
+      condition: "ready",
       updated_at: new Date().toISOString(),
-    }).eq("id", id);
+    };
+
+    if (category === "linhas" || category === "telecom") {
+      base.asset_type = "";
+      base.gestor = "";
+      base.contrato = "";
+    }
+
+    // Licenças: only clear collaborator, keep everything else
+    if (category === "licencas" || category === "licenses") {
+      await supabase.from("inventory").update({
+        collaborator: "",
+        status: "Inativo",
+        updated_at: new Date().toISOString(),
+      }).eq("id", id);
+    } else {
+      await supabase.from("inventory").update(base).eq("id", id);
+    }
+
     toast.success("Ativo desvinculado e devolvido ao estoque");
     refetch();
   };

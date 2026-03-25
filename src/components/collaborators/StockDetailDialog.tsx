@@ -1,17 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Eye, Save } from "lucide-react";
+import { Eye, Save, Check, ChevronsUpDown } from "lucide-react";
 import { CollaboratorAsset } from "@/hooks/use-collaborators";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getConditionLabel } from "./StockTab";
 import { cn } from "@/lib/utils";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from "@/components/ui/command";
 
 interface Props {
   asset: CollaboratorAsset;
@@ -82,12 +88,104 @@ function getFieldsForCategory(category: string): EditableField[] {
   return base;
 }
 
+/* ── Collaborator Combobox ─────────────────────────────────── */
+function CollaboratorCombobox({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [allCollaborators, setAllCollaborators] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("inventory")
+      .select("collaborator")
+      .neq("collaborator", "")
+      .not("collaborator", "is", null)
+      .then(({ data }) => {
+        if (data) {
+          const unique = [...new Set(
+            data.map((d: any) => d.collaborator as string).filter(Boolean)
+          )].sort();
+          setAllCollaborators(unique);
+        }
+      });
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return allCollaborators;
+    const q = search.toLowerCase();
+    return allCollaborators.filter((c) => c.toLowerCase().includes(q));
+  }, [search, allCollaborators]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-8 w-full justify-between text-sm font-normal"
+        >
+          <span className="truncate">{value || "Selecionar colaborador..."}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Buscar colaborador..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList className="max-h-48">
+            <CommandEmpty>Nenhum encontrado</CommandEmpty>
+            <CommandGroup>
+              {search.trim() && !filtered.includes(search.trim()) && (
+                <CommandItem
+                  value={search.trim()}
+                  onSelect={() => {
+                    onChange(search.trim());
+                    setOpen(false);
+                  }}
+                  className="text-sm"
+                >
+                  <span className="italic text-muted-foreground">Usar "{search.trim()}"</span>
+                </CommandItem>
+              )}
+              {filtered.map((name) => (
+                <CommandItem
+                  key={name}
+                  value={name}
+                  onSelect={() => {
+                    onChange(name);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className="text-sm"
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", value === name ? "opacity-100" : "opacity-0")} />
+                  {name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ── Main Dialog ───────────────────────────────────────────── */
 export function StockDetailDialog({ asset, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  // Initialize form data when dialog opens or asset changes
   useEffect(() => {
     if (open) {
       const fields = getFieldsForCategory(asset.category);
@@ -96,7 +194,7 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
         const raw = (asset as any)[f.key];
         if (f.key === "created_at" && raw) {
           data[f.key] = format(new Date(raw), "dd/MM/yyyy HH:mm");
-      } else if ((f.key === "data_bloqueio" || f.key === "data_aquisicao") && raw) {
+        } else if ((f.key === "data_bloqueio" || f.key === "data_aquisicao") && raw) {
           data[f.key] = format(new Date(raw), "yyyy-MM-dd");
         } else if (f.key === "valor_pago") {
           data[f.key] = raw != null ? String(raw) : "";
@@ -180,6 +278,11 @@ export function StockDetailDialog({ asset, onUpdated }: Props) {
                     <p className="text-sm py-1.5 px-2 bg-muted/50 rounded-md">
                       {formData[f.key] || "—"}
                     </p>
+                  ) : f.key === "collaborator" ? (
+                    <CollaboratorCombobox
+                      value={formData[f.key] || ""}
+                      onChange={(v) => handleChange(f.key, v)}
+                    />
                   ) : f.key === "valor_pago" ? (
                     <Input
                       type="number"
