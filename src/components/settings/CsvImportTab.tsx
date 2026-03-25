@@ -728,6 +728,12 @@ export function CsvImportTab() {
         if (statusMap[normStatus]) payload.status = statusMap[normStatus];
       }
 
+      // Parse data_aquisicao to ISO date format
+      if (payload.data_aquisicao) {
+        const parsed = parseDateToISO(payload.data_aquisicao);
+        payload.data_aquisicao = parsed;
+      }
+
       const collabValue = (payload.collaborator || "").trim();
       if (collabValue) {
         if (!payload.status) payload.status = "Em uso";

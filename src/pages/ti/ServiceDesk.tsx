@@ -362,6 +362,7 @@ export default function ServiceDesk() {
             completedAt: t.completed_at ?? undefined,
             ativoId: t.asset_id ?? undefined,
             subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
+            orderIndex: (t as any).order_index ?? 0,
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
