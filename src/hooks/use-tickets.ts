@@ -32,6 +32,7 @@ export interface Ticket {
   external_notes: string | null;
   bucket_name: string | null;
   progress: "not_started" | "in_progress" | "completed";
+  order_index: number;
 }
 
 export function useTickets() {
