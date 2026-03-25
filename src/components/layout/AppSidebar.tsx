@@ -41,7 +41,7 @@ export function AppSidebar() {
     } as NavItem] : []),
     // Torre de Controle visible only for admin and ti roles
     ...(hasAnyRole("admin", "ti") ? [{
-      title: "Torre de Controle",
+      title: "Dashboard",
       href: "/central-inteligencia",
       icon: Brain,
     } as NavItem] : []),
