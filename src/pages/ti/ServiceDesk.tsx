@@ -404,6 +404,7 @@ export default function ServiceDesk() {
             const t = tickets.find((tk) => tk.ticket_number === ticketIdOrNumber || tk.id === ticketIdOrNumber);
             if (t) deleteTicket(t.id);
           }}
+          onReorder={handleReorder}
         />
       ) : (
         <TicketTable
