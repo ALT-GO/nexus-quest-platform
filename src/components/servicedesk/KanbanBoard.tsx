@@ -20,6 +20,7 @@ interface KanbanTicket {
   completedAt?: string;
   ativoId?: string;
   subtaskAssetIds?: string[];
+  orderIndex?: number;
 }
 
 interface KanbanBoardProps {
@@ -116,7 +117,8 @@ export function KanbanBoard({
 
     if (ticket.statusId !== columnId) {
       onStatusChange(ticketId, columnId);
-    } else if (onReorder) {
+    }
+    if (onReorder) {
       onReorder(ticketId, columnId, index);
     }
     setDraggedTicketId(null);
@@ -139,7 +141,8 @@ export function KanbanBoard({
             .sort((a, b) => {
               const ac = a.completedAt ? 1 : 0;
               const bc = b.completedAt ? 1 : 0;
-              return ac - bc;
+              if (ac !== bc) return ac - bc;
+              return (a.orderIndex ?? 0) - (b.orderIndex ?? 0);
             });
 
           return (

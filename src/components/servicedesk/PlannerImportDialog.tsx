@@ -65,6 +65,8 @@ const defaultFieldMap: Record<string, string> = {
   "labels": "category",
   "criado por": "requester",
   "created by": "requester",
+  "criado em": "created_at",
+  "created on": "created_at",
 };
 
 const targetFields = [
@@ -81,6 +83,7 @@ const targetFields = [
   { value: "completed_date", label: "Data de Conclusão" },
   { value: "status_id", label: "Progresso / Status" },
   { value: "category", label: "Rótulos / Categoria" },
+  { value: "created_at", label: "Data de Criação" },
 ];
 
 function parseCsvLine(line: string): string[] {

@@ -83,6 +83,11 @@ const headerMappings: Record<string, string> = {
   "licenca": "licenca",
   "license": "licenca",
   "chave": "licenca",
+  "data de aquisição": "data_aquisicao",
+  "data de aquisicao": "data_aquisicao",
+  "data aquisição": "data_aquisicao",
+  "data aquisicao": "data_aquisicao",
+  "acquisition date": "data_aquisicao",
 };
 
 const collaboratorMappings: Record<string, string> = {
@@ -256,6 +261,7 @@ const inventoryColumns = [
   { value: "numero", label: "Número" },
   { value: "operadora", label: "Operadora" },
   { value: "licenca", label: "Licença" },
+  { value: "data_aquisicao", label: "Data de Aquisição" },
 ];
 
 const collaboratorColumns = [
