@@ -145,7 +145,7 @@ export function KanbanBoard({
           return (
             <div
               key={status.id}
-              className="w-[300px] shrink-0 flex flex-col"
+              className="w-[300px] shrink-0 flex flex-col h-full"
               onDragOver={(e) => handleColumnDragOver(e, status.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, status.id)}
