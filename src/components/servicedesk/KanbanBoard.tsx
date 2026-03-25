@@ -207,7 +207,7 @@ export function KanbanBoard({
                         onDrop={(e) => handleCardDrop(e, status.id, index)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          "group cursor-grab rounded-lg border bg-card p-3.5 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
+                          "group cursor-grab rounded-lg border bg-card p-3.5 shadow-sm transition-all hover:shadow-md active:cursor-grabbing overflow-hidden",
                           draggedTicketId === ticket.id ? "opacity-40 scale-95" : "",
                           isCompleted ? "opacity-60" : ""
                         )}
