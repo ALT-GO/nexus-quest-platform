@@ -68,7 +68,7 @@ export default function CentralInteligencia() {
     <AppLayout>
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
-          title="Torre de Controle"
+          title="Dashboard"
           description="Visão consolidada de métricas, KPIs e inteligência operacional"
         />
 

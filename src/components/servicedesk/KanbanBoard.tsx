@@ -237,11 +237,11 @@ export function KanbanBoard({
                             )}
                           </button>
                           <div
-                            className="flex-1 cursor-pointer"
+                            className="flex-1 min-w-0 cursor-pointer"
                             onClick={() => onTicketClick?.(ticket.id)}
                           >
-                            <p className="text-xs font-mono text-muted-foreground mb-1">{ticket.id}</p>
-                            <p className={cn("font-medium text-sm leading-tight", isCompleted && "line-through")}>{ticket.title}</p>
+                            <p className="text-xs font-mono text-muted-foreground mb-1 truncate">{ticket.id}</p>
+                            <p className={cn("font-medium text-sm leading-tight break-words whitespace-normal line-clamp-3", isCompleted && "line-through")}>{ticket.title}</p>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {onDelete && (
@@ -269,10 +269,10 @@ export function KanbanBoard({
                           {subtaskAssets.length > 0 && (
                             <div className="mb-2 space-y-1">
                               {subtaskAssets.map((asset) => (
-                                <div key={asset.id} className="flex items-center gap-1.5 rounded bg-success/10 px-2 py-1 text-xs">
-                                  <CheckCircle2 className="h-3 w-3 text-success" />
-                                  <span className="font-medium text-success truncate">{asset.model}</span>
-                                  <span className="text-muted-foreground">({asset.type})</span>
+                              <div key={asset.id} className="flex items-center gap-1.5 rounded bg-success/10 px-2 py-1 text-xs min-w-0 flex-wrap">
+                                  <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
+                                  <span className="font-medium text-success truncate max-w-[120px]">{asset.model}</span>
+                                  <span className="text-muted-foreground truncate">({asset.type})</span>
                                 </div>
                               ))}
                             </div>
