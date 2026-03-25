@@ -131,8 +131,8 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="overflow-x-auto pb-4 -mx-2 px-2" style={{ scrollbarGutter: "stable" }}>
-      <div className="flex gap-4 min-w-max">
+    <div className="overflow-x-auto pb-4 -mx-2 px-2 h-[calc(100vh-220px)]" style={{ scrollbarGutter: "stable" }}>
+      <div className="flex gap-4 min-w-max h-full">
         {statuses.map((status) => {
           const columnTickets = tickets
             .filter((t) => t.statusId === status.id)
@@ -145,7 +145,7 @@ export function KanbanBoard({
           return (
             <div
               key={status.id}
-              className="w-[300px] shrink-0 flex flex-col"
+              className="w-[300px] shrink-0 flex flex-col h-full"
               onDragOver={(e) => handleColumnDragOver(e, status.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, status.id)}
@@ -153,7 +153,7 @@ export function KanbanBoard({
               {/* Sticky Column Header */}
               <div
                 className={cn(
-                  "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors sticky top-0 z-10 backdrop-blur-sm",
+                  "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors sticky top-0 z-10 bg-background",
                   dragOverColumn === status.id ? "ring-2 ring-ring ring-offset-2" : ""
                 )}
                 style={{
@@ -184,7 +184,7 @@ export function KanbanBoard({
               </div>
 
               {/* Cards */}
-              <div className="space-y-2.5 flex-1">
+              <div className="space-y-2.5 flex-1 overflow-y-auto pr-1">
                 {columnTickets.map((ticket, index) => {
                   const isCompleted = !!ticket.completedAt;
                   const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
