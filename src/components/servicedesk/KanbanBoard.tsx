@@ -131,8 +131,8 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="overflow-x-auto pb-4 -mx-2 px-2" style={{ scrollbarGutter: "stable" }}>
-      <div className="flex gap-4 min-w-max">
+    <div className="overflow-x-auto pb-4 -mx-2 px-2 h-[calc(100vh-220px)]" style={{ scrollbarGutter: "stable" }}>
+      <div className="flex gap-4 min-w-max h-full">
         {statuses.map((status) => {
           const columnTickets = tickets
             .filter((t) => t.statusId === status.id)
