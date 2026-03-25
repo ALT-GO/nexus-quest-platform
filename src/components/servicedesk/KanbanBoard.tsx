@@ -184,7 +184,7 @@ export function KanbanBoard({
               </div>
 
               {/* Cards */}
-              <div className="space-y-2.5 flex-1">
+              <div className="space-y-2.5 flex-1 overflow-y-auto pr-1">
                 {columnTickets.map((ticket, index) => {
                   const isCompleted = !!ticket.completedAt;
                   const sla = getSlaInfo(ticket.createdAt, ticket.category, isCompleted);
