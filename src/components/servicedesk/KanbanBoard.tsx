@@ -153,7 +153,7 @@ export function KanbanBoard({
               {/* Sticky Column Header */}
               <div
                 className={cn(
-                  "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors sticky top-0 z-10 backdrop-blur-sm",
+                  "mb-3 flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors sticky top-0 z-10 bg-background",
                   dragOverColumn === status.id ? "ring-2 ring-ring ring-offset-2" : ""
                 )}
                 style={{
