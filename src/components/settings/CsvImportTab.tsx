@@ -83,6 +83,11 @@ const headerMappings: Record<string, string> = {
   "licenca": "licenca",
   "license": "licenca",
   "chave": "licenca",
+  "data de aquisição": "data_aquisicao",
+  "data de aquisicao": "data_aquisicao",
+  "data aquisição": "data_aquisicao",
+  "data aquisicao": "data_aquisicao",
+  "acquisition date": "data_aquisicao",
 };
 
 const collaboratorMappings: Record<string, string> = {
@@ -128,6 +133,25 @@ function norm(val: string | null | undefined): string {
 function isBlank(val: string | null | undefined): boolean {
   const v = norm(val);
   return v === "" || v === "-" || v === "NULO" || v === "NULL";
+}
+
+function parseDateToISO(val: string): string | null {
+  if (!val) return null;
+  const iso = Date.parse(val);
+  if (!isNaN(iso)) return new Date(iso).toISOString().split("T")[0];
+  const parts = val.split(/[/\-\.]/);
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map(Number);
+    if (c > 1000) {
+      const d = new Date(c, b - 1, a);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+    if (a > 1000) {
+      const d = new Date(a, b - 1, c);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -256,6 +280,7 @@ const inventoryColumns = [
   { value: "numero", label: "Número" },
   { value: "operadora", label: "Operadora" },
   { value: "licenca", label: "Licença" },
+  { value: "data_aquisicao", label: "Data de Aquisição" },
 ];
 
 const collaboratorColumns = [
@@ -720,6 +745,12 @@ export function CsvImportTab() {
         };
         const normStatus = norm(payload.status);
         if (statusMap[normStatus]) payload.status = statusMap[normStatus];
+      }
+
+      // Parse data_aquisicao to ISO date format
+      if (payload.data_aquisicao) {
+        const parsed = parseDateToISO(payload.data_aquisicao);
+        payload.data_aquisicao = parsed;
       }
 
       const collabValue = (payload.collaborator || "").trim();

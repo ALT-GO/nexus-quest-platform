@@ -65,6 +65,8 @@ const defaultFieldMap: Record<string, string> = {
   "labels": "category",
   "criado por": "requester",
   "created by": "requester",
+  "criado em": "created_at",
+  "created on": "created_at",
 };
 
 const targetFields = [
@@ -81,6 +83,7 @@ const targetFields = [
   { value: "completed_date", label: "Data de Conclusão" },
   { value: "status_id", label: "Progresso / Status" },
   { value: "category", label: "Rótulos / Categoria" },
+  { value: "created_at", label: "Data de Criação" },
 ];
 
 function parseCsvLine(line: string): string[] {
@@ -285,13 +288,15 @@ export function PlannerImportDialog() {
         const startDateRaw = getMappedValue(row, "start_date");
         const completedDateRaw = getMappedValue(row, "completed_date");
         const completedDate = tryParseDate(completedDateRaw);
+        const createdAtRaw = getMappedValue(row, "created_at");
+        const createdAtParsed = tryParseDate(createdAtRaw);
         const progressRaw = getMappedValue(row, "status_id").toLowerCase();
 
-        const now = new Date();
+        const createdAt = createdAtParsed || new Date().toISOString();
         const slaHours = slaByCategory[category] ?? 24;
         const slaDeadline = completedDate
           ? new Date(completedDate)
-          : new Date(now.getTime() + slaHours * 3600000);
+          : new Date(new Date(createdAt).getTime() + slaHours * 3600000);
 
         // Map Planner progress to status_id
         let statusId = "pending";
@@ -313,7 +318,8 @@ export function PlannerImportDialog() {
           sla_hours: slaHours,
           sla_deadline: slaDeadline.toISOString(),
           ticket_number: "",
-          completed_at: statusId === "done" ? (completedDate || now.toISOString()) : null,
+          created_at: createdAt,
+          completed_at: statusId === "done" ? (completedDate || createdAt) : null,
           checklist: checklist.length > 0 ? JSON.stringify(checklist) : "[]",
           external_notes: externalNotes,
           bucket_name: bucketName,

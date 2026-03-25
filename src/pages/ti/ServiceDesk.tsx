@@ -58,7 +58,7 @@ export default function ServiceDesk() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const { getSlaInfo, tick } = useSlaTimer();
@@ -212,6 +212,33 @@ export default function ServiceDesk() {
     [tickets, updateTicket, getDoneStatusId, statuses]
   );
 
+  // Handle reorder within same column
+  const handleReorder = useCallback(
+    async (ticketIdOrNumber: string, statusId: string, newIndex: number) => {
+      // Get all non-subtask tickets in this column, sorted by order_index
+      const columnTickets = tickets
+        .filter((t) => !t.parent_ticket_id && t.status_id === statusId)
+        .sort((a, b) => ((a as any).order_index ?? 0) - ((b as any).order_index ?? 0));
+
+      const ticket = tickets.find((t) => t.ticket_number === ticketIdOrNumber || t.id === ticketIdOrNumber);
+      if (!ticket) return;
+
+      // Remove dragged ticket and insert at new position
+      const ordered = columnTickets.filter((t) => t.id !== ticket.id);
+      ordered.splice(newIndex, 0, ticket);
+
+      // Batch update order_index
+      const updates = ordered.map((t, idx) => ({ id: t.id, order_index: idx }));
+      for (const u of updates) {
+        await supabase
+          .from("tickets")
+          .update({ order_index: u.order_index, updated_at: new Date().toISOString() } as any)
+          .eq("id", u.id as any);
+      }
+    },
+    [tickets]
+  );
+
   // Open detail sheet
   const handleTicketClick = useCallback(
     (ticketIdOrNumber: string) => {
@@ -362,6 +389,7 @@ export default function ServiceDesk() {
             completedAt: t.completed_at ?? undefined,
             ativoId: t.asset_id ?? undefined,
             subtaskAssetIds: getSubtasks(t.id).map((s) => s.asset_id).filter(Boolean) as string[],
+            orderIndex: t.order_index ?? 0,
           }))}
           statuses={activeStatuses}
           getSlaInfo={getSlaInfo}
@@ -376,6 +404,7 @@ export default function ServiceDesk() {
             const t = tickets.find((tk) => tk.ticket_number === ticketIdOrNumber || tk.id === ticketIdOrNumber);
             if (t) deleteTicket(t.id);
           }}
+          onReorder={handleReorder}
         />
       ) : (
         <TicketTable
