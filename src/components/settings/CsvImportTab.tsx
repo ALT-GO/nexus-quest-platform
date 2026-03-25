@@ -135,6 +135,25 @@ function isBlank(val: string | null | undefined): boolean {
   return v === "" || v === "-" || v === "NULO" || v === "NULL";
 }
 
+function parseDateToISO(val: string): string | null {
+  if (!val) return null;
+  const iso = Date.parse(val);
+  if (!isNaN(iso)) return new Date(iso).toISOString().split("T")[0];
+  const parts = val.split(/[/\-\.]/);
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map(Number);
+    if (c > 1000) {
+      const d = new Date(c, b - 1, a);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+    if (a > 1000) {
+      const d = new Date(a, b - 1, c);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+  }
+  return null;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Normalização de categoria: siglas → nomes completos                */
 /* ------------------------------------------------------------------ */
