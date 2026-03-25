@@ -392,6 +392,7 @@ export type Database = {
           email: string
           external_notes: string | null
           id: string
+          order_index: number | null
           parent_ticket_id: string | null
           priority: string
           progress: string
@@ -417,6 +418,7 @@ export type Database = {
           email: string
           external_notes?: string | null
           id?: string
+          order_index?: number | null
           parent_ticket_id?: string | null
           priority?: string
           progress?: string
@@ -442,6 +444,7 @@ export type Database = {
           email?: string
           external_notes?: string | null
           id?: string
+          order_index?: number | null
           parent_ticket_id?: string | null
           priority?: string
           progress?: string
