@@ -7,8 +7,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
   Clock, CheckCircle2, AlertTriangle, Monitor, Wrench, Users, BarChart3, Ticket, Loader2,
-  Laptop, Smartphone, Phone, KeyRound,
+  Laptop, Smartphone, Phone, KeyRound, Timer, CalendarDays,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -64,12 +67,15 @@ const categoryColorClasses: Record<string, string> = {
   licencas: "text-chart-4",
 };
 
+const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProps) {
   const { tickets: allTickets, loading } = useTickets();
   const [techFilter, setTechFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [timesheetTotals, setTimesheetTotals] = useState<Record<string, number>>({});
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [allTimesheetData, setAllTimesheetData] = useState<{ ticket_id: string; duration_seconds: number }[]>([]);
 
   // Fetch inventory from Supabase
   useEffect(() => {
@@ -87,9 +93,21 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Fetch all timesheet data for all tickets
   useEffect(() => {
-    const ids = allTickets.filter((t) => t.completed_at).map((t) => t.id);
-    if (ids.length > 0) fetchTimesheetTotals(ids).then(setTimesheetTotals);
+    const ids = allTickets.map((t) => t.id);
+    if (ids.length > 0) {
+      fetchTimesheetTotals(ids).then(setTimesheetTotals);
+      // Also fetch raw timesheet logs for per-assignee aggregation
+      supabase
+        .from("timesheet_logs")
+        .select("ticket_id, duration_seconds")
+        .in("ticket_id", ids as any)
+        .not("end_time", "is", null)
+        .then(({ data }) => {
+          if (data) setAllTimesheetData(data as { ticket_id: string; duration_seconds: number }[]);
+        });
+    }
   }, [allTickets]);
 
   const filtered = useMemo(() => {
@@ -148,6 +166,46 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
         fullName: name, value, color: chartColors[i % chartColors.length],
       }))
       .sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  // ---- NEW: Top 5 Tarefas Demoradas ----
+  const top5SlowTasks = useMemo(() => {
+    return filtered
+      .filter((t) => timesheetTotals[t.id] && timesheetTotals[t.id] > 0)
+      .map((t) => ({
+        id: t.id,
+        ticketNumber: t.ticket_number,
+        title: t.title,
+        assignee: t.assignee || "—",
+        totalSeconds: timesheetTotals[t.id],
+      }))
+      .sort((a, b) => b.totalSeconds - a.totalSeconds)
+      .slice(0, 5);
+  }, [filtered, timesheetTotals]);
+
+  // ---- NEW: Horas Trabalhadas por Colaborador ----
+  const hoursByAssignee = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((t) => {
+      const assignee = t.assignee || "Sem atribuição";
+      const secs = timesheetTotals[t.id] || 0;
+      if (secs > 0) {
+        map[assignee] = (map[assignee] || 0) + secs;
+      }
+    });
+    return Object.entries(map)
+      .map(([name, seconds]) => ({ name, hours: Math.round((seconds / 3600) * 10) / 10 }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [filtered, timesheetTotals]);
+
+  // ---- NEW: Volume de Chamados por Dia da Semana ----
+  const ticketsByDayOfWeek = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
+    filtered.forEach((t) => {
+      const day = new Date(t.created_at).getDay();
+      counts[day]++;
+    });
+    return dayLabels.map((label, i) => ({ name: label, chamados: counts[i] }));
   }, [filtered]);
 
   const filteredInv = useMemo(() => {
@@ -213,7 +271,7 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
         <StatCard title="Chamados Abertos" value={filtered.filter((t) => !t.completed_at).length} icon={AlertTriangle} description="Sem conclusão" />
       </div>
 
-      {/* Charts */}
+      {/* Charts Row 1 */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -269,7 +327,95 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
         </Card>
       </div>
 
-      {/* SLA Gauge */}
+      {/* NEW: Volume por Dia da Semana + Horas por Colaborador */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />Volume de Chamados por Dia da Semana
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ticketsByDayOfWeek}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="chamados" name="Chamados" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Timer className="h-4 w-4 text-muted-foreground" />Horas Trabalhadas por Colaborador
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hoursByAssignee.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                Nenhum registro de timesheet no período
+              </div>
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hoursByAssignee} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} unit="h" />
+                    <YAxis dataKey="name" type="category" width={120} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `${value}h`} />
+                    <Bar dataKey="hours" name="Horas" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* NEW: Top 5 Tarefas Demoradas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Clock className="h-4 w-4 text-muted-foreground" />Top 5 Tarefas Mais Demoradas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {top5SlowTasks.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              Nenhum registro de timesheet encontrado no período
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Chamado</TableHead>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead className="text-right">Tempo Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {top5SlowTasks.map((task, i) => (
+                  <TableRow key={task.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{task.ticketNumber}</TableCell>
+                    <TableCell className="font-medium max-w-[250px] truncate">{task.title}</TableCell>
+                    <TableCell>{task.assignee}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold">{formatDuration(task.totalSeconds)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SLA Gauge + Resumo de Ativos */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,11 +15,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, TrendingUp, Target, DollarSign, Users } from "lucide-react";
+import { Plus, TrendingUp, Target, DollarSign, Users, Clock, Timer } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line,
 } from "recharts";
+import { useTickets } from "@/hooks/use-tickets";
 
 interface Event {
   id: string; name: string; investedValue: number; leadsGenerated: number; cpl: number; category: string; date: string;
@@ -47,7 +50,7 @@ const monthlyData = [
   { month: "Jun", investimento: 52000, leads: 410, propostas: 720000 },
 ];
 
-const categories = ["Digital", "Mídia Paga", "Eventos Presenciais", "Conteúdo", "Branding", "Outros"];
+const eventCategories = ["Digital", "Mídia Paga", "Eventos Presenciais", "Conteúdo", "Branding", "Outros"];
 
 const tooltipStyle = {
   backgroundColor: "hsl(var(--card))",
@@ -62,6 +65,54 @@ export function MarketingTab() {
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ name: "", investedValue: "", leadsGenerated: "", category: "", date: "" });
   const [newProposal, setNewProposal] = useState({ clientName: "", value: "", quantity: "", date: "" });
+
+  // Timesheet data for marketing tasks
+  const { tickets: allTickets } = useTickets();
+  const [timesheetTotals, setTimesheetTotals] = useState<Record<string, number>>({});
+
+  // Filter marketing-related tickets (by department or category)
+  const marketingTickets = useMemo(() => {
+    return allTickets.filter(
+      (t) => t.department?.toLowerCase().includes("marketing") || t.category?.toLowerCase().includes("marketing")
+    );
+  }, [allTickets]);
+
+  useEffect(() => {
+    const ids = marketingTickets.map((t) => t.id);
+    if (ids.length > 0) {
+      fetchTimesheetTotals(ids).then(setTimesheetTotals);
+    }
+  }, [marketingTickets]);
+
+  // Top 5 tarefas demoradas (marketing)
+  const top5SlowTasks = useMemo(() => {
+    return marketingTickets
+      .filter((t) => timesheetTotals[t.id] && timesheetTotals[t.id] > 0)
+      .map((t) => ({
+        id: t.id,
+        ticketNumber: t.ticket_number,
+        title: t.title,
+        assignee: t.assignee || "—",
+        totalSeconds: timesheetTotals[t.id],
+      }))
+      .sort((a, b) => b.totalSeconds - a.totalSeconds)
+      .slice(0, 5);
+  }, [marketingTickets, timesheetTotals]);
+
+  // Horas por colaborador (marketing)
+  const hoursByAssignee = useMemo(() => {
+    const map: Record<string, number> = {};
+    marketingTickets.forEach((t) => {
+      const assignee = t.assignee || "Sem atribuição";
+      const secs = timesheetTotals[t.id] || 0;
+      if (secs > 0) {
+        map[assignee] = (map[assignee] || 0) + secs;
+      }
+    });
+    return Object.entries(map)
+      .map(([name, seconds]) => ({ name, hours: Math.round((seconds / 3600) * 10) / 10 }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [marketingTickets, timesheetTotals]);
 
   const totalInvestment = events.reduce((sum, e) => sum + e.investedValue, 0);
   const totalLeads = events.reduce((sum, e) => sum + e.leadsGenerated, 0);
@@ -131,6 +182,73 @@ export function MarketingTab() {
         </Card>
       </div>
 
+      {/* NEW: Timesheet Charts for Marketing */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Timer className="h-4 w-4 text-muted-foreground" />Horas Trabalhadas por Colaborador (Marketing)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hoursByAssignee.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                Nenhum registro de timesheet em tarefas de marketing
+              </div>
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hoursByAssignee} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} unit="h" />
+                    <YAxis dataKey="name" type="category" width={120} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `${value}h`} />
+                    <Bar dataKey="hours" name="Horas" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top 5 Tarefas Demoradas - Marketing */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Clock className="h-4 w-4 text-muted-foreground" />Top 5 Tarefas Demoradas (Marketing)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {top5SlowTasks.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                Nenhum registro de timesheet em tarefas de marketing
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Chamado</TableHead>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead className="text-right">Tempo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {top5SlowTasks.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{task.ticketNumber}</TableCell>
+                      <TableCell className="font-medium max-w-[200px] truncate">{task.title}</TableCell>
+                      <TableCell>{task.assignee}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">{formatDuration(task.totalSeconds)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Events Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -149,7 +267,7 @@ export function MarketingTab() {
                   <div className="grid gap-2"><Label>Categoria</Label>
                     <Select value={newEvent.category} onValueChange={(v) => setNewEvent({ ...newEvent, category: v })}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                      <SelectContent>{eventCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2"><Label>Data</Label><Input type="date" value={newEvent.date} onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })} /></div>

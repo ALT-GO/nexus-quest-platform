@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { calcDepreciation, formatBRL } from "@/lib/depreciation";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { DollarSign, Phone, FileText, Download, Plus } from "lucide-react";
+import { DollarSign, Phone, FileText, Download, Plus, TrendingDown, Wifi } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -30,8 +32,17 @@ const initialLicenseCosts: LicenseCost[] = [
   { id: "5", month: "2024-10", email: "joao.pedro@empresa.com", collaborator: "João Pedro", costCenter: "TI", licenseType: "Microsoft 365 E3", value: 120.0 },
 ];
 
-const chartColors = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--chart-4))", "hsl(var(--info))"];
+const chartColors = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--chart-4))", "hsl(var(--info))", "hsl(var(--destructive))"];
 const tooltipStyle = { backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" };
+
+interface InventoryAsset {
+  id: string;
+  category: string;
+  operadora: string | null;
+  valor_mensal: number | null;
+  valor_pago: number | null;
+  data_aquisicao: string | null;
+}
 
 interface FinanceiroTabProps {
   selectedMonth: string;
@@ -40,6 +51,30 @@ interface FinanceiroTabProps {
 export function FinanceiroTab({ selectedMonth }: FinanceiroTabProps) {
   const [telecomCosts] = useState<TelecomCost[]>(initialTelecomCosts);
   const [licenseCosts] = useState<LicenseCost[]>(initialLicenseCosts);
+  const [inventoryAssets, setInventoryAssets] = useState<InventoryAsset[]>([]);
+
+  // Fetch inventory for operadora donut + depreciation
+  useEffect(() => {
+    supabase
+      .from("inventory")
+      .select("id, category, operadora, valor_mensal, valor_pago, data_aquisicao")
+      .then(({ data }) => {
+        if (data) setInventoryAssets(data as InventoryAsset[]);
+      });
+
+    const channel = supabase
+      .channel("financeiro-inventory-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => {
+        supabase
+          .from("inventory")
+          .select("id, category, operadora, valor_mensal, valor_pago, data_aquisicao")
+          .then(({ data }) => {
+            if (data) setInventoryAssets(data as InventoryAsset[]);
+          });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const filteredTelecom = telecomCosts.filter((c) => c.month === selectedMonth);
   const filteredLicenses = licenseCosts.filter((c) => c.month === selectedMonth);
@@ -65,14 +100,63 @@ export function FinanceiroTab({ selectedMonth }: FinanceiroTabProps) {
 
   const pieData = costByCostCenter.map((item, i) => ({ name: item.costCenter, value: item.total, color: chartColors[i % chartColors.length] }));
 
+  // ---- NEW: Custo por Operadora (Donut) ----
+  const costByOperadora = useMemo(() => {
+    const linhas = inventoryAssets.filter((a) => a.category === "linhas" && a.operadora && a.operadora.trim() !== "");
+    const map: Record<string, number> = {};
+    linhas.forEach((a) => {
+      const op = a.operadora!.trim();
+      // Normalize operator names
+      let normalized = op;
+      const lower = op.toLowerCase();
+      if (lower.includes("vivo")) normalized = "Vivo";
+      else if (lower.includes("claro")) normalized = "Claro";
+      else if (lower.includes("salvy") || lower.includes("salvi")) normalized = "Salvy";
+      else if (lower.includes("tim")) normalized = "TIM";
+      else if (lower.includes("oi")) normalized = "Oi";
+
+      const value = a.valor_mensal || 0;
+      if (value > 0) {
+        map[normalized] = (map[normalized] || 0) + value;
+      }
+    });
+    return Object.entries(map)
+      .map(([name, value], i) => ({ name, value: Math.round(value * 100) / 100, color: chartColors[i % chartColors.length] }))
+      .sort((a, b) => b.value - a.value);
+  }, [inventoryAssets]);
+
+  // ---- NEW: Depreciação Acumulada ----
+  const depreciationTotal = useMemo(() => {
+    const hardwareAssets = inventoryAssets.filter(
+      (a) => (a.category === "notebooks" || a.category === "celulares") && a.valor_pago && a.valor_pago > 0 && a.data_aquisicao
+    );
+    let totalDepreciation = 0;
+    let totalOriginal = 0;
+    hardwareAssets.forEach((a) => {
+      const result = calcDepreciation(a.valor_pago, a.data_aquisicao);
+      if (result) {
+        totalDepreciation += result.depreciacaoAcumulada;
+        totalOriginal += result.valorAquisicao;
+      }
+    });
+    return { totalDepreciation, totalOriginal, assetCount: hardwareAssets.length };
+  }, [inventoryAssets]);
+
   const months: Record<string, string> = { "2024-11": "Novembro 2024", "2024-10": "Outubro 2024", "2024-09": "Setembro 2024" };
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Total Telecom" value={`R$ ${totalTelecom.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={Phone} className="border-l-4 border-l-primary" />
         <StatCard title="Total Licenças" value={`R$ ${totalLicenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={FileText} className="border-l-4 border-l-success" />
         <StatCard title="Custo Total TI" value={`R$ ${totalCosts.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} className="border-l-4 border-l-warning" />
+        <StatCard
+          title="Depreciação Acumulada"
+          value={formatBRL(depreciationTotal.totalDepreciation)}
+          icon={TrendingDown}
+          description={`${depreciationTotal.assetCount} ativos · Original: ${formatBRL(depreciationTotal.totalOriginal)}`}
+          className="border-l-4 border-l-destructive"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -94,30 +178,41 @@ export function FinanceiroTab({ selectedMonth }: FinanceiroTabProps) {
           </CardContent>
         </Card>
 
+        {/* NEW: Custo por Operadora Donut */}
         <Card>
-          <CardHeader><CardTitle className="text-base font-semibold">Distribuição por Centro de Custo</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Wifi className="h-4 w-4 text-muted-foreground" />Custo por Operadora
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="flex h-[300px] items-center justify-center gap-8">
-              <div className="h-[220px] w-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
-                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
-                  </PieChart>
-                </ResponsiveContainer>
+            {costByOperadora.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                Nenhuma linha com operadora e valor mensal cadastrados
               </div>
-              <div className="space-y-3">
-                {pieData.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm text-muted-foreground">{item.name}</span>
-                    <span className="ml-auto font-medium">R$ {item.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
+            ) : (
+              <div className="flex h-[300px] items-center justify-center gap-8">
+                <div className="h-[220px] w-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={costByOperadora} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
+                        {costByOperadora.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  {costByOperadora.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-sm text-muted-foreground">{item.name}</span>
+                      <span className="ml-auto font-medium">R$ {item.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
