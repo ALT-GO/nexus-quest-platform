@@ -13,6 +13,7 @@ import CentralInteligencia from "./pages/CentralInteligencia";
 import ChamadoPublico from "./pages/ti/ChamadoPublico";
 import Configuracoes from "./pages/Configuracoes";
 import GestaoFaturas from "./pages/ti/GestaoFaturas";
+import CofreSenhas from "./pages/ti/CofreSenhas";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import ForgotPassword from "./pages/auth/ForgotPassword";
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/ti/ativos" element={<Navigate to="/ti/colaboradores" replace />} />
       <Route path="/ti/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
       <Route path="/ti/faturas" element={<ProtectedRoute><GestaoFaturas /></ProtectedRoute>} />
+      <Route path="/ti/cofre-senhas" element={<PrivilegedRoute><CofreSenhas /></PrivilegedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
       {/* Torre de Controle: admin + ti only */}
