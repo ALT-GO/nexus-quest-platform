@@ -251,6 +251,36 @@ export type Database = {
         }
         Relationships: []
       }
+      password_vault: {
+        Row: {
+          account_name: string
+          created_at: string
+          id: string
+          notes: string | null
+          password_value: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          account_name: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          password_value?: string
+          updated_at?: string
+          username?: string
+        }
+        Update: {
+          account_name?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          password_value?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

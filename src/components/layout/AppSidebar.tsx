@@ -60,6 +60,7 @@ export function AppSidebar() {
         { title: "Service Desk", href: "/ti/service-desk" },
         { title: "Colaboradores", href: "/ti/colaboradores" },
         { title: "Gestão de Custos", href: "/ti/faturas" },
+        { title: "Cofre de Senhas", href: "/ti/cofre-senhas" },
       ],
     } as NavItem] : []),
   ];
