@@ -459,8 +459,21 @@ export function TicketDetailSheet({
   };
 
   const handleFieldChange = async (field: string, value: string, label: string) => {
+    const previousValue = (ticket as any)[field];
     await onUpdateTicket(ticket.id, { [field]: value } as any);
     await logHistory("field_change", `${label} alterado para "${value}"`, "Admin");
+
+    // Send notification when assignee changes
+    if (field === "assignee" && value && value !== previousValue) {
+      const { sendNotification } = await import("@/lib/notifications");
+      sendNotification({
+        recipientName: value,
+        title: "Nova Tarefa Atribuída",
+        message: `Você foi atribuído ao chamado "${ticket.title}" (${ticket.ticket_number})`,
+        type: "task_assigned",
+        link: "/ti/servicedesk",
+      });
+    }
   };
 
   const handleStatusChange = async (newStatusId: string) => {
