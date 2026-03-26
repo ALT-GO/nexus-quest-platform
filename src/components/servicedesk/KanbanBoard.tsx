@@ -4,8 +4,9 @@ import { HardwareAsset } from "@/hooks/use-assets";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinkerCompact } from "@/components/servicedesk/AssetLinker";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { SlaInfo } from "@/hooks/use-sla";
-import { User, GripVertical, CheckCircle2, Circle } from "lucide-react";
+import { GripVertical, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KanbanTicket {
@@ -293,9 +294,9 @@ export function KanbanBoard({
                               <span>{priority.label}</span>
                             </div>
                             {ticket.assignee ? (
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                <span>{ticket.assignee}</span>
+                              <div className="flex items-center gap-1.5">
+                                <UserAvatar name={ticket.assignee} className="h-5 w-5 text-[10px]" />
+                                <span className="truncate max-w-[100px]">{ticket.assignee}</span>
                               </div>
                             ) : (
                               <span className="italic text-muted-foreground/60">Sem responsável</span>
