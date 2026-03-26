@@ -71,6 +71,15 @@ export function AutomationsTab() {
   const { rules, loading, addRule, deleteRule, toggleRule } = useAutomationRules();
   const { activeStatuses } = useCustomStatuses();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [technicians, setTechnicians] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.from("profiles").select("full_name").then(({ data }) => {
+      setTechnicians(
+        (data || []).map((p: any) => p.full_name).filter((n: string) => n.trim() !== "")
+      );
+    });
+  }, []);
 
   // New rule form state
   const [name, setName] = useState("");
