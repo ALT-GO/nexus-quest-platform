@@ -29,7 +29,7 @@ function PasswordCell({ value }: { value: string }) {
       </Button>
       <Button
         variant="ghost" size="sm" className="h-6 w-6 p-0"
-        onClick={() => { navigator.clipboard.writeText(value); toast.success("Copiado!"); }}
+        onClick={() => { navigator.clipboard.writeText(value); toast.success("Senha copiada!"); }}
       >
         <Copy className="h-3.5 w-3.5" />
       </Button>
