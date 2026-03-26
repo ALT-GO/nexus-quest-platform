@@ -68,6 +68,28 @@ const fieldsByCategory: Record<string, FieldConfig[]> = {
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
   ],
+  tablets: [
+    { key: "service_tag", label: "Service tag", placeholder: "Ex: ABC1234" },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca", placeholder: "Ex: Samsung" },
+    { key: "model", label: "Modelo", required: true, placeholder: "Ex: Galaxy Tab S9" },
+    { key: "imei1", label: "IMEI / S/N", placeholder: "IMEI ou número de série" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "notes", label: "Notas", type: "textarea" },
+  ],
+  perifericos: [
+    { key: "service_tag", label: "Service tag / P/N", placeholder: "P/N ou S/N" },
+    { key: "collaborator", label: "Colaborador" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca", placeholder: "Ex: Logitech" },
+    { key: "model", label: "Modelo", required: true, placeholder: "Ex: MX Master 3" },
+    { key: "asset_type", label: "Tipo", type: "select", options: ["Mouse", "Teclado", "Carregador", "Monitor", "Headset", "Docking Station", "Outro"] },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "notes", label: "Notas", type: "textarea" },
+  ],
   licencas: [
     { key: "status", label: "Status", type: "select", options: statusOptionsLicenca },
     { key: "collaborator", label: "Colaborador" },
@@ -84,6 +106,8 @@ const fieldsByCategory: Record<string, FieldConfig[]> = {
 const categoryLabels: Record<string, string> = {
   notebooks: "Notebook",
   celulares: "Celular",
+  tablets: "Tablet",
+  perifericos: "Periférico",
   linhas: "Linha",
   licencas: "Licença",
 };
