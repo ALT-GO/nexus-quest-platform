@@ -75,7 +75,7 @@ export function DevolutionChecklistDialog({ open, onOpenChange, collaboratorName
         } else {
           const isLinha = ["linhas", "telecom"].includes(asset.category);
           const isLicenca = ["licencas", "licenses"].includes(asset.category);
-          const isNotebookCelular = ["notebooks", "celulares", "hardware"].includes(asset.category);
+          const isNotebookCelular = ["notebooks", "celulares", "tablets", "perifericos", "hardware"].includes(asset.category);
 
           if (isLicenca) {
             // Licenças: only clear collaborator
