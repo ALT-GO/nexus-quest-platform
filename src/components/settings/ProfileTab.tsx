@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export function ProfileTab() {
-  const { user, profile } = useAuth();
-  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const { user } = useAuth();
+  const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
