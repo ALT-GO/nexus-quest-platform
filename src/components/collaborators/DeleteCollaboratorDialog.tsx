@@ -62,7 +62,7 @@ export function DeleteCollaboratorDialog({ collaboratorName, onDone, trigger }: 
         } else {
           // Return to stock with cost center rules
           const isLinhaLicenca = ["linhas", "licencas", "telecom", "licenses"].includes(asset.category);
-          const isNotebookCelular = ["notebooks", "celulares", "hardware"].includes(asset.category);
+          const isNotebookCelular = ["notebooks", "celulares", "tablets", "perifericos", "hardware"].includes(asset.category);
           const updates: any = {
             collaborator: "",
             status: asset.category === "licencas" || asset.category === "licenses" ? "Inativo" : "Disponível",
