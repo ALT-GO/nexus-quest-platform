@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { usePasswordVault, VaultEntry } from "@/hooks/use-password-vault";
-import { Plus, Search, Eye, EyeOff, Copy, Pencil, Trash2, Loader2, KeyRound } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Copy, Pencil, Trash2, Loader2, KeyRound, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 function PasswordCell({ value }: { value: string }) {
@@ -113,8 +113,58 @@ function EntryDialog({
 }
 
 export default function CofreSenhas() {
-  const { entries, loading, addEntry, updateEntry, deleteEntry } = usePasswordVault();
+  const { entries, loading, addEntry, deleteEntry, updateEntry, refetch } = usePasswordVault();
   const [search, setSearch] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) { toast.error("Arquivo vazio ou sem dados"); return; }
+
+      const header = lines[0].split(/[;,\t]/).map((h) => h.trim().toUpperCase().replace(/"/g, ""));
+      const colMap: Record<string, string> = {
+        CONTA: "account_name", LOGIN: "username", SENHA: "password_value", NOTAS: "notes",
+        ACCOUNT_NAME: "account_name", USERNAME: "username", PASSWORD_VALUE: "password_value", NOTES: "notes",
+      };
+      const mapping = header.map((h) => colMap[h] || null);
+
+      if (!mapping.includes("account_name")) {
+        toast.error("Coluna 'CONTA' não encontrada no CSV");
+        return;
+      }
+
+      const rows: Omit<VaultEntry, "id" | "created_at" | "updated_at">[] = [];
+      const delimiter = lines[0].includes(";") ? ";" : lines[0].includes("\t") ? "\t" : ",";
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(delimiter).map((c) => c.trim().replace(/^"|"$/g, ""));
+        const row: any = { account_name: "", username: "", password_value: "", notes: "" };
+        mapping.forEach((field, idx) => { if (field && cols[idx]) row[field] = cols[idx]; });
+        if (row.account_name) rows.push(row);
+      }
+
+      if (rows.length === 0) { toast.error("Nenhum registro válido encontrado"); return; }
+
+      let success = 0;
+      for (const row of rows) {
+        const ok = await addEntry(row);
+        if (ok) success++;
+      }
+      toast.success(`${success} senha(s) importada(s) com sucesso!`);
+      await refetch();
+    } catch {
+      toast.error("Erro ao processar o arquivo CSV");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const filtered = entries.filter((e) => {
     if (!search) return true;
@@ -144,15 +194,33 @@ export default function CofreSenhas() {
               className="pl-10"
             />
           </div>
-          <EntryDialog
-            onSave={addEntry}
-            trigger={
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Nova senha
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleCsvImport}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={importing}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Importar CSV
+            </Button>
+            <EntryDialog
+              onSave={addEntry}
+              trigger={
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova senha
+                </Button>
+              }
+            />
+          </div>
         </div>
 
         {loading ? (
