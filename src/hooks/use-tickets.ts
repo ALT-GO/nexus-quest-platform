@@ -95,7 +95,7 @@ export function useTickets() {
   }, []);
 
   const updateTicket = useCallback(
-    async (id: string, updates: Partial<Pick<Ticket, "status_id" | "assignee" | "asset_id" | "completed_at" | "sla_expired" | "priority">>) => {
+    async (id: string, updates: Partial<Omit<Ticket, "id" | "created_at">>) => {
       const { error } = await supabase
         .from("tickets")
         .update({ ...updates, updated_at: new Date().toISOString() } as any)
@@ -106,6 +106,12 @@ export function useTickets() {
         toast.error("Erro ao atualizar chamado");
         return false;
       }
+      // Update local state so UI reflects change immediately
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
+        )
+      );
       return true;
     },
     []
