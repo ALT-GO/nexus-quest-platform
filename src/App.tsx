@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { AuthProvider, useAuth, UserPermissions } from "@/hooks/use-auth";
 import Dashboard from "./pages/Dashboard";
 import Projetos from "./pages/marketing/Projetos";
 import Solicitacoes from "./pages/marketing/Solicitacoes";
@@ -23,34 +23,39 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
-function PrivilegedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, roles, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
+function PermissionRoute({
+  children,
+  permission,
+  fallbackRoles,
+}: {
+  children: React.ReactNode;
+  permission: keyof UserPermissions;
+  fallbackRoles?: string[];
+}) {
+  const { user, loading, hasPermission, roles, isAdmin } = useAuth();
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  const hasAccess = isAdmin || roles.includes("ti");
+
+  const hasAccess =
+    isAdmin ||
+    hasPermission(permission) ||
+    (fallbackRoles && fallbackRoles.some((r) => roles.includes(r as any)));
+
   if (!hasAccess) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -58,13 +63,7 @@ function PrivilegedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
     <Routes>
@@ -77,17 +76,45 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/marketing/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
-      <Route path="/marketing/solicitacoes" element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />
-      <Route path="/ti/service-desk" element={<ProtectedRoute><ServiceDesk /></ProtectedRoute>} />
-      <Route path="/ti/ativos" element={<Navigate to="/ti/colaboradores" replace />} />
-      <Route path="/ti/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
-      <Route path="/ti/faturas" element={<ProtectedRoute><GestaoFaturas /></ProtectedRoute>} />
-      <Route path="/ti/cofre-senhas" element={<PrivilegedRoute><CofreSenhas /></PrivilegedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
-      {/* Torre de Controle: admin + ti only */}
-      <Route path="/central-inteligencia" element={<PrivilegedRoute><CentralInteligencia /></PrivilegedRoute>} />
+      {/* Permission-gated routes */}
+      <Route path="/marketing/projetos" element={
+        <PermissionRoute permission="acessar_kanban_marketing" fallbackRoles={["admin", "marketing"]}>
+          <Projetos />
+        </PermissionRoute>
+      } />
+      <Route path="/marketing/solicitacoes" element={
+        <PermissionRoute permission="acessar_kanban_marketing" fallbackRoles={["admin", "marketing"]}>
+          <Solicitacoes />
+        </PermissionRoute>
+      } />
+      <Route path="/ti/service-desk" element={
+        <PermissionRoute permission="criar_chamados" fallbackRoles={["admin", "ti"]}>
+          <ServiceDesk />
+        </PermissionRoute>
+      } />
+      <Route path="/ti/ativos" element={<Navigate to="/ti/colaboradores" replace />} />
+      <Route path="/ti/colaboradores" element={
+        <PermissionRoute permission="gerenciar_estoque" fallbackRoles={["admin", "ti"]}>
+          <Colaboradores />
+        </PermissionRoute>
+      } />
+      <Route path="/ti/faturas" element={
+        <PermissionRoute permission="ver_custos_faturas" fallbackRoles={["admin", "ti"]}>
+          <GestaoFaturas />
+        </PermissionRoute>
+      } />
+      <Route path="/ti/cofre-senhas" element={
+        <PermissionRoute permission="acessar_cofre_senhas" fallbackRoles={["admin", "ti"]}>
+          <CofreSenhas />
+        </PermissionRoute>
+      } />
+      <Route path="/central-inteligencia" element={
+        <PermissionRoute permission="ver_dashboard_financeiro" fallbackRoles={["admin", "ti"]}>
+          <CentralInteligencia />
+        </PermissionRoute>
+      } />
 
       {/* Legacy redirects */}
       <Route path="/ti/dashboard" element={<Navigate to="/central-inteligencia" replace />} />

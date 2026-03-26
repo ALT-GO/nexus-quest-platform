@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, UserPermissions, DEFAULT_PERMISSIONS } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserPlus, Copy, Check, Users, Clock } from "lucide-react";
+import { UserPlus, Copy, Check, Users, Clock, Shield, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface UserWithRole {
@@ -36,6 +38,7 @@ interface UserWithRole {
   full_name: string;
   email: string;
   role: string;
+  permissions: UserPermissions;
 }
 
 interface Invite {
@@ -60,6 +63,42 @@ const ROLE_COLORS: Record<string, string> = {
   colaborador: "outline",
 };
 
+interface PermissionCategory {
+  label: string;
+  keys: { key: keyof UserPermissions; label: string }[];
+}
+
+const PERMISSION_CATEGORIES: PermissionCategory[] = [
+  {
+    label: "Módulo TI",
+    keys: [
+      { key: "criar_chamados", label: "Criar Chamados (Padrão)" },
+      { key: "atender_chamados", label: "Atender Chamados (Analista)" },
+      { key: "gerenciar_estoque", label: "Gerenciar Estoque (Edição)" },
+    ],
+  },
+  {
+    label: "Módulo Financeiro",
+    keys: [
+      { key: "ver_custos_faturas", label: "Ver Custos e Faturas" },
+      { key: "ver_dashboard_financeiro", label: "Ver Dashboard Financeiro" },
+    ],
+  },
+  {
+    label: "Módulo Marketing",
+    keys: [
+      { key: "acessar_kanban_marketing", label: "Acessar Kanban de Marketing" },
+    ],
+  },
+  {
+    label: "Segurança",
+    keys: [
+      { key: "acessar_cofre_senhas", label: "Acessar Cofre de Senhas" },
+      { key: "acesso_admin_global", label: "Acesso Administrador Global" },
+    ],
+  },
+];
+
 export function UserManagementTab() {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -71,31 +110,32 @@ export function UserManagementTab() {
   const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Permission editing
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [editPerms, setEditPerms] = useState<UserPermissions>(DEFAULT_PERMISSIONS);
+  const [permDialogOpen, setPermDialogOpen] = useState(false);
+  const [savingPerms, setSavingPerms] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch users with roles - use admin endpoint to get emails
-    const { data: profiles } = await supabase.from("profiles").select("id, full_name");
+    const { data: profiles } = await supabase.from("profiles").select("id, full_name, permissions");
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
 
     if (profiles && roles) {
       const roleMap = new Map<string, string>();
       roles.forEach((r) => roleMap.set(r.user_id, r.role));
 
-      // Try to get emails from invites (accepted ones have the user email)
-      const { data: inviteData } = await supabase.from("user_invites").select("email, accepted_at");
-      const acceptedEmails = new Set((inviteData || []).filter((i: any) => i.accepted_at).map((i: any) => i.email));
-
       const userList: UserWithRole[] = profiles.map((p) => ({
         id: p.id,
         full_name: p.full_name,
         email: "",
         role: roleMap.get(p.id) || "colaborador",
+        permissions: { ...DEFAULT_PERMISSIONS, ...((p as any).permissions as Record<string, boolean> || {}) },
       }));
       setUsers(userList);
     }
 
-    // Fetch invites
     const { data: inviteData } = await supabase
       .from("user_invites")
       .select("*")
@@ -127,7 +167,6 @@ export function UserManagementTab() {
       invited_by: user?.id ?? null,
     }).select();
     setSaving(false);
-    console.log("Invite insert result:", { inserted, error });
     if (error || !inserted?.length) {
       if (error?.code === "23505") {
         toast.error("Este e-mail já possui um convite.");
@@ -151,8 +190,34 @@ export function UserManagementTab() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const openPermEditor = (u: UserWithRole) => {
+    setEditingUser(u);
+    setEditPerms({ ...u.permissions });
+    setPermDialogOpen(true);
+  };
+
+  const handleSavePermissions = async () => {
+    if (!editingUser) return;
+    setSavingPerms(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ permissions: editPerms as any, updated_at: new Date().toISOString() })
+      .eq("id", editingUser.id);
+    setSavingPerms(false);
+    if (error) {
+      toast.error("Erro ao salvar permissões");
+    } else {
+      toast.success("Permissões atualizadas!");
+      setPermDialogOpen(false);
+      fetchData();
+    }
+  };
+
+  const togglePerm = (key: keyof UserPermissions) => {
+    setEditPerms((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const pendingInvites = invites.filter((i) => !i.accepted_at);
-  const acceptedInvites = invites.filter((i) => i.accepted_at);
 
   if (!isAdmin) {
     return (
@@ -222,6 +287,7 @@ export function UserManagementTab() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Nível</TableHead>
+                <TableHead className="text-right">Permissões</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,11 +299,22 @@ export function UserManagementTab() {
                       {ROLE_LABELS[u.role] || u.role}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => openPermEditor(u)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar Acessos
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {users.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     Nenhum usuário encontrado.
                   </TableCell>
                 </TableRow>
@@ -246,6 +323,47 @@ export function UserManagementTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Permission Editor Dialog */}
+      <Dialog open={permDialogOpen} onOpenChange={setPermDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Permissões — {editingUser?.full_name || "Usuário"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            {PERMISSION_CATEGORIES.map((cat) => (
+              <div key={cat.label}>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-3">{cat.label}</h4>
+                <div className="space-y-3">
+                  {cat.keys.map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <Label htmlFor={key} className="cursor-pointer font-normal">
+                        {label}
+                      </Label>
+                      <Switch
+                        id={key}
+                        checked={editPerms[key]}
+                        onCheckedChange={() => togglePerm(key)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Separator className="mt-4" />
+              </div>
+            ))}
+            <Button
+              onClick={handleSavePermissions}
+              disabled={savingPerms}
+              className="w-full"
+            >
+              {savingPerms ? "Salvando..." : "Salvar Permissões"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pending Invites */}
       <Card>
