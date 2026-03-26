@@ -70,7 +70,7 @@ export function ProfileTab() {
     }
   };
 
-  const initials = (profile?.full_name || user?.email || "U")
+  const initials = (fullName || user?.email || "U")
     .split(" ")
     .map((w) => w[0])
     .join("")
