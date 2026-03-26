@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
       automation_rules: {
         Row: {
           action_config: Json
@@ -305,6 +338,33 @@ export type Database = {
           id?: string
           permissions?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sla_settings: {
+        Row: {
+          business_end: string
+          business_hours_only: boolean
+          business_start: string
+          id: string
+          updated_at: string
+          working_days: number[]
+        }
+        Insert: {
+          business_end?: string
+          business_hours_only?: boolean
+          business_start?: string
+          id?: string
+          updated_at?: string
+          working_days?: number[]
+        }
+        Update: {
+          business_end?: string
+          business_hours_only?: boolean
+          business_start?: string
+          id?: string
+          updated_at?: string
+          working_days?: number[]
         }
         Relationships: []
       }
