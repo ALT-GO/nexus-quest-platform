@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { ActiveTimersCard } from "@/components/dashboard/ActiveTimersCard";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { StatCard } from "@/components/ui/stat-card";
@@ -137,6 +138,7 @@ export function MarketingTab() {
 
   return (
     <div className="space-y-6">
+      <ActiveTimersCard />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Investimento Total" value={`R$ ${totalInvestment.toLocaleString("pt-BR")}`} icon={DollarSign} trend={{ value: 15, isPositive: true }} />
         <StatCard title="Leads Gerados" value={totalLeads} icon={Users} trend={{ value: 22, isPositive: true }} />

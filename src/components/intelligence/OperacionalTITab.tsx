@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { ActiveTimersCard } from "@/components/dashboard/ActiveTimersCard";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchTimesheetTotals, formatDuration } from "@/hooks/use-timesheet";
 import { StatCard } from "@/components/ui/stat-card";
@@ -236,6 +237,7 @@ export function OperacionalTITab({ dateRange, costCenter }: OperacionalTITabProp
 
   return (
     <div className="space-y-6">
+      <ActiveTimersCard />
       {/* Sub-filters */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
