@@ -15,6 +15,19 @@ export function ProfileTab() {
   const [saving, setSaving] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setFullName(data.full_name || "");
+        setLoadingProfile(false);
+      });
+  }, [user]);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
