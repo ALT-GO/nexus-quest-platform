@@ -19,6 +19,8 @@ interface Props {
 const categoryLabels: Record<string, string> = {
   notebooks: "Notebooks",
   celulares: "Celulares",
+  tablets: "Tablets",
+  perifericos: "Periféricos",
   linhas: "Linhas Telefônicas",
   licencas: "Licenças",
   hardware: "Hardware",
@@ -29,6 +31,8 @@ const categoryLabels: Record<string, string> = {
 const categorySingular: Record<string, string> = {
   notebooks: "Notebook",
   celulares: "Celular",
+  tablets: "Tablet",
+  perifericos: "Periférico",
   linhas: "Linha",
   licencas: "Licença",
 };
@@ -50,7 +54,7 @@ function getItemType(asset: any): string {
 
 /** Returns technical detail depending on category */
 function getAssetDetail(asset: any): string {
-  if (asset.category === "notebooks" || asset.category === "celulares") {
+  if (asset.category === "notebooks" || asset.category === "celulares" || asset.category === "tablets" || asset.category === "perifericos") {
     return asset.model || "—";
   }
   if (asset.category === "linhas") return asset.numero || "—";
@@ -149,7 +153,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 </tr>
               ) : (
                 assets.map((asset: any) => {
-                  const canDepreciate = asset.category === "notebooks" || asset.category === "celulares";
+                  const canDepreciate = ["notebooks", "celulares", "tablets", "perifericos"].includes(asset.category);
                   const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.data_aquisicao) : null;
                   const valorPagoDisplay = canDepreciate
                     ? (dep ? formatBRL(dep.valorAquisicao) : asset.valor_pago ? formatBRL(asset.valor_pago) : "—")
