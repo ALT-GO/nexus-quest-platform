@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { GlobalTimerBadge } from "@/components/layout/GlobalTimerBadge";
 
 interface PageHeaderProps {
   title: string;
@@ -26,7 +27,10 @@ export function PageHeader({
           <p className="mt-1 text-muted-foreground">{description}</p>
         )}
       </div>
-      {children && <div className="flex items-center gap-3">{children}</div>}
+      <div className="flex items-center gap-3">
+        <GlobalTimerBadge />
+        {children}
+      </div>
     </div>
   );
 }
