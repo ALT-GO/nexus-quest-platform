@@ -103,7 +103,7 @@ export function SystemPreferencesTab() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
-    setAuditLogs((data as AuditLog[] | null) || []);
+    setAuditLogs(((data as unknown) as AuditLog[] | null) || []);
     setLoadingLogs(false);
     setLogsVisible(true);
   };
