@@ -702,6 +702,16 @@ export function TicketDetailSheet({
                 </Select>
               </div>
 
+              {/* Aberto em */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" /> Aberto em
+                </label>
+                <p className="text-sm py-1.5">
+                  {format(new Date(ticket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+
               {/* Deadline */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
