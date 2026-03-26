@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Laptop, Smartphone, Phone, FileText } from "lucide-react";
+import { Laptop, Smartphone, Phone, FileText, Tablet, Mouse } from "lucide-react";
 import { CategoryTable } from "@/components/assets/CategoryTable";
 
 export default function GestaoAtivos() {
@@ -27,6 +27,14 @@ export default function GestaoAtivos() {
             <Phone className="h-4 w-4" />
             <span>Linha Telefônica</span>
           </TabsTrigger>
+          <TabsTrigger value="tablets" className="gap-2 px-4 py-2 data-[state=active]:bg-cyan-500/15 data-[state=active]:text-cyan-700 data-[state=active]:shadow-sm">
+            <Tablet className="h-4 w-4" />
+            <span>Tablet</span>
+          </TabsTrigger>
+          <TabsTrigger value="perifericos" className="gap-2 px-4 py-2 data-[state=active]:bg-orange-500/15 data-[state=active]:text-orange-700 data-[state=active]:shadow-sm">
+            <Mouse className="h-4 w-4" />
+            <span>Periférico</span>
+          </TabsTrigger>
           <TabsTrigger value="licencas" className="gap-2 px-4 py-2 data-[state=active]:bg-yellow-500/15 data-[state=active]:text-yellow-700 data-[state=active]:shadow-sm">
             <FileText className="h-4 w-4" />
             <span>Licença</span>
@@ -38,6 +46,12 @@ export default function GestaoAtivos() {
         </TabsContent>
         <TabsContent value="celulares">
           <CategoryTable category="celulares" label="Celulares" />
+        </TabsContent>
+        <TabsContent value="tablets">
+          <CategoryTable category="tablets" label="Tablets" />
+        </TabsContent>
+        <TabsContent value="perifericos">
+          <CategoryTable category="perifericos" label="Periféricos" />
         </TabsContent>
         <TabsContent value="linhas">
           <CategoryTable category="linhas" label="Linhas telefônicas" />

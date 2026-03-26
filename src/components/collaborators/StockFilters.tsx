@@ -34,6 +34,19 @@ const filtersByCategory: Record<string, FilterDef[]> = {
     { id: "cost_center_man", label: "Centro de custo - Man", type: "text" },
     { id: "contrato", label: "Contrato", type: "text" },
   ],
+  tablets: [
+    { id: "marca", label: "Marca", type: "text" },
+    { id: "model", label: "Modelo", type: "text" },
+    { id: "cost_center", label: "Centro de custo", type: "text" },
+    { id: "contrato", label: "Contrato", type: "text" },
+  ],
+  perifericos: [
+    { id: "marca", label: "Marca", type: "text" },
+    { id: "model", label: "Modelo", type: "text" },
+    { id: "asset_type", label: "Tipo", type: "select", options: ["Mouse", "Teclado", "Carregador", "Monitor", "Headset", "Docking Station", "Outro"] },
+    { id: "cost_center", label: "Centro de custo", type: "text" },
+    { id: "contrato", label: "Contrato", type: "text" },
+  ],
   licencas: [
     { id: "status", label: "Status", type: "select", options: ["Ativo", "Inativo", "Desligado"] },
     { id: "cost_center_eng", label: "Centro de custo - Eng", type: "text" },

@@ -20,11 +20,13 @@ import {
   type DuplicateAction,
 } from "./DuplicateResolverDialog";
 
-type ImportCategory = "notebooks" | "celulares" | "linhas" | "licencas" | "colaborador";
+type ImportCategory = "notebooks" | "celulares" | "tablets" | "perifericos" | "linhas" | "licencas" | "colaborador";
 
 const categoryOptions: { value: ImportCategory; label: string }[] = [
   { value: "notebooks", label: "Notebook" },
   { value: "celulares", label: "Celular" },
+  { value: "tablets", label: "Tablet" },
+  { value: "perifericos", label: "Periférico" },
   { value: "linhas", label: "Linha" },
   { value: "licencas", label: "Licença" },
   { value: "colaborador", label: "Colaborador" },
@@ -68,6 +70,11 @@ const headerMappings: Record<string, string> = {
   "service_tag": "service_tag",
   "service tag 2": "service_tag_2",
   "service_tag_2": "service_tag_2",
+  "imei - s/n": "imei1",
+  "imei - sn": "imei1",
+  "serial": "imei1",
+  "s/n": "service_tag",
+  "p/n": "service_tag",
   "imei": "imei1",
   "imei 1": "imei1",
   "imei1": "imei1",
@@ -166,6 +173,14 @@ const categoryAliases: Record<string, string> = {
   "CEL": "celulares",
   "CELULAR": "celulares",
   "CELULARES": "celulares",
+  "TAB": "tablets",
+  "TABLET": "tablets",
+  "TABLETS": "tablets",
+  "PER": "perifericos",
+  "PERIFERICO": "perifericos",
+  "PERIFÉRICO": "perifericos",
+  "PERIFERICOS": "perifericos",
+  "PERIFÉRICOS": "perifericos",
   "LIN": "linhas",
   "LINHA": "linhas",
   "LINHAS": "linhas",

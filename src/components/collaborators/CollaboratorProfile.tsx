@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/table";
 import { InlineCellEditor } from "@/components/assets/InlineCellEditor";
 import { StatusSelectCell } from "@/components/collaborators/StatusSelectCell";
-import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp, Eye } from "lucide-react";
+import { ArrowLeft, FileDown, Laptop, Smartphone, Phone, FileText, Loader2, FileUp, Eye, Tablet, Mouse } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Unlink } from "lucide-react";
 import { PrintableTermDialog } from "@/components/collaborators/PrintableTermDialog";
@@ -91,6 +91,28 @@ const columnsByCategory: Record<string, ColDef[]> = {
     { key: "cost_center_eng", label: "Centro de custo - Eng" },
     { key: "cost_center_man", label: "Centro de custo - Man" },
   ],
+  tablets: [
+    { key: "service_tag", label: "Service tag" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "imei1", label: "IMEI / S/N" },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "valor_pago", label: "Valor Pago (R$)" },
+    { key: "notes", label: "Notas" },
+  ],
+  perifericos: [
+    { key: "service_tag", label: "Service tag / P/N" },
+    { key: "cargo", label: "Cargo" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "asset_type", label: "Tipo", type: "select", options: ["Mouse", "Teclado", "Carregador", "Monitor", "Headset", "Docking Station", "Outro"] },
+    { key: "cost_center", label: "Centro de custo" },
+    { key: "contrato", label: "Contrato" },
+    { key: "valor_pago", label: "Valor Pago (R$)" },
+    { key: "notes", label: "Notas" },
+  ],
   licencas: [
     { key: "status", label: "Status", type: "status" },
     { key: "cargo", label: "Cargo" },
@@ -108,6 +130,8 @@ const columnsByCategory: Record<string, ColDef[]> = {
 const categoryConfig: Record<string, { label: string; icon: React.ElementType }> = {
   notebooks: { label: "Notebooks", icon: Laptop },
   celulares: { label: "Celulares", icon: Smartphone },
+  tablets: { label: "Tablets", icon: Tablet },
+  perifericos: { label: "Periféricos", icon: Mouse },
   linhas: { label: "Linhas telefônicas", icon: Phone },
   licencas: { label: "Licenças", icon: FileText },
 };
@@ -265,6 +289,8 @@ export function CollaboratorProfile({ name, onBack }: Props) {
 
   const notebooks = assets.filter((a) => a.category === "notebooks" || a.category === "hardware");
   const celulares = assets.filter((a) => a.category === "celulares");
+  const tablets = assets.filter((a) => a.category === "tablets");
+  const perifericos = assets.filter((a) => a.category === "perifericos");
   const linhas = assets.filter((a) => a.category === "linhas" || a.category === "telecom");
   const licencas = assets.filter((a) => a.category === "licencas" || a.category === "licenses");
 
@@ -354,6 +380,8 @@ export function CollaboratorProfile({ name, onBack }: Props) {
       <div className="space-y-6">
         <AssetSection category="notebooks" assets={notebooks} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
         <AssetSection category="celulares" assets={celulares} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="tablets" assets={tablets} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
+        <AssetSection category="perifericos" assets={perifericos} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
         <AssetSection category="linhas" assets={linhas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
         <AssetSection category="licencas" assets={licencas} collaboratorName={name} onUpdate={updateAsset} onDelete={handleDelete} onUnlink={handleUnlink} onRefetch={refetch} />
       </div>
