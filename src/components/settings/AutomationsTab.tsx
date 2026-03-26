@@ -26,7 +26,8 @@ import {
   TriggerType,
   ActionType,
 } from "@/hooks/use-automation-rules";
-import { useCustomStatuses, StatusCustom } from "@/hooks/use-custom-status";
+import { useCustomStatuses } from "@/hooks/use-custom-status";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus,
   Zap,
@@ -51,8 +52,6 @@ const categories = [
   "Solicitação de Tablet",
   "Gerais/Outros",
 ];
-
-const technicians = ["Álvaro", "Maria", "João", "Carlos", "Ana"];
 
 const triggerIcons: Record<TriggerType, string> = {
   ticket_created: "📩",
