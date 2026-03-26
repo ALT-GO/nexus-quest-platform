@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { usePasswordVault, VaultEntry } from "@/hooks/use-password-vault";
-import { Plus, Search, Eye, EyeOff, Copy, Pencil, Trash2, Loader2, KeyRound } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Copy, Pencil, Trash2, Loader2, KeyRound, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 function PasswordCell({ value }: { value: string }) {
