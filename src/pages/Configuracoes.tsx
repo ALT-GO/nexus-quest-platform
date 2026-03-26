@@ -9,11 +9,15 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsTab } from "@/components/settings/AutomationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
-import { CsvImportTab } from "@/components/settings/CsvImportTab";
-import { TicketImportTab } from "@/components/settings/TicketImportTab";
 import { DangerZoneTab } from "@/components/settings/DangerZoneTab";
 import { IntegrityAuditorTab } from "@/components/settings/IntegrityAuditorTab";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   User,
   Bell,
@@ -22,8 +26,7 @@ import {
   Zap,
   Save,
   Users,
-  FileSpreadsheet,
-  ShieldCheck,
+  Code2,
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -57,13 +60,9 @@ export default function Configuracoes() {
             <Database className="h-4 w-4" />
             Sistema
           </TabsTrigger>
-          <TabsTrigger value="import" className="gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            Importação
-          </TabsTrigger>
-          <TabsTrigger value="integrity" className="gap-2">
-            <ShieldCheck className="h-4 w-4" />
-            Auditório
+          <TabsTrigger value="advanced" className="gap-2">
+            <Code2 className="h-4 w-4" />
+            Avançado
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
@@ -188,7 +187,7 @@ export default function Configuracoes() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="system" className="space-y-6">
+        <TabsContent value="system">
           <Card>
             <CardHeader>
               <CardTitle>Configurações do Sistema</CardTitle>
@@ -225,14 +224,27 @@ export default function Configuracoes() {
               </div>
             </CardContent>
           </Card>
-          <DangerZoneTab />
         </TabsContent>
-        <TabsContent value="import" className="space-y-6">
-          <CsvImportTab />
-          <TicketImportTab />
-        </TabsContent>
-        <TabsContent value="integrity">
-          <IntegrityAuditorTab />
+
+        <TabsContent value="advanced">
+          <Accordion type="multiple" className="space-y-4">
+            <AccordionItem value="integrity" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <span className="text-sm font-medium">Auditoria de Integridade</span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <IntegrityAuditorTab />
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="danger" className="rounded-lg border border-destructive/30 bg-card px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <span className="text-sm font-medium text-destructive">Zona de Perigo</span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <DangerZoneTab />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </TabsContent>
         {isAdmin && (
           <TabsContent value="users">
