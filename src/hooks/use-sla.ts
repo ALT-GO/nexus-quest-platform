@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSlaSettings, SlaSettings, calcBusinessDeadline, calcBusinessHoursMs } from "./use-sla-settings";
 
 export type SlaStatus = "ok" | "warning" | "expired";
 
@@ -26,22 +27,34 @@ export const slaByCategory: Record<string, number> = {
   "Gerais/Outros": 24,
 };
 
-export function calcSlaDeadline(createdAt: string, category: string): Date {
+export function calcSlaDeadline(createdAt: string, category: string, settings?: SlaSettings): Date {
   const hours = slaByCategory[category] ?? 24;
   const created = new Date(createdAt);
+  if (settings && settings.businessHoursOnly) {
+    return calcBusinessDeadline(created, hours, settings);
+  }
   return new Date(created.getTime() + hours * 60 * 60 * 1000);
 }
 
 export function calcSlaInfo(
   createdAt: string,
   category: string,
-  isCompleted: boolean
+  isCompleted: boolean,
+  settings?: SlaSettings
 ): SlaInfo {
   const prazoSlaEmHoras = slaByCategory[category] ?? 24;
-  const dataLimiteSla = calcSlaDeadline(createdAt, category);
+  const dataLimiteSla = calcSlaDeadline(createdAt, category, settings);
   const totalMs = prazoSlaEmHoras * 60 * 60 * 1000;
   const now = new Date();
-  const remainingMs = dataLimiteSla.getTime() - now.getTime();
+
+  let remainingMs: number;
+  if (settings && settings.businessHoursOnly) {
+    const elapsedMs = calcBusinessHoursMs(new Date(createdAt), now, settings);
+    remainingMs = totalMs - elapsedMs;
+  } else {
+    remainingMs = dataLimiteSla.getTime() - now.getTime();
+  }
+
   const percentRemaining = Math.max(0, (remainingMs / totalMs) * 100);
   const slaVencido = !isCompleted && remainingMs <= 0;
 
@@ -81,9 +94,10 @@ export function calcSlaInfo(
   };
 }
 
-/** Hook that recalculates SLA every 30s */
+/** Hook that recalculates SLA every 30s, using business hours settings */
 export function useSlaTimer() {
   const [tick, setTick] = useState(0);
+  const { settings } = useSlaSettings();
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 30_000);
@@ -92,9 +106,9 @@ export function useSlaTimer() {
 
   const getSlaInfo = useCallback(
     (createdAt: string, category: string, isCompleted: boolean) =>
-      calcSlaInfo(createdAt, category, isCompleted),
+      calcSlaInfo(createdAt, category, isCompleted, settings),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tick]
+    [tick, settings]
   );
 
   return { getSlaInfo, tick };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
 
 export interface InventoryItem {
@@ -130,11 +131,18 @@ export function useInventory(category: string) {
   }, []);
 
   const deleteItem = useCallback(async (id: string) => {
+    const item = items.find(i => i.id === id);
     const { error } = await supabase.from("inventory").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir"); return; }
     setItems(prev => prev.filter(i => i.id !== id));
     toast.success("Ativo excluído");
-  }, []);
+    logAuditEvent({
+      action: "Exclusão de ativo",
+      entityType: "inventory",
+      entityId: id,
+      details: `Excluiu o ativo "${item?.model || item?.asset_code || id}"`,
+    });
+  }, [items]);
 
   // Custom field CRUD
   const addField = useCallback(async (name: string, field_type: string, options?: string[]) => {

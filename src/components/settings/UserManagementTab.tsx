@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, UserPermissions, DEFAULT_PERMISSIONS } from "@/hooks/use-auth";
+import { logAuditEvent } from "@/lib/audit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -208,6 +209,12 @@ export function UserManagementTab() {
       toast.error("Erro ao salvar permissões");
     } else {
       toast.success("Permissões atualizadas!");
+      logAuditEvent({
+        action: "Alteração de permissões",
+        entityType: "user",
+        entityId: editingUser.id,
+        details: `Alterou as permissões de "${editingUser.full_name}"`,
+      });
       setPermDialogOpen(false);
       fetchData();
     }
