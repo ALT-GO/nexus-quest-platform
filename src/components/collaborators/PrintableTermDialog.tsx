@@ -153,7 +153,7 @@ export function PrintableTermDialog({ open, onOpenChange, collaboratorName, asse
                 </tr>
               ) : (
                 assets.map((asset: any) => {
-                  const canDepreciate = asset.category === "notebooks" || asset.category === "celulares";
+                  const canDepreciate = ["notebooks", "celulares", "tablets", "perifericos"].includes(asset.category);
                   const dep = canDepreciate ? calcDepreciation(asset.valor_pago, asset.data_aquisicao) : null;
                   const valorPagoDisplay = canDepreciate
                     ? (dep ? formatBRL(dep.valorAquisicao) : asset.valor_pago ? formatBRL(asset.valor_pago) : "—")

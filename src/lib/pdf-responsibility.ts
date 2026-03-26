@@ -7,6 +7,8 @@ import { ptBR } from "date-fns/locale";
 const categoryLabels: Record<string, string> = {
   notebooks: "Notebooks",
   celulares: "Celulares",
+  tablets: "Tablets",
+  perifericos: "Periféricos",
   linhas: "Linhas",
   licencas: "Licenças",
   hardware: "Hardware",
@@ -30,6 +32,22 @@ const columnsByCategory: Record<string, { key: string; label: string }[]> = {
     { key: "model", label: "Modelo" },
     { key: "imei1", label: "Imei 1" },
     { key: "imei2", label: "Imei 2" },
+  ],
+  tablets: [
+    { key: "asset_code", label: "Id" },
+    { key: "service_tag", label: "Service tag" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "imei1", label: "IMEI / S/N" },
+    { key: "contrato", label: "Contrato" },
+  ],
+  perifericos: [
+    { key: "asset_code", label: "Id" },
+    { key: "service_tag", label: "Service tag / P/N" },
+    { key: "marca", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "asset_type", label: "Tipo" },
+    { key: "contrato", label: "Contrato" },
   ],
   linhas: [
     { key: "asset_code", label: "Id" },
