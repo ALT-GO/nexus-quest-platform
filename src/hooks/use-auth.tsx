@@ -4,30 +4,59 @@ import type { User, Session } from "@supabase/supabase-js";
 
 export type AppRole = "admin" | "ti" | "marketing" | "colaborador";
 
+export interface UserPermissions {
+  criar_chamados: boolean;
+  atender_chamados: boolean;
+  gerenciar_estoque: boolean;
+  ver_custos_faturas: boolean;
+  ver_dashboard_financeiro: boolean;
+  acessar_kanban_marketing: boolean;
+  acessar_cofre_senhas: boolean;
+  acesso_admin_global: boolean;
+}
+
+export const DEFAULT_PERMISSIONS: UserPermissions = {
+  criar_chamados: true,
+  atender_chamados: false,
+  gerenciar_estoque: false,
+  ver_custos_faturas: false,
+  ver_dashboard_financeiro: false,
+  acessar_kanban_marketing: false,
+  acessar_cofre_senhas: false,
+  acesso_admin_global: false,
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   roles: AppRole[];
+  permissions: UserPermissions;
   loading: boolean;
   hasRole: (role: AppRole) => boolean;
+  hasPermission: (key: keyof UserPermissions) => boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
+  refreshPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   roles: [],
+  permissions: DEFAULT_PERMISSIONS,
   loading: true,
   hasRole: () => false,
+  hasPermission: () => false,
   isAdmin: false,
   signOut: async () => {},
+  refreshPermissions: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [permissions, setPermissions] = useState<UserPermissions>(DEFAULT_PERMISSIONS);
   const [loading, setLoading] = useState(true);
 
   const fetchRoles = useCallback(async () => {
@@ -39,35 +68,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const fetchPermissions = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("permissions")
+      .eq("id", userId)
+      .single();
+    if (!error && data?.permissions) {
+      setPermissions({ ...DEFAULT_PERMISSIONS, ...(data.permissions as Record<string, boolean>) });
+    } else {
+      setPermissions(DEFAULT_PERMISSIONS);
+    }
+  }, []);
+
+  const refreshPermissions = useCallback(async () => {
+    if (user) {
+      await fetchPermissions(user.id);
+    }
+  }, [user, fetchPermissions]);
+
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Defer role fetch to avoid Supabase client deadlock
-          setTimeout(() => fetchRoles(), 0);
+          setTimeout(() => {
+            fetchRoles();
+            fetchPermissions(session.user.id);
+          }, 0);
         } else {
           setRoles([]);
+          setPermissions(DEFAULT_PERMISSIONS);
         }
         setLoading(false);
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchRoles();
+        fetchPermissions(session.user.id);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchRoles]);
+  }, [fetchRoles, fetchPermissions]);
 
   const hasRole = useCallback(
     (role: AppRole) => roles.includes(role),
@@ -76,15 +126,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = roles.includes("admin");
 
+  const hasPermission = useCallback(
+    (key: keyof UserPermissions) => {
+      // Admins always have all permissions
+      if (isAdmin || permissions.acesso_admin_global) return true;
+      return !!permissions[key];
+    },
+    [permissions, isAdmin]
+  );
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRoles([]);
+    setPermissions(DEFAULT_PERMISSIONS);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, roles, loading, hasRole, isAdmin, signOut }}>
+    <AuthContext.Provider value={{
+      user, session, roles, permissions, loading,
+      hasRole, hasPermission, isAdmin, signOut, refreshPermissions,
+    }}>
       {children}
     </AuthContext.Provider>
   );

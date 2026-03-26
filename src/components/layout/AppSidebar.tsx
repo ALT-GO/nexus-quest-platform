@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   Brain,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,10 +28,32 @@ interface NavItem {
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, roles, signOut } = useAuth();
+  const { user, isAdmin, roles, hasPermission, signOut } = useAuth();
 
   const hasAnyRole = (...r: string[]) => r.some((role) => roles.includes(role as any));
   const isPrivileged = isAdmin || hasAnyRole("ti", "marketing");
+
+  // Build TI children based on permissions
+  const tiChildren: { title: string; href: string }[] = [];
+  if (hasPermission("criar_chamados") || hasPermission("atender_chamados")) {
+    tiChildren.push({ title: "Service Desk", href: "/ti/service-desk" });
+  }
+  if (hasPermission("gerenciar_estoque") || hasAnyRole("admin", "ti")) {
+    tiChildren.push({ title: "Colaboradores", href: "/ti/colaboradores" });
+  }
+  if (hasPermission("ver_custos_faturas")) {
+    tiChildren.push({ title: "Gestão de Custos", href: "/ti/faturas" });
+  }
+  if (hasPermission("acessar_cofre_senhas")) {
+    tiChildren.push({ title: "Cofre de Senhas", href: "/ti/cofre-senhas" });
+  }
+
+  // Build marketing children
+  const marketingChildren: { title: string; href: string }[] = [];
+  if (hasPermission("acessar_kanban_marketing") || hasAnyRole("admin", "marketing")) {
+    marketingChildren.push({ title: "Projetos", href: "/marketing/projetos" });
+    marketingChildren.push({ title: "Solicitações", href: "/marketing/solicitacoes" });
+  }
 
   const navigation: NavItem[] = [
     // Collaborators see Dashboard; privileged users land on Torre de Controle
@@ -41,29 +62,21 @@ export function AppSidebar() {
       href: "/",
       icon: LayoutDashboard,
     } as NavItem] : []),
-    // Torre de Controle visible only for admin and ti roles
-    ...(hasAnyRole("admin", "ti") ? [{
+    // Torre de Controle visible for admin/ti or users with dashboard permission
+    ...(hasAnyRole("admin", "ti") || hasPermission("ver_dashboard_financeiro") ? [{
       title: "Dashboard",
       href: "/central-inteligencia",
       icon: Brain,
     } as NavItem] : []),
-    ...(hasAnyRole("admin", "marketing") ? [{
+    ...(marketingChildren.length > 0 ? [{
       title: "Marketing",
       icon: Megaphone,
-      children: [
-        { title: "Projetos", href: "/marketing/projetos" },
-        { title: "Solicitações", href: "/marketing/solicitacoes" },
-      ],
+      children: marketingChildren,
     } as NavItem] : []),
-    ...(hasAnyRole("admin", "ti") ? [{
+    ...(tiChildren.length > 0 ? [{
       title: "TI",
       icon: Monitor,
-      children: [
-        { title: "Service Desk", href: "/ti/service-desk" },
-        { title: "Colaboradores", href: "/ti/colaboradores" },
-        { title: "Gestão de Custos", href: "/ti/faturas" },
-        { title: "Cofre de Senhas", href: "/ti/cofre-senhas" },
-      ],
+      children: tiChildren,
     } as NavItem] : []),
   ];
 
@@ -99,7 +112,6 @@ export function AppSidebar() {
   };
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
-  const userInitial = userName.charAt(0).toUpperCase();
   const roleLabel = isAdmin ? "Admin" : roles.includes("ti") ? "TI" : roles.includes("marketing") ? "Marketing" : "Colaborador";
 
   const SidebarContent = () => (
