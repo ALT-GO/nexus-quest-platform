@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   LayoutDashboard,
   Megaphone,
@@ -67,6 +69,19 @@ export function AppSidebar() {
 
   const [expandedItems, setExpandedItems] = useState<string[]>(["Marketing", "TI"]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("avatar_url, full_name")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      });
+  }, [user]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -167,9 +182,12 @@ export function AppSidebar() {
       {/* Footer */}
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium text-sidebar-foreground">
-            {userInitial}
-          </div>
+          <UserAvatar
+            name={userName}
+            avatarUrl={avatarUrl}
+            className="h-8 w-8"
+            fallbackClassName="bg-sidebar-accent text-sidebar-foreground text-sm"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
             <p className="text-xs text-sidebar-muted">{roleLabel}</p>

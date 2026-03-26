@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { SlaIndicator } from "@/components/sla/SlaIndicator";
 import { AssetLinker } from "@/components/servicedesk/AssetLinker";
@@ -945,11 +946,11 @@ export function TicketDetailSheet({
                 ) : (
                   comments.map((comment) => (
                     <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {comment.author.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={comment.author}
+                        avatarUrl={comment.avatar_url}
+                        className="h-8 w-8 flex-shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
                           <span className="text-sm font-medium">{comment.author}</span>
