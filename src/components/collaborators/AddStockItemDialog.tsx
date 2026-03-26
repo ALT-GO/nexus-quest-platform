@@ -292,6 +292,8 @@ const uniqueFieldByCategory: Record<string, { field: string; label: string; dbCo
     { field: "service_tag", label: "Service tag", dbColumn: "service_tag" },
     { field: "imei1", label: "Imei 1", dbColumn: "imei1" },
   ],
+  tablets: [{ field: "service_tag", label: "Service tag", dbColumn: "service_tag" }],
+  perifericos: [{ field: "service_tag", label: "Service tag / P/N", dbColumn: "service_tag" }],
 };
 
 interface Props {
