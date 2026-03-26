@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { slaByCategory } from "@/hooks/use-sla";
+import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
 
 export interface ChecklistItem {
@@ -112,6 +113,7 @@ export function useTickets() {
 
   const deleteTicket = useCallback(
     async (id: string) => {
+      const ticket = tickets.find((t) => t.id === id);
       const { error } = await supabase
         .from("tickets")
         .delete()
@@ -124,9 +126,15 @@ export function useTickets() {
       }
       setTickets((prev) => prev.filter((t) => t.id !== id));
       toast.success("Chamado excluído permanentemente");
+      logAuditEvent({
+        action: "Exclusão de chamado",
+        entityType: "ticket",
+        entityId: id,
+        details: `Excluiu o chamado "${ticket?.title || id}"`,
+      });
       return true;
     },
-    []
+    [tickets]
   );
 
   return { tickets, loading, fetchTickets, updateTicket, deleteTicket };
