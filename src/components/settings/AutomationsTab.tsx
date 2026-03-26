@@ -26,7 +26,8 @@ import {
   TriggerType,
   ActionType,
 } from "@/hooks/use-automation-rules";
-import { useCustomStatuses, StatusCustom } from "@/hooks/use-custom-status";
+import { useCustomStatuses } from "@/hooks/use-custom-status";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus,
   Zap,
@@ -52,8 +53,6 @@ const categories = [
   "Gerais/Outros",
 ];
 
-const technicians = ["Álvaro", "Maria", "João", "Carlos", "Ana"];
-
 const triggerIcons: Record<TriggerType, string> = {
   ticket_created: "📩",
   status_changed: "🔄",
@@ -72,6 +71,15 @@ export function AutomationsTab() {
   const { rules, loading, addRule, deleteRule, toggleRule } = useAutomationRules();
   const { activeStatuses } = useCustomStatuses();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [technicians, setTechnicians] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.from("profiles").select("full_name").then(({ data }) => {
+      setTechnicians(
+        (data || []).map((p: any) => p.full_name).filter((n: string) => n.trim() !== "")
+      );
+    });
+  }, []);
 
   // New rule form state
   const [name, setName] = useState("");
