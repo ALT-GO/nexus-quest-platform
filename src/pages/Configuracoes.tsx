@@ -4,11 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileTab } from "@/components/settings/ProfileTab";
 import { TeamManagementTab } from "@/components/settings/TeamManagementTab";
 import { SystemPreferencesTab } from "@/components/settings/SystemPreferencesTab";
+import { CsvImportTab } from "@/components/settings/CsvImportTab";
+import { TicketImportTab } from "@/components/settings/TicketImportTab";
 import { useAuth } from "@/hooks/use-auth";
-import { User, Users, Settings } from "lucide-react";
+import { User, Users, Settings, Upload } from "lucide-react";
 
 export default function Configuracoes() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasRole } = useAuth();
+  const canImport = isAdmin || hasRole("ti");
+
   return (
     <AppLayout>
       <PageHeader
@@ -32,6 +36,12 @@ export default function Configuracoes() {
             <Settings className="h-4 w-4" />
             Preferências do Sistema
           </TabsTrigger>
+          {canImport && (
+            <TabsTrigger value="imports" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Importações
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -47,6 +57,13 @@ export default function Configuracoes() {
         <TabsContent value="preferences">
           <SystemPreferencesTab />
         </TabsContent>
+
+        {canImport && (
+          <TabsContent value="imports" className="space-y-6">
+            <CsvImportTab />
+            <TicketImportTab />
+          </TabsContent>
+        )}
       </Tabs>
     </AppLayout>
   );
