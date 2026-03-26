@@ -209,6 +209,12 @@ export function UserManagementTab() {
       toast.error("Erro ao salvar permissões");
     } else {
       toast.success("Permissões atualizadas!");
+      logAuditEvent({
+        action: "Alteração de permissões",
+        entityType: "user",
+        entityId: editingUser.id,
+        details: `Alterou as permissões de "${editingUser.full_name}"`,
+      });
       setPermDialogOpen(false);
       fetchData();
     }
