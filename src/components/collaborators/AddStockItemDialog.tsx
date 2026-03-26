@@ -53,6 +53,28 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
     { id: "imei1", label: "Imei 1", type: "text", sanitize: "digits" },
     { id: "imei2", label: "Imei 2", type: "text", sanitize: "digits" },
   ],
+  tablets: [
+    { id: "service_tag", label: "Service tag", type: "text" },
+    { id: "marca", label: "Marca", type: "autocomplete", dbColumn: "marca" },
+    { id: "model", label: "Modelo", type: "autocomplete", dbColumn: "model" },
+    { id: "imei1", label: "IMEI / S/N", type: "text" },
+    { id: "cost_center", label: "Centro de custo", type: "text" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
+    { id: "valor_pago", label: "Valor Pago (R$)", type: "text" },
+    { id: "data_aquisicao", label: "Data de Aquisição", type: "date" },
+    { id: "notes", label: "Notas", type: "text" },
+  ],
+  perifericos: [
+    { id: "service_tag", label: "Service tag / P/N", type: "text" },
+    { id: "marca", label: "Marca", type: "autocomplete", dbColumn: "marca" },
+    { id: "model", label: "Modelo", type: "autocomplete", dbColumn: "model" },
+    { id: "asset_type", label: "Tipo", type: "select", options: ["Mouse", "Teclado", "Carregador", "Monitor", "Headset", "Docking Station", "Outro"] },
+    { id: "cost_center", label: "Centro de custo", type: "text" },
+    { id: "contrato", label: "Contrato", type: "autocomplete", dbColumn: "contrato" },
+    { id: "valor_pago", label: "Valor Pago (R$)", type: "text" },
+    { id: "data_aquisicao", label: "Data de Aquisição", type: "date" },
+    { id: "notes", label: "Notas", type: "text" },
+  ],
   linhas: [
     { id: "numero", label: "Número", type: "text", sanitize: "digits" },
     { id: "asset_type", label: "Tipo", type: "select", options: ["Administrativo", "Campo"] },
@@ -79,6 +101,8 @@ const fieldsByCategory: Record<string, FieldDef[]> = {
 const categoryLabels: Record<string, string> = {
   notebooks: "Notebook",
   celulares: "Celular",
+  tablets: "Tablet",
+  perifericos: "Periférico",
   linhas: "Linha",
   licencas: "Licença",
 };
@@ -268,6 +292,8 @@ const uniqueFieldByCategory: Record<string, { field: string; label: string; dbCo
     { field: "service_tag", label: "Service tag", dbColumn: "service_tag" },
     { field: "imei1", label: "Imei 1", dbColumn: "imei1" },
   ],
+  tablets: [{ field: "service_tag", label: "Service tag", dbColumn: "service_tag" }],
+  perifericos: [{ field: "service_tag", label: "Service tag / P/N", dbColumn: "service_tag" }],
 };
 
 interface Props {

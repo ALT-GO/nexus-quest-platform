@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical } from "lucide-react";
+import { Loader2, Search, Package, UserPlus, Laptop, Smartphone, Phone, FileText, GripVertical, Tablet, Mouse } from "lucide-react";
 import { StockDetailDialog } from "./StockDetailDialog";
 import { format } from "date-fns";
 import { InlineStockCell } from "./InlineStockCell";
@@ -223,9 +223,33 @@ const licencaCols: ColDef[] = [
   { id: "cost_center_man", header: "Centro de custo - Man", field: "cost_center_man", accessor: (i) => i.cost_center_man || "" },
 ];
 
+const tabletCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
+  { id: "service_tag", header: "Service tag", field: "service_tag", accessor: (i) => i.service_tag || "" },
+  { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
+  { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
+  { id: "imei1", header: "IMEI / S/N", field: "imei1", accessor: (i) => i.imei1 || "" },
+  { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "notes", header: "Notas", field: "notes", accessor: (i) => i.notes || "" },
+];
+
+const perifericoCols: ColDef[] = [
+  { id: "condition", header: "Condição", field: "condition", accessor: (i) => i.condition || "ready" },
+  { id: "service_tag", header: "Service tag / P/N", field: "service_tag", accessor: (i) => i.service_tag || "" },
+  { id: "marca", header: "Marca", field: "marca", accessor: (i) => i.marca || "" },
+  { id: "model", header: "Modelo", field: "model", accessor: (i) => i.model || "" },
+  { id: "asset_type", header: "Tipo", field: "asset_type", accessor: (i) => i.asset_type || "" },
+  { id: "cost_center", header: "Centro de custo", field: "cost_center", accessor: (i) => i.cost_center || "" },
+  { id: "contrato", header: "Contrato", field: "contrato", accessor: (i) => i.contrato || "" },
+  { id: "notes", header: "Notas", field: "notes", accessor: (i) => i.notes || "" },
+];
+
 const defaultColsByCat: Record<string, ColDef[]> = {
   notebooks: notebookCols,
   celulares: celularCols,
+  tablets: tabletCols,
+  perifericos: perifericoCols,
   linhas: linhaCols,
   licencas: licencaCols,
 };
@@ -233,6 +257,8 @@ const defaultColsByCat: Record<string, ColDef[]> = {
 const tabConfig = [
   { key: "notebooks", label: "Notebooks", icon: Laptop },
   { key: "celulares", label: "Celulares", icon: Smartphone },
+  { key: "tablets", label: "Tablets", icon: Tablet },
+  { key: "perifericos", label: "Periféricos", icon: Mouse },
   { key: "linhas", label: "Linhas", icon: Phone },
   { key: "licencas", label: "Licenças", icon: FileText },
 ];
@@ -245,6 +271,8 @@ const commonSortOpts: SortOption[] = [
 const sortOptionsByCategory: Record<string, SortOption[]> = {
   notebooks: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
   celulares: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  tablets: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }],
+  perifericos: [...commonSortOpts, { value: "marca", label: "Marca" }, { value: "model", label: "Modelo" }, { value: "asset_type", label: "Tipo" }],
   linhas: [
     { value: "created_at", label: "Data criação" },
     { value: "operadora", label: "Operadora" },
@@ -457,17 +485,19 @@ export function StockTab({ onAssigned }: StockTabProps) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("notebooks");
   const [filtersByTab, setFiltersByTab] = useState<Record<string, Record<string, string>>>({
-    notebooks: {}, celulares: {}, linhas: {}, licencas: {},
+    notebooks: {}, celulares: {}, tablets: {}, perifericos: {}, linhas: {}, licencas: {},
   });
   const [licenseStatusFilter, setLicenseStatusFilter] = useState<"all" | "Ativo" | "Inativo">("all");
 
   // Per-tab sorting with persistence
   const nbSort = usePersistentSort("stock-sort-notebooks", "created_at", "desc");
   const celSort = usePersistentSort("stock-sort-celulares", "created_at", "desc");
+  const tabSort2 = usePersistentSort("stock-sort-tablets", "created_at", "desc");
+  const perSort = usePersistentSort("stock-sort-perifericos", "created_at", "desc");
   const linSort = usePersistentSort("stock-sort-linhas", "created_at", "desc");
   const licSort = usePersistentSort("stock-sort-licencas", "created_at", "desc");
   const sortByTab: Record<string, typeof nbSort> = {
-    notebooks: nbSort, celulares: celSort, linhas: linSort, licencas: licSort,
+    notebooks: nbSort, celulares: celSort, tablets: tabSort2, perifericos: perSort, linhas: linSort, licencas: licSort,
   };
 
   const unowned = items.filter((i) => isUnowned(i.collaborator));
